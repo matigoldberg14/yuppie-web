@@ -1,60 +1,35 @@
 const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:1337/api';
 
-export async function getRestaurant(restaurantId: string) {
+export async function getAllRestaurants() {
   try {
-    const response = await fetch(
-      `${API_URL}/restaurants?filters[documentId]=${restaurantId}&populate=*`
-    );
+    const response = await fetch(`${API_URL}/restaurants?populate=*`);
 
     if (!response.ok) {
-      throw new Error('Restaurant not found');
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json();
-    return data.data[0];
+    const json = await response.json();
+    return json;
   } catch (error) {
-    console.error('Error fetching restaurant:', error);
-    return null;
+    console.error('Error fetching restaurants:', error);
+    return { data: [], meta: { pagination: { total: 0 } } };
   }
 }
 
-export async function submitFeedback({
-  restaurantId,
-  rating,
-  improvements,
-  comment,
-  email,
-}: {
-  restaurantId: string;
-  rating: number;
-  improvements?: string[];
-  comment?: string;
-  email?: string;
-}) {
+export async function getRestaurant(documentId: string) {
   try {
-    const response = await fetch(`${API_URL}/reviews`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        data: {
-          restaurant: restaurantId,
-          rating,
-          improvements,
-          comment,
-          email,
-        },
-      }),
-    });
+    const response = await fetch(
+      `${API_URL}/restaurants?filters[documentId][$eq]=${documentId}&populate=*`
+    );
 
     if (!response.ok) {
-      throw new Error('Error submitting feedback');
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return await response.json();
+    const json = await response.json();
+    return json.data[0];
   } catch (error) {
-    console.error('Error:', error);
-    throw error;
+    console.error('Error fetching restaurant:', error);
+    return null;
   }
 }

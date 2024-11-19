@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-black text-white min-h-screen;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Estilos para el tema oscuro */
+@layer base {
+  body {
+    @apply antialiased;
+  }
+}
+
+/* Estilos personalizados para componentes */
+@layer components {
+  .card {
+    @apply bg-gray-900 rounded-lg p-6 shadow-xl;
+  }
+
+  .input {
+    @apply bg-gray-800 border border-gray-700 rounded-lg p-3 
+           text-white placeholder-gray-400 
+           focus:outline-none focus:ring-2 focus:ring-blue-500;
+  }
+
+  .button {
+    @apply bg-white text-black rounded-full px-6 py-3 
+           font-medium transition-all hover:bg-gray-100
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+}
+
+/* Utilidades personalizadas */
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500;
+  }
+}

@@ -3,8 +3,13 @@ import Layout from '../layouts/Layout.astro';
 import { RatingForm } from '../components/feedback/Rating';
 import { getRestaurant } from '../services/api';
 
-const restaurantId = Astro.url.searchParams.get('local');
-const restaurant = restaurantId ? await getRestaurant(restaurantId) : null;
+const localId = Astro.url.searchParams.get('local');
+if (!localId) {
+  return Astro.redirect('/404');
+}
+
+const restaurant = await getRestaurant(localId);
+console.log('Found restaurant:', restaurant); // Para debug
 
 if (!restaurant) {
   return Astro.redirect('/404');
@@ -13,12 +18,14 @@ if (!restaurant) {
 
 <Layout title="Califica tu experiencia">
   <div class="min-h-screen bg-black text-white px-4 py-8 flex flex-col items-center">
-    <h1 class="text-3xl font-bold mb-12">Yuppie</h1>
+    <h1 class="text-3xl font-bold mb-12">
+      {restaurant.name}
+    </h1>
     
     <RatingForm 
       client:load 
-      restaurantId={restaurant.id}
-      nextUrl={`/improvement?local=${restaurantId}`}
+      restaurantId={restaurant.id.toString()}
+      nextUrl={`/improvement?local=${localId}`}
     />
   </div>
 </Layout>
