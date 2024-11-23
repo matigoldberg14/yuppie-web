@@ -33,3 +33,61 @@ export async function getRestaurant(documentId: string) {
     return null;
   }
 }
+
+export async function createReview({
+  restaurantId,
+  typeImprovement,
+  email,
+  comment,
+}: {
+  restaurantId: string;
+  typeImprovement: string;
+  email: string;
+  comment: string;
+}) {
+  try {
+    // Generar un documentId único
+    const documentId = 'rev_' + Math.random().toString(36).substr(2, 9);
+
+    const reviewData = {
+      data: {
+        googleSent: false,
+        typeImprovement,
+        email,
+        date: new Date(),
+        comment,
+        restaurant: restaurantId, // Relación directa con el ID del restaurante.
+      },
+    };
+
+    console.log('Sending to Strapi:', JSON.stringify(reviewData, null, 2));
+
+    const response = await fetch(`${API_URL}/reviews`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(reviewData),
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error('Strapi error response:', responseData);
+      throw new Error(
+        responseData.error?.message ||
+          JSON.stringify(responseData.error?.details) ||
+          'Error creating review'
+      );
+    }
+
+    return responseData;
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Error details:', error.message);
+    } else {
+      console.error('Unknown error:', error);
+    }
+    throw error;
+  }
+}

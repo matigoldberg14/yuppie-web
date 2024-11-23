@@ -1,9 +1,9 @@
 const improvementOptions = [
-  { id: 'atencion', label: 'Atención', icon: '🔔' },
-  { id: 'comidas', label: 'Comidas', icon: '🍽' },
-  { id: 'bebidas', label: 'Bebidas', icon: '☕️🍷' },
-  { id: 'ambiente', label: 'Ambiente', icon: '🎵' },
-  { id: 'otra', label: 'Otra', icon: '⏰' },
+  { id: 'Atención', label: 'Atención', icon: '🔔' },
+  { id: 'Comidas', label: 'Comidas', icon: '🍽' },
+  { id: 'Bebidas', label: 'Bebidas', icon: '☕️🍷' },
+  { id: 'Ambiente', label: 'Ambiente', icon: '🎵' },
+  { id: 'Otra', label: 'Otra', icon: '⏰' },
 ] as const;
 
 type Props = {
@@ -13,7 +13,8 @@ type Props = {
 
 export function ImprovementSelector({ restaurantId, nextUrl }: Props) {
   const handleSelect = (improvement: string) => {
-    localStorage.setItem('yuppie_improvements', JSON.stringify([improvement]));
+    // Guardar la selección para usarla en el siguiente paso
+    localStorage.setItem('yuppie_improvement', improvement);
     window.location.href = nextUrl;
   };
 
@@ -30,7 +31,7 @@ export function ImprovementSelector({ restaurantId, nextUrl }: Props) {
             onClick={() => handleSelect(id)}
             className="w-full p-4 rounded-lg flex items-center gap-3 bg-primary-dark hover:bg-primary-light transition-colors text-white"
           >
-            <span role="img" aria-label={label} className="text-2xl">
+            <span role="img" aria-label={label}>
               {icon}
             </span>
             <span>{label}</span>

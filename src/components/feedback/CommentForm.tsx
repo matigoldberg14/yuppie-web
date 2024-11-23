@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Button } from '../Button';
-import { submitFeedback } from '../../lib/api';
+import { createReview } from '../../services/api';
 
 type Props = {
   restaurantId: string;
@@ -11,33 +10,39 @@ export function CommentForm({ restaurantId, successUrl }: Props) {
   const [comment, setComment] = useState('');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     try {
+      setError(null);
       setIsSubmitting(true);
-      const rating = Number(localStorage.getItem('yuppie_rating'));
-      const improvements = JSON.parse(
-        localStorage.getItem('yuppie_improvements') || '[]'
-      );
 
-      await submitFeedback({
+      const typeImprovement = localStorage.getItem('yuppie_improvement');
+      console.log('Attempting to submit:', {
         restaurantId,
-        rating,
-        improvements,
-        comment: comment.trim(),
-        email: email.trim(),
+        typeImprovement,
+        email,
+        comment,
       });
 
-      // Limpiar localStorage
-      localStorage.removeItem('yuppie_rating');
-      localStorage.removeItem('yuppie_improvements');
+      if (!typeImprovement) {
+        throw new Error('Por favor, selecciona qué podemos mejorar');
+      }
 
+      await createReview({
+        restaurantId,
+        typeImprovement,
+        email,
+        comment: comment.trim(),
+      });
+
+      localStorage.removeItem('yuppie_improvement');
       window.location.href = successUrl;
     } catch (error) {
-      console.error('Error submitting feedback:', error);
-      alert(
-        'Hubo un error al enviar tu feedback. Por favor, intenta nuevamente.'
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido';
+      setError(errorMessage);
+      console.error('Error submitting review:', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -49,28 +54,36 @@ export function CommentForm({ restaurantId, successUrl }: Props) {
         Por último ¿Nos quisieras dejar un comentario?
       </h2>
 
+      {error && (
+        <div className="bg-red-500/10 text-red-400 p-4 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
         placeholder="Comentanos aquí."
         className="w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 resize-none h-40"
+        required
       />
 
       <input
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="Usuario@mail.com"
+        placeholder="Tu email"
         className="w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400"
+        required
       />
 
-      <p className="text-sm text-center text-gray-400">
-        Puede aplicar una compensación.
-      </p>
-
-      <Button onClick={handleSubmit} fullWidth disabled={isSubmitting}>
+      <button
+        onClick={handleSubmit}
+        disabled={isSubmitting || !email || !comment.trim()}
+        className="w-full py-3 px-6 bg-white text-black rounded-full font-medium hover:bg-gray-100 disabled:opacity-50"
+      >
         {isSubmitting ? 'Enviando...' : 'Enviar'}
-      </Button>
+      </button>
     </div>
   );
 }

@@ -3,13 +3,21 @@ import { useState } from 'react';
 type Props = {
   restaurantId: string;
   nextUrl: string;
+  linkMaps: string; // Agregamos el prop para el link
 };
 
-export function RatingForm({ restaurantId, nextUrl }: Props) {
+export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
   const handleRatingSelect = (rating: number) => {
     localStorage.setItem('yuppie_rating', rating.toString());
     localStorage.setItem('yuppie_restaurant', restaurantId);
-    window.location.href = nextUrl;
+
+    // Si la valoración es 5, redirigimos a Google Maps
+    if (rating === 5) {
+      window.location.href = linkMaps;
+    } else {
+      // Si no, continuamos con el flujo normal
+      window.location.href = nextUrl;
+    }
   };
 
   return (
