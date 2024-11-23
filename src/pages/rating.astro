@@ -1,40 +1,61 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { RatingForm } from '../components/feedback/Rating';
-import { getRestaurant } from '../services/api';
+import { getRestaurant, incrementTaps } from '../services/api';
 
 const localId = Astro.url.searchParams.get('local');
+console.log('Local ID recibido:', localId);
+
 if (!localId) {
+  console.error('No se recibió local ID');
   return Astro.redirect('/404');
 }
 
-const restaurant = await getRestaurant(localId);
-if (!restaurant) {
-  return Astro.redirect('/404');
+let restaurant;
+
+try {
+  restaurant = await getRestaurant(localId);
+  console.log('Restaurante encontrado:', restaurant);
+  
+  if (!restaurant) {
+    console.error('No se encontró el restaurante');
+    return Astro.redirect('/404');
+  }
+
+  // Solo intentar incrementar taps si encontramos el restaurante
+  await incrementTaps(localId);
+} catch (error) {
+  console.error('Error al procesar la página:', error);
+  return Astro.redirect('/error');
 }
 ---
 
 <Layout title="Califica tu experiencia">
-  <div class="min-h-screen px-4 py-8 flex flex-col items-center justify-center relative">
-    <div class="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-      <div class="float absolute top-10 left-10 w-20 h-20 bg-[#5F50E5] rounded-full opacity-20"></div>
-      <div class="float absolute bottom-20 right-10 w-32 h-32 bg-[#5F50E5] rounded-full opacity-20" style="animation-delay: -2s;"></div>
-    </div>
-    
-    <h1 class="text-4xl font-bold mb-8 text-center relative z-10">
-      <span class="bg-clip-text text-transparent bg-gradient-to-r from-white to-[#5F50E5]">
-        {restaurant.name}
-      </span>
-    </h1>
-    
-    <div class="w-full max-w-md bg-white/10 backdrop-blur-lg rounded-2xl p-6 shadow-lg relative z-10">
-      <RatingForm 
-        client:load 
-        restaurantId={restaurant.id.toString()}
-        nextUrl={`/improvement?local=${localId}`}
-        linkMaps={restaurant.linkMaps}
-      />
+  <div class="min-h-screen bg-gradient flex flex-col items-center justify-center p-4">
+    <div class="w-full max-w-md">
+      <h1 class="text-4xl font-bold mb-6 text-center text-shadow">
+        {restaurant.attributes.name}
+      </h1>
+      
+      <div class="card p-6">
+        <h2 class="text-2xl font-semibold mb-4 text-center">Califica tu experiencia</h2>
+        <RatingForm 
+          client:load 
+          restaurantId={restaurant.id.toString()}
+          nextUrl={`/improvement?local=${localId}`}
+          linkMaps={restaurant.attributes.linkMaps}
+        />
+      </div>
     </div>
   </div>
 </Layout>
 
+
+<style>
+  .card {
+    transition: transform 0.3s ease;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+  }
+</style>

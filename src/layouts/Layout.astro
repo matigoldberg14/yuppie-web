@@ -1,29 +1,41 @@
 ---
+import { ViewTransitions } from 'astro:transitions';
+import '../styles/globals.css';
+
 interface Props {
   title: string;
+  description?: string;
 }
 
-const { title } = Astro.props;
+const { 
+  title, 
+  description = "Yuppie - Tu plataforma de feedback" 
+} = Astro.props;
 ---
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="description" content="Yuppie - Tu plataforma de feedback" />
-    <meta name="viewport" content="width=device-width" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/jpeg" href="/logo_chico.jpeg" />
+    <ViewTransitions />
   </head>
-  <body class="bg-primary min-h-screen text-white">
+  <body class="min-h-screen bg-gradient font-['Poppins',sans-serif] text-white">
     <slot />
   </body>
 </html>
 
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+<style is:global>
+  :root {
+    --blue-primary: #2F02CC;
+    --blue-light: #5F50E5;
+    --blue-dark: #1D0158;
+  }
   
-  body {
-    font-family: 'Inter', sans-serif;
+  .bg-gradient {
+    background: linear-gradient(135deg, var(--blue-primary), var(--blue-dark));
   }
 </style>

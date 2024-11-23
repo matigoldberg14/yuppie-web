@@ -1,22 +1,34 @@
 import { useState } from 'react';
+import { createReview } from '../../services/api';
 
 type Props = {
   restaurantId: string;
   nextUrl: string;
-  linkMaps: string; // Agregamos el prop para el link
+  linkMaps: string;
 };
 
 export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
-  const handleRatingSelect = (rating: number) => {
-    localStorage.setItem('yuppie_rating', rating.toString());
-    localStorage.setItem('yuppie_restaurant', restaurantId);
-
-    // Si la valoración es 5, redirigimos a Google Maps
-    if (rating === 5) {
-      window.location.href = linkMaps;
-    } else {
-      // Si no, continuamos con el flujo normal
-      window.location.href = nextUrl;
+  const handleRatingSelect = async (rating: number) => {
+    try {
+      if (rating === 5) {
+        // Para calificación 5, creamos la review simplificada y redirigimos a Google
+        await createReview({
+          restaurantId,
+          calification: rating,
+          googleSent: true,
+        });
+        window.location.href = linkMaps;
+      } else {
+        // Para otras calificaciones, guardamos el rating y continuamos el flujo
+        localStorage.setItem('yuppie_rating', rating.toString());
+        localStorage.setItem('yuppie_restaurant', restaurantId);
+        window.location.href = nextUrl;
+      }
+    } catch (error) {
+      console.error('Error al procesar calificación:', error);
+      alert(
+        'Hubo un error al procesar tu calificación. Por favor, intenta nuevamente.'
+      );
     }
   };
 
