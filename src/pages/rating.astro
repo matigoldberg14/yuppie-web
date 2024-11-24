@@ -4,37 +4,34 @@ import { RatingForm } from '../components/feedback/Rating';
 import { getRestaurant, incrementTaps } from '../services/api';
 
 const localId = Astro.url.searchParams.get('local');
-console.log('Local ID recibido:', localId);
-
 if (!localId) {
-  console.error('No se recibió local ID');
+  console.error('Falta el parámetro local');
   return Astro.redirect('/404');
 }
 
 let restaurant;
-
 try {
   restaurant = await getRestaurant(localId);
-  console.log('Restaurante encontrado:', restaurant);
-  
   if (!restaurant) {
-    console.error('No se encontró el restaurante');
-    return Astro.redirect('/404');
+    throw new Error('No se encontró el restaurante');
   }
 
-  // Solo intentar incrementar taps si encontramos el restaurante
-  await incrementTaps(localId);
+  // Intentar incrementar taps
+  try {
+    await incrementTaps(localId);
+  } catch (error) {
+    console.error('Error incrementando taps:', error);
+  }
 } catch (error) {
-  console.error('Error al procesar la página:', error);
-  return Astro.redirect('/error');
+  console.error('Error cargando restaurante:', error);
+  return Astro.redirect('/404');
 }
 ---
-
 <Layout title="Califica tu experiencia">
   <div class="min-h-screen bg-gradient flex flex-col items-center justify-center p-4">
     <div class="w-full max-w-md">
       <h1 class="text-4xl font-bold mb-6 text-center text-shadow">
-        {restaurant.attributes.name}
+        {restaurant.name}
       </h1>
       
       <div class="card p-6">
@@ -43,13 +40,12 @@ try {
           client:load 
           restaurantId={restaurant.id.toString()}
           nextUrl={`/improvement?local=${localId}`}
-          linkMaps={restaurant.attributes.linkMaps}
+          linkMaps={restaurant.linkMaps}
         />
       </div>
     </div>
   </div>
 </Layout>
-
 
 <style>
   .card {
