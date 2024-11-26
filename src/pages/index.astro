@@ -1,27 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getAllRestaurants } from '../services/api';
-
-type Restaurant = {
-  id: number;
-  documentId: string;
-  name: string;
-  taps: string;
-  linkMaps: string;
-  cover: {
-    id: number;
-    name: string;
-    url: string;
-    formats: {
-      small: {
-        url: string;
-      };
-      thumbnail: {
-        url: string;
-      };
-    };
-  };
-};
+import type { Restaurant } from '../services/api';
 
 // Obtener todos los restaurantes de la base de datos
 const response = await getAllRestaurants();

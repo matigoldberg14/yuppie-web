@@ -1,15 +1,114 @@
-const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:1337/api';
+// Definición de tipos al inicio del archivo
+interface Restaurant {
+  id: number;
+  documentId: string;
+  name: string;
+  taps: string;
+  linkMaps: string;
+  cover?: {
+    id: number;
+    name: string;
+    url: string;
+    formats: {
+      small: {
+        url: string;
+      };
+      thumbnail: {
+        url: string;
+      };
+    };
+  };
+}
 
+interface Review {
+  restaurantId: string;
+  calification: number;
+  typeImprovement?: string | null;
+  email?: string | null;
+  comment?: string | null;
+  googleSent?: boolean;
+  date?: string;
+}
+
+interface ApiError extends Error {
+  status?: number;
+  details?: unknown;
+}
+
+interface ApiResponse<T> {
+  data: T;
+  meta?: {
+    pagination?: {
+      total: number;
+    };
+  };
+}
+
+const API_CONFIG = {
+  baseUrl: import.meta.env.PUBLIC_API_URL || 'http://localhost:1337/api',
+  timeout: 10000, // 10 segundos
+  retryAttempts: 3,
+  retryDelay: 1000, // 1 segundo
+} as const;
+
+const handleApiError = (error: unknown): never => {
+  if (error instanceof Response) {
+    throw new Error(`HTTP error! status: ${error.status}`);
+  }
+  throw error;
+};
+
+const withRetry = async <T>(
+  fn: () => Promise<T>,
+  attempts: number = API_CONFIG.retryAttempts
+): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (attempts <= 1) throw error;
+    await new Promise((resolve) => setTimeout(resolve, API_CONFIG.retryDelay));
+    return withRetry(fn, attempts - 1);
+  }
+};
+
+// Cliente base mejorado
+const apiClient = {
+  async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
+
+    try {
+      const response = await withRetry(async () => {
+        const res = await fetch(`${API_CONFIG.baseUrl}${endpoint}`, {
+          ...options,
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+          },
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error?.message || 'API Error');
+        }
+
+        return res.json();
+      });
+
+      return response;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  },
+};
+
+// Funciones mejoradas
 export async function getAllRestaurants() {
   try {
-    const response = await fetch(`${API_URL}/restaurants?populate=*`);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const json = await response.json();
-    return json;
+    return await apiClient.fetch<ApiResponse<Restaurant[]>>(
+      '/restaurants?populate=*'
+    );
   } catch (error) {
     console.error('Error fetching restaurants:', error);
     return { data: [], meta: { pagination: { total: 0 } } };
@@ -17,87 +116,51 @@ export async function getAllRestaurants() {
 }
 
 export async function getRestaurant(documentId: string) {
+  if (!documentId) {
+    throw new Error('Document ID is required');
+  }
+
+  console.log('Buscando restaurante con documentId:', documentId);
+
   try {
-    console.log('Buscando restaurante con documentId:', documentId);
-
-    const response = await fetch(`${API_URL}/restaurants/${documentId}`);
-    const restaurantData = await response.json();
-
-    if (!response.ok || !restaurantData.data) {
-      console.error(
-        'No se encontró el restaurante con documentId:',
-        documentId
-      );
-      return null;
-    }
-
-    return restaurantData.data; // Devuelve el objeto del restaurante
+    const response = await apiClient.fetch<ApiResponse<Restaurant>>(
+      `/restaurants/${documentId}`
+    );
+    return response.data;
   } catch (error) {
     console.error('Error fetching restaurant:', error);
     return null;
   }
 }
 
-export async function createReview({
-  restaurantId,
-  calification,
-  typeImprovement = null,
-  email = null,
-  comment = null,
-  googleSent = false,
-}: {
-  restaurantId: string;
-  calification: number;
-  typeImprovement?: string | null;
-  email?: string | null;
-  comment?: string | null;
-  googleSent?: boolean;
-}) {
+export async function createReview(reviewData: Review) {
   try {
-    // Validaciones adicionales a nivel de API
-    if (!restaurantId) {
+    if (!reviewData.restaurantId) {
       throw new Error('El ID del restaurante es requerido');
     }
 
-    if (isNaN(parseInt(restaurantId))) {
+    if (isNaN(parseInt(reviewData.restaurantId))) {
       throw new Error('El ID del restaurante debe ser un número');
     }
 
-    const reviewData = {
+    const formattedData = {
       data: {
-        restaurant: parseInt(restaurantId),
-        calification,
-        googleSent,
-        typeImprovement,
-        email,
-        comment,
+        restaurant: parseInt(reviewData.restaurantId),
+        calification: reviewData.calification,
+        googleSent: reviewData.googleSent,
+        typeImprovement: reviewData.typeImprovement,
+        email: reviewData.email,
+        comment: reviewData.comment,
         date: new Date().toISOString().split('T')[0],
       },
     };
 
-    console.log('Sending to Strapi:', JSON.stringify(reviewData, null, 2));
+    console.log('Sending to Strapi:', JSON.stringify(formattedData, null, 2));
 
-    const response = await fetch(`${API_URL}/reviews`, {
+    return await apiClient.fetch<ApiResponse<Review>>('/reviews', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(reviewData),
+      body: JSON.stringify(formattedData),
     });
-
-    const responseData = await response.json();
-
-    if (!response.ok) {
-      const errorMessage =
-        responseData.error?.message ||
-        responseData.error?.details ||
-        'Error creando la review';
-
-      console.error('Strapi error response:', responseData);
-      throw new Error(errorMessage);
-    }
-
-    return responseData;
   } catch (error) {
     console.error('Error details:', error);
     throw error;
@@ -107,39 +170,32 @@ export async function createReview({
 export async function incrementTaps(documentId: string) {
   try {
     // 1. Obtener el restaurante actual por documentId
-    const response = await fetch(`${API_URL}/restaurants/${documentId}`);
-    const restaurantData = await response.json();
+    const restaurantData = await apiClient.fetch<ApiResponse<Restaurant>>(
+      `/restaurants/${documentId}`
+    );
 
-    if (!response.ok || !restaurantData.data) {
+    if (!restaurantData.data) {
       throw new Error('No se encontró el restaurante');
     }
 
-    const restaurant = restaurantData.data; // Datos del restaurante
-
     // 2. Incrementar taps
-    const currentTaps = parseInt(restaurant.taps || '0'); // Validar taps
+    const currentTaps = parseInt(restaurantData.data.taps || '0');
     const newTaps = currentTaps + 1;
 
     console.log('Actualizando taps a:', newTaps);
 
     // 3. Actualizar el restaurante
-    const updateResponse = await fetch(`${API_URL}/restaurants/${documentId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        data: {
-          taps: newTaps.toString(),
-        },
-      }),
-    });
-
-    const updateResult = await updateResponse.json();
-    if (!updateResponse.ok) {
-      console.error('Error en la respuesta de Strapi:', updateResult);
-      throw new Error('Error al actualizar taps');
-    }
+    const updateResult = await apiClient.fetch<ApiResponse<Restaurant>>(
+      `/restaurants/${documentId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          data: {
+            taps: newTaps.toString(),
+          },
+        }),
+      }
+    );
 
     console.log('Taps actualizado correctamente:', updateResult);
     return updateResult;
@@ -148,3 +204,5 @@ export async function incrementTaps(documentId: string) {
     throw error;
   }
 }
+
+export type { ApiError, ApiResponse, Restaurant, Review };

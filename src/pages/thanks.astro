@@ -1,0 +1,42 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const title = "Gracias por tu feedback";
+---
+
+<Layout title={title}>
+  <div class="min-h-screen bg-gradient flex flex-col items-center justify-center p-4 text-center">
+    <div class="w-full max-w-md">
+      <div class="card p-8 space-y-6">
+        
+        <h1 class="text-3xl font-bold text-white">
+          ¡Gracias por ayudarnos a mejorar!
+        </h1>
+        
+        <p class="text-lg text-gray-200">
+          Tu opinión es muy valiosa para nosotros y nos ayuda a ofrecer una mejor experiencia.
+        </p>
+        
+        <div class="pt-4">
+          <a href="/" class="inline-block bg-white text-blue-600 font-semibold py-2 px-6 rounded-full transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50">
+            Volver al inicio
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .bg-gradient {
+    background: linear-gradient(135deg, var(--blue-primary), var(--blue-dark));
+  }
+  
+  .card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+</style>

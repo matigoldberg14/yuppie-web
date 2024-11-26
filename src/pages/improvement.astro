@@ -9,6 +9,7 @@ const restaurant = restaurantId ? await getRestaurant(restaurantId) : null;
 if (!restaurant) {
   return Astro.redirect('/404');
 }
+const restaurantIdString = restaurant.id.toString();
 ---
 
 <Layout title="¿En qué podríamos mejorar?">
@@ -22,7 +23,7 @@ if (!restaurant) {
         <h2 class="text-2xl font-semibold mb-4 text-center">¿En qué podríamos mejorar?</h2>
         <ImprovementSelector 
           client:load 
-          restaurantId={restaurant.id}
+          restaurantId={restaurantIdString}
           nextUrl={`/comment?local=${restaurantId}`}
         />
       </div>

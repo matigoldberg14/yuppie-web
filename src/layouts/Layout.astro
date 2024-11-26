@@ -1,41 +1,109 @@
 ---
 import { ViewTransitions } from 'astro:transitions';
+import { SEO } from 'astro-seo';
 import '../styles/globals.css';
 
 interface Props {
   title: string;
   description?: string;
+  image?: string;
+  noindex?: boolean;
 }
 
 const { 
   title, 
-  description = "Yuppie - Tu plataforma de feedback" 
+  description = "Yuppie - Mejora la experiencia de tus clientes con feedback en tiempo real",
+  image = "/og-image.jpg",
+  noindex = false
 } = Astro.props;
+
+// Detectar el ambiente
+const isProd = import.meta.env.PROD;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 ---
 
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{title}</title>
-    <meta name="description" content={description} />
-    <link rel="icon" type="image/jpeg" href="/logo_chico.jpeg" />
+    
+    <SEO
+      title={title}
+      description={description}
+      canonical={canonicalURL.toString()}
+      noindex={noindex}
+      openGraph={{
+        basic: {
+          title,
+          type: "website",
+          image,
+        },
+        image: {
+          alt: "Yuppie Preview Image",
+        },
+      }}
+      twitter={{
+        creator: "@yuppie",
+        card: "summary_large_image",
+      }}
+    />
+
+    <!-- Fonts -->
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+
     <ViewTransitions />
+
+    <style is:inline>
+      :root {
+        --blue-primary: #2F02CC;
+        --blue-light: #5F50E5;
+        --blue-dark: #1D0158;
+      }
+      
+      .bg-gradient {
+        background: linear-gradient(135deg, var(--blue-primary), var(--blue-dark));
+      }
+      
+      .text-shadow {
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      }
+      
+      .card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+    </style>
   </head>
   <body class="min-h-screen bg-gradient font-['Poppins',sans-serif] text-white">
     <slot />
+
+    <!-- Progress Bar -->
+    <div id="progress-bar" class="fixed top-0 left-0 h-1 bg-white/20 w-full z-50">
+      <div class="h-full bg-white transform-origin-left"></div>
+    </div>
+
+    <script>
+      // Progress Bar
+      document.addEventListener('astro:page-load', () => {
+        const progressBar = document.querySelector('#progress-bar div') as HTMLElement;
+        if (progressBar) {
+          window.addEventListener('scroll', () => {
+            const winScroll = document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            progressBar.style.width = `${scrolled}%`;
+          });
+        }
+      });
+    </script>
   </body>
 </html>
-
-<style is:global>
-  :root {
-    --blue-primary: #2F02CC;
-    --blue-light: #5F50E5;
-    --blue-dark: #1D0158;
-  }
-  
-  .bg-gradient {
-    background: linear-gradient(135deg, var(--blue-primary), var(--blue-dark));
-  }
-</style>
