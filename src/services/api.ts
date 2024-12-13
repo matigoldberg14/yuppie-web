@@ -1,4 +1,3 @@
-// Definición de tipos al inicio del archivo
 interface Restaurant {
   id: number;
   documentId: string;
@@ -44,18 +43,16 @@ interface ApiResponse<T> {
   };
 }
 
-const API_CONFIG = {
+export const API_CONFIG = {
   baseUrl: import.meta.env.PUBLIC_API_URL || 'http://localhost:1337/api',
-  timeout: 10000, // 10 segundos
+  timeout: 10000,
   retryAttempts: 3,
-  retryDelay: 1000, // 1 segundo
+  retryDelay: 1000,
 } as const;
 
-const handleApiError = (error: unknown): never => {
-  if (error instanceof Response) {
-    throw new Error(`HTTP error! status: ${error.status}`);
-  }
-  throw error;
+const handleError = (error: unknown) => {
+  console.error('API Error:', error);
+  throw error instanceof Error ? error : new Error('Unknown error occurred');
 };
 
 const withRetry = async <T>(
@@ -116,17 +113,15 @@ export async function getAllRestaurants() {
 }
 
 export async function getRestaurant(documentId: string) {
-  if (!documentId) {
-    throw new Error('Document ID is required');
-  }
-
-  console.log('Buscando restaurante con documentId:', documentId);
-
   try {
-    const response = await apiClient.fetch<ApiResponse<Restaurant>>(
-      `/restaurants/${documentId}`
+    const response = await fetch(
+      `${API_CONFIG.baseUrl}/restaurants/${documentId}?populate=*`
     );
-    return response.data;
+    if (!response.ok) {
+      throw new Error('No se encontró el restaurante');
+    }
+    const restaurantData = await response.json();
+    return restaurantData.data;
   } catch (error) {
     console.error('Error fetching restaurant:', error);
     return null;
@@ -168,27 +163,28 @@ export async function createReview(reviewData: Review) {
 }
 
 export async function incrementTaps(documentId: string) {
+  console.log('=== INICIO INCREMENT TAPS ===');
   try {
-    // 1. Obtener el restaurante actual por documentId
-    const restaurantData = await apiClient.fetch<ApiResponse<Restaurant>>(
-      `/restaurants/${documentId}`
+    const response = await fetch(
+      `${API_CONFIG.baseUrl}/restaurants/${documentId}`
     );
+    const restaurantData = await response.json();
 
-    if (!restaurantData.data) {
-      throw new Error('No se encontró el restaurante');
-    }
+    console.log('Datos obtenidos del restaurante:', restaurantData);
 
-    // 2. Incrementar taps
     const currentTaps = parseInt(restaurantData.data.taps || '0');
     const newTaps = currentTaps + 1;
 
-    console.log('Actualizando taps a:', newTaps);
+    console.log('Taps actuales:', currentTaps);
+    console.log('Nuevos taps:', newTaps);
 
-    // 3. Actualizar el restaurante
-    const updateResult = await apiClient.fetch<ApiResponse<Restaurant>>(
-      `/restaurants/${documentId}`,
+    const updateResponse = await fetch(
+      `${API_CONFIG.baseUrl}/restaurants/${documentId}`,
       {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           data: {
             taps: newTaps.toString(),
@@ -197,8 +193,8 @@ export async function incrementTaps(documentId: string) {
       }
     );
 
-    console.log('Taps actualizado correctamente:', updateResult);
-    return updateResult;
+    console.log('Respuesta de actualización:', await updateResponse.json());
+    console.log('=== FIN INCREMENT TAPS ===');
   } catch (error) {
     console.error('Error incrementando taps:', error);
     throw error;

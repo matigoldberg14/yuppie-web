@@ -17,10 +17,9 @@ const {
   noindex = false
 } = Astro.props;
 
-// Detectar el ambiente
-const isProd = import.meta.env.PROD;
-const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const canonicalURL = new URL(Astro.url.pathname, 'http://localhost:4321');
 ---
+
 
 <!DOCTYPE html>
 <html lang="es" class="scroll-smooth">

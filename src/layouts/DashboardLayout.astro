@@ -1,6 +1,6 @@
 ---
-// src/layouts/DashboardLayout.astro
 import { Icon } from 'astro-icon/components';
+import { auth } from '../lib/firebase';
 
 interface Props {
   title: string;
@@ -8,15 +8,20 @@ interface Props {
 
 const { title } = Astro.props;
 
-const navItems = [
+type NavItem = {
+  href: string;
+  icon: string;
+  label: string;
+};
+
+const navItems: NavItem[] = [
   { href: '/dashboard', icon: 'lucide:home', label: 'Dashboard' },
   { href: '/dashboard/locales', icon: 'lucide:building-2', label: 'Locales' },
   { href: '/dashboard/personal', icon: 'lucide:users', label: 'Personal' },
   { href: '/dashboard/reviews', icon: 'lucide:message-square', label: 'Reviews' },
-  { href: '/dashboard/settings', icon: 'lucide:settings', label: 'Configuración' },
+  { href: '/dashboard/settings', icon: 'lucide:settings', label: 'Configuración' }
 ];
 
-// Detectar la ruta actual
 const currentPath = Astro.url.pathname;
 ---
 
@@ -29,7 +34,6 @@ const currentPath = Astro.url.pathname;
   </head>
   <body class="min-h-screen bg-[#1a1a1a]">
     <div class="flex min-h-screen">
-      <!-- Sidebar -->
       <aside class="w-64 bg-[#2F02CC] flex flex-col">
         <div class="h-16 flex items-center px-4 border-b border-white/10">
           <a href="/dashboard" class="flex items-center gap-2">
@@ -40,15 +44,14 @@ const currentPath = Astro.url.pathname;
 
         <nav class="flex-1 p-4 space-y-1">
           {navItems.map((item) => (
-            <a
+            <a>
               href={item.href}
-              class={`
-                flex items-center gap-3 px-4 py-3 rounded-lg transition-all
-                ${currentPath === item.href 
-                  ? 'bg-white/10 text-white' 
-                  : 'text-white/60 hover:text-white hover:bg-white/5'}
-              `}
-            >
+              class:list={[
+                'flex items-center gap-3 px-4 py-3 rounded-lg transition-all',
+                currentPath === item.href
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
+              ]}
               <Icon name={item.icon} class="h-5 w-5" />
               <span class="font-medium">{item.label}</span>
             </a>
@@ -60,7 +63,6 @@ const currentPath = Astro.url.pathname;
         </div>
       </aside>
 
-      <!-- Main content -->
       <div class="flex-1 flex flex-col">
         <header class="h-16 bg-[#2F02CC]/5 border-b border-white/10 flex items-center px-6">
           <h1 class="text-xl font-semibold text-white">{title}</h1>

@@ -29,50 +29,33 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
   };
 
   const handleRatingSelect = async (rating: number) => {
+    if (isSubmitting) return;
+
     try {
       setIsSubmitting(true);
+      setSelectedRating(rating);
 
       if (rating === 5) {
-        // Para calificación 5, creamos la review simplificada y redirigimos a Google
         await createReview({
           restaurantId,
           calification: rating,
           googleSent: true,
         });
 
-        // Animación de éxito antes de redireccionar
-        toast({
-          title: '¡Gracias por tu calificación!',
-          description: 'Te estamos redirigiendo a Google para tu reseña...',
-          duration: 2000,
-        });
-
-        setTimeout(() => {
-          window.location.href = linkMaps;
-        }, 2000);
+        // Usar window.location.href para redirección confiable
+        window.location.href = linkMaps;
       } else {
-        // Para otras calificaciones, guardamos el rating y continuamos el flujo
         localStorage.setItem('yuppie_rating', rating.toString());
         localStorage.setItem('yuppie_restaurant', restaurantId);
 
-        toast({
-          title: 'Calificación registrada',
-          description: 'Cuéntanos más sobre tu experiencia...',
-          duration: 1500,
-        });
-
-        setTimeout(() => {
-          window.location.href = nextUrl;
-        }, 1500);
+        // Usar window.location.href para redirección confiable
+        window.location.href = nextUrl;
       }
     } catch (error) {
       console.error('Error al procesar calificación:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description:
-          'Hubo un problema al procesar tu calificación. Por favor, intenta nuevamente.',
-      });
+      alert(
+        'Hubo un error al procesar tu calificación. Por favor, intenta nuevamente.'
+      );
       setIsSubmitting(false);
     }
   };
