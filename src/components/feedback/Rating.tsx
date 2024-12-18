@@ -1,3 +1,5 @@
+// src/components/feedback/Rating.tsx
+
 import { useState } from 'react';
 import { createReview } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';

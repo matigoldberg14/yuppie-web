@@ -1,3 +1,4 @@
+// src/services/api.ts
 interface Restaurant {
   id: number;
   documentId: string;

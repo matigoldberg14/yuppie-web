@@ -1,3 +1,4 @@
+// src/types/restaurant.ts
 export type Restaurant = {
   id: number;
   attributes: {

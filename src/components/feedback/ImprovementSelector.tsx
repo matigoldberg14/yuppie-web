@@ -1,3 +1,5 @@
+// src/components/feedback/ImprovementSelector.tsx
+
 import { motion, AnimatePresence } from 'framer-motion';
 
 const improvementOptions = [
