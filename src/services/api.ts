@@ -21,7 +21,7 @@ interface Restaurant {
 }
 
 interface Review {
-  restaurantId: string;
+  restaurantId: string | number;
   calification: number;
   typeImprovement?: string | null;
   email?: string | null;
@@ -113,71 +113,28 @@ export async function getAllRestaurants() {
   }
 }
 
-export async function getRestaurant(documentId: string) {
-  try {
-    const response = await fetch(
-      `${API_CONFIG.baseUrl}/restaurants/${documentId}?populate=*`
-    );
-    if (!response.ok) {
-      throw new Error('No se encontró el restaurante');
-    }
-    const restaurantData = await response.json();
-    return restaurantData.data;
-  } catch (error) {
-    console.error('Error fetching restaurant:', error);
-    return null;
-  }
-}
-
-export async function createReview(reviewData: Review) {
-  try {
-    if (!reviewData.restaurantId) {
-      throw new Error('El ID del restaurante es requerido');
-    }
-
-    if (isNaN(parseInt(reviewData.restaurantId))) {
-      throw new Error('El ID del restaurante debe ser un número');
-    }
-
-    const formattedData = {
-      data: {
-        restaurant: parseInt(reviewData.restaurantId),
-        calification: reviewData.calification,
-        googleSent: reviewData.googleSent,
-        typeImprovement: reviewData.typeImprovement,
-        email: reviewData.email,
-        comment: reviewData.comment,
-        date: new Date().toISOString().split('T')[0],
-      },
-    };
-
-    console.log('Sending to Strapi:', JSON.stringify(formattedData, null, 2));
-
-    return await apiClient.fetch<ApiResponse<Review>>('/reviews', {
-      method: 'POST',
-      body: JSON.stringify(formattedData),
-    });
-  } catch (error) {
-    console.error('Error details:', error);
-    throw error;
-  }
-}
-
 export async function incrementTaps(documentId: string) {
-  console.log('=== INICIO INCREMENT TAPS ===');
   try {
+    console.log('Incrementando taps para documentId:', documentId);
+
+    // 1. Obtener el restaurante actual
     const response = await fetch(
       `${API_CONFIG.baseUrl}/restaurants/${documentId}`
     );
-    const restaurantData = await response.json();
 
-    console.log('Datos obtenidos del restaurante:', restaurantData);
+    if (!response.ok) {
+      console.error('Error obteniendo restaurante:', await response.text());
+      return null;
+    }
 
-    const currentTaps = parseInt(restaurantData.data.taps || '0');
+    const data = await response.json();
+    console.log('Datos del restaurante obtenido:', data);
+
+    // 2. Actualizar los taps
+    const currentTaps = parseInt(data.data.taps || '0');
     const newTaps = currentTaps + 1;
 
-    console.log('Taps actuales:', currentTaps);
-    console.log('Nuevos taps:', newTaps);
+    console.log('Actualizando taps de:', currentTaps, 'a:', newTaps);
 
     const updateResponse = await fetch(
       `${API_CONFIG.baseUrl}/restaurants/${documentId}`,
@@ -194,11 +151,67 @@ export async function incrementTaps(documentId: string) {
       }
     );
 
-    console.log('Respuesta de actualización:', await updateResponse.json());
-    console.log('=== FIN INCREMENT TAPS ===');
+    if (!updateResponse.ok) {
+      throw new Error(
+        `Error actualizando taps: ${await updateResponse.text()}`
+      );
+    }
+
+    const result = await updateResponse.json();
+    console.log('Resultado de la actualización:', result);
+
+    return result;
   } catch (error) {
-    console.error('Error incrementando taps:', error);
+    console.error('Error en incrementTaps:', error);
     throw error;
+  }
+}
+
+export async function createReview(reviewData: Review) {
+  try {
+    const formattedData = {
+      data: {
+        restaurant: reviewData.restaurantId, // documentId del restaurante
+        calification: reviewData.calification,
+        typeImprovement: reviewData.typeImprovement || null,
+        email: reviewData.email || null,
+        comment: reviewData.comment || null,
+        googleSent: reviewData.googleSent || false,
+        date: new Date().toISOString().split('T')[0],
+      },
+    };
+
+    const reviewResponse = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formattedData),
+    });
+
+    if (!reviewResponse.ok) {
+      throw new Error('Failed to create review');
+    }
+
+    return await reviewResponse.json();
+  } catch (error) {
+    console.error('Error in createReview:', error);
+    throw error;
+  }
+}
+
+export async function getRestaurant(documentId: string) {
+  try {
+    const response = await fetch(
+      `${API_CONFIG.baseUrl}/restaurants/${documentId}?populate=*`
+    );
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error('Error fetching restaurant:', error);
+    return null;
   }
 }
 

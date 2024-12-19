@@ -31,6 +31,7 @@ export function CommentForm({ restaurantId }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  // Validación del formulario
   useEffect(() => {
     try {
       commentSchema.parse(formData);
@@ -63,33 +64,44 @@ export function CommentForm({ restaurantId }: Props) {
     try {
       setIsSubmitting(true);
 
+      // Validar datos del formulario
       const validatedData = commentSchema.parse(formData);
 
-      const typeImprovement = localStorage.getItem('yuppie_improvement');
+      // Obtener datos guardados en localStorage
       const rating = Number(localStorage.getItem('yuppie_rating'));
+      const typeImprovement = localStorage.getItem('yuppie_improvement');
 
       if (!rating) {
         throw new Error('No se encontró la calificación');
       }
 
+      if (!typeImprovement && rating < 5) {
+        throw new Error('No se encontró el tipo de mejora');
+      }
+
+      // Crear la review completa
       await createReview({
         restaurantId,
         calification: rating,
         typeImprovement,
         email: validatedData.email,
         comment: validatedData.comment.trim(),
-        googleSent: false,
+        googleSent: rating === 5,
       });
 
+      // Limpiar localStorage
       localStorage.removeItem('yuppie_improvement');
       localStorage.removeItem('yuppie_rating');
+      localStorage.removeItem('yuppie_restaurant');
 
+      // Mostrar mensaje de éxito
       toast({
         title: '¡Gracias por tu comentario!',
         description: 'Tu feedback nos ayuda a mejorar',
         duration: 2000,
       });
 
+      // Redireccionar a la página de agradecimiento
       setTimeout(() => {
         window.location.href = '/thanks';
       }, 1500);

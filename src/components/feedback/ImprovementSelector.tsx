@@ -1,6 +1,7 @@
 // src/components/feedback/ImprovementSelector.tsx
-
 import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
+import { useToast } from '../ui/use-toast';
 
 const improvementOptions = [
   { id: 'Atención', label: 'Atención', icon: '🤝' },
@@ -16,9 +17,41 @@ type Props = {
 };
 
 export function ImprovementSelector({ restaurantId, nextUrl }: Props) {
-  const handleSelect = (improvement: string) => {
-    localStorage.setItem('yuppie_improvement', improvement);
-    window.location.href = nextUrl;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const handleSelect = async (improvement: string) => {
+    try {
+      setIsSubmitting(true);
+
+      // Verificar que tenemos el rating guardado
+      const rating = localStorage.getItem('yuppie_rating');
+      const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
+
+      if (!rating) {
+        throw new Error('No se encontró la calificación');
+      }
+
+      if (storedRestaurantId !== restaurantId) {
+        throw new Error('Error de coincidencia de restaurante');
+      }
+
+      // Guardar la mejora seleccionada
+      localStorage.setItem('yuppie_improvement', improvement);
+
+      // Navegar al siguiente paso
+      window.location.href = nextUrl;
+    } catch (error) {
+      console.error('Error al seleccionar mejora:', error);
+      setIsSubmitting(false);
+
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error desconocido',
+      });
+    }
   };
 
   return (
@@ -40,8 +73,14 @@ export function ImprovementSelector({ restaurantId, nextUrl }: Props) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1 }}
               onClick={() => handleSelect(id)}
-              className="w-full p-4 rounded-lg flex items-center gap-3 
-                bg-white/5 hover:bg-white/10 transition-colors text-white"
+              disabled={isSubmitting}
+              className={`w-full p-4 rounded-lg flex items-center gap-3 
+                ${
+                  isSubmitting
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'bg-white/5 hover:bg-white/10 transition-colors'
+                } 
+                text-white`}
             >
               <span role="img" aria-label={label} className="text-2xl">
                 {icon}
@@ -51,6 +90,16 @@ export function ImprovementSelector({ restaurantId, nextUrl }: Props) {
           ))}
         </div>
       </AnimatePresence>
+
+      {isSubmitting && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center text-white/80"
+        >
+          Procesando...
+        </motion.div>
+      )}
     </div>
   );
 }

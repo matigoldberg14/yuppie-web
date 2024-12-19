@@ -1,15 +1,14 @@
 // src/components/feedback/Rating.tsx
 
 import { useState } from 'react';
-import { createReview } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 
-type Props = {
+interface Props {
   restaurantId: string;
   nextUrl: string;
   linkMaps: string;
-};
+}
 
 const ratingOptions = [
   { rating: 1, emoji: '😠', label: 'Muy insatisfecho', color: 'bg-red-500' },
@@ -35,30 +34,28 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
 
     try {
       setIsSubmitting(true);
-      setSelectedRating(rating);
 
+      // Solo guardamos en localStorage y navegamos
+      localStorage.setItem('yuppie_rating', rating.toString());
+      localStorage.setItem('yuppie_restaurant', restaurantId);
+
+      // Si es 5 estrellas, va a Google Maps
       if (rating === 5) {
-        await createReview({
-          restaurantId,
-          calification: rating,
-          googleSent: true,
-        });
-
-        // Usar window.location.href para redirección confiable
         window.location.href = linkMaps;
       } else {
-        localStorage.setItem('yuppie_rating', rating.toString());
-        localStorage.setItem('yuppie_restaurant', restaurantId);
-
-        // Usar window.location.href para redirección confiable
+        // Si no, va al siguiente paso
         window.location.href = nextUrl;
       }
     } catch (error) {
-      console.error('Error al procesar calificación:', error);
-      alert(
-        'Hubo un error al procesar tu calificación. Por favor, intenta nuevamente.'
-      );
+      console.error('Error procesando calificación:', error);
       setIsSubmitting(false);
+
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error desconocido',
+      });
     }
   };
 
@@ -97,7 +94,6 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
                 {emoji}
               </span>
 
-              {/* Tooltip */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{
@@ -109,7 +105,6 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
                 {label}
               </motion.div>
 
-              {/* Indicator dot */}
               <motion.div
                 initial={false}
                 animate={{

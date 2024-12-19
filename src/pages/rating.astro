@@ -1,36 +1,27 @@
 ---
 // src/pages/rating.astro
-
 import Layout from '../layouts/Layout.astro';
 import { RatingForm } from '../components/feedback/Rating';
 import { getRestaurant, incrementTaps } from '../services/api';
 
-console.log('=== INICIO DE RATING.ASTRO ===');
-
-const localId = Astro.url.searchParams.get('local');
-if (!localId) {
+const documentId = Astro.url.searchParams.get('local');
+if (!documentId) {
   return Astro.redirect('/404');
 }
 
 let restaurant;
 try {
-  console.log('Obteniendo restaurante con ID:', localId);
-  restaurant = await getRestaurant(localId);
-  
+  restaurant = await getRestaurant(documentId);
   if (!restaurant) {
-    throw new Error('No se encontró el restaurante');
+    throw new Error('Restaurant not found');
   }
 
-  console.log('Restaurante encontrado, taps actuales:', restaurant.taps);
-  await incrementTaps(localId);
-  console.log('Taps incrementados');
-
+  // Incrementar taps solo una vez
+  await incrementTaps(documentId);
 } catch (error) {
-  console.error('Error:', error);
+  console.error('Error in rating:', error);
   return Astro.redirect('/404');
 }
-
-console.log('=== FIN DE RATING.ASTRO ===');
 ---
 
 <Layout title="Califica tu experiencia">
@@ -44,8 +35,8 @@ console.log('=== FIN DE RATING.ASTRO ===');
         <h2 class="text-2xl font-semibold mb-4 text-center">Califica tu experiencia</h2>
         <RatingForm 
           client:load 
-          restaurantId={restaurant.id.toString()}
-          nextUrl={`/improvement?local=${localId}`}
+          restaurantId={documentId}
+          nextUrl={`/improvement?local=${documentId}`}
           linkMaps={restaurant.linkMaps}
         />
       </div>

@@ -1,32 +1,37 @@
 ---
 // src/pages/improvement.astro
-
 import Layout from '../layouts/Layout.astro';
 import { ImprovementSelector } from '../components/feedback/ImprovementSelector';
 import { getRestaurant } from '../services/api';
 
-const restaurantId = Astro.url.searchParams.get('local');
-const restaurant = restaurantId ? await getRestaurant(restaurantId) : null;
+const documentId = Astro.url.searchParams.get('local');
 
+// Si no hay documentId, redirigir
+if (!documentId) {
+  return Astro.redirect('/404');
+}
+
+const restaurant = await getRestaurant(documentId);
+
+// Si no se encuentra el restaurante, redirigir
 if (!restaurant) {
   return Astro.redirect('/404');
 }
-const restaurantIdString = restaurant.id.toString();
 ---
 
 <Layout title="¿En qué podríamos mejorar?">
   <div class="min-h-screen bg-gradient flex flex-col items-center justify-center p-4">
     <div class="w-full max-w-md">
       <h1 class="text-4xl font-bold mb-6 text-center text-shadow">
-        Yuppie
+        {restaurant.name}
       </h1>
       
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">¿En qué podríamos mejorar?</h2>
         <ImprovementSelector 
           client:load 
-          restaurantId={restaurantIdString}
-          nextUrl={`/comment?local=${restaurantId}`}
+          restaurantId={documentId}
+          nextUrl={`/comment?local=${documentId}`}
         />
       </div>
     </div>
@@ -41,4 +46,3 @@ const restaurantIdString = restaurant.id.toString();
     transform: translateY(-5px);
   }
 </style>
-
