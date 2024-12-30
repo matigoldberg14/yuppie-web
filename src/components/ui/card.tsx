@@ -1,82 +1,43 @@
-// src/components/ui/card.tsx
-export function Card({
-  className = '',
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={`rounded-lg bg-white/5 p-6 ${className}`}>{children}</div>
-  );
-}
+// src/components/ui/Card.tsx
+import * as React from 'react';
 
-export function CardHeader({
-  className = '',
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={`flex items-center justify-between mb-4 ${className}`}>
-      {children}
-    </div>
-  );
-}
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {}
 
-export function CardTitle({
-  className = '',
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return <h3 className={`text-lg font-semibold ${className}`}>{children}</h3>;
-}
+export const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className = '', ...props }, ref) => (
+    <div ref={ref} className={`rounded-lg shadow-sm ${className}`} {...props} />
+  )
+);
+Card.displayName = 'Card';
 
-export function CardContent({
-  className = '',
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return <div className={className}>{children}</div>;
-}
+export const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
+  ({ className = '', ...props }, ref) => (
+    <div
+      ref={ref}
+      className={`flex flex-col space-y-1.5 p-6 ${className}`}
+      {...props}
+    />
+  )
+);
+CardHeader.displayName = 'CardHeader';
 
-// src/components/ui/select.tsx
-interface SelectProps {
-  value: string;
-  onValueChange: (value: string) => void;
-  options: { value: string; label: string }[];
-  placeholder?: string;
-  className?: string;
-}
+export const CardContent = React.forwardRef<HTMLDivElement, CardContentProps>(
+  ({ className = '', ...props }, ref) => (
+    <div ref={ref} className={`p-6 pt-0 ${className}`} {...props} />
+  )
+);
+CardContent.displayName = 'CardContent';
 
-export function Select({
-  value,
-  onValueChange,
-  options,
-  placeholder,
-  className = '',
-}: SelectProps) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onValueChange(e.target.value)}
-      className={`
-          bg-white/5 text-white border border-white/10 rounded-lg px-4 py-2
-          focus:outline-none focus:ring-2 focus:ring-white/20
-          ${className}
-        `}
-    >
-      {placeholder && <option value="">{placeholder}</option>}
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
-  );
-}
+export const CardTitle = React.forwardRef<HTMLHeadingElement, CardTitleProps>(
+  ({ className = '', ...props }, ref) => (
+    <h3
+      ref={ref}
+      className={`text-xl font-semibold leading-none tracking-tight ${className}`}
+      {...props}
+    />
+  )
+);
+CardTitle.displayName = 'CardTitle';
