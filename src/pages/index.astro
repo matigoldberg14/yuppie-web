@@ -1,14 +1,11 @@
 ---
 // src/pages/index.astro
-
 import Layout from '../layouts/Layout.astro';
 import { getAllRestaurants } from '../services/api';
-import type { Restaurant } from '../services/api';
 
 // Obtener todos los restaurantes de la base de datos
 const response = await getAllRestaurants();
 const restaurants = response.data;
-console.log('Restaurants loaded:', restaurants);
 ---
 
 <Layout title="Inicio | Yuppie">
@@ -22,7 +19,7 @@ console.log('Restaurants loaded:', restaurants);
     </p>
 
     <div class="grid gap-4 md:grid-cols-2 max-w-4xl">
-      {restaurants && restaurants.map((restaurant: Restaurant) => (
+      {restaurants && restaurants.map((restaurant) => (
         <a 
           href={`/rating?local=${restaurant.documentId}`}
           class="flex flex-col md:flex-row items-center bg-white/5 rounded-lg hover:bg-white/10 transition-all overflow-hidden"
@@ -51,9 +48,5 @@ console.log('Restaurants loaded:', restaurants);
         </a>
       ))}
     </div>
-
-    <footer class="mt-16 text-gray-400">
-      <p>© {new Date().getFullYear()} Yuppie. Todos los derechos reservados.</p>
-    </footer>
   </main>
 </Layout>

@@ -1,19 +1,34 @@
 ---
+// src/pages/dashboard/index.astro
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { Sidebar } from '../../components/dashboard/Sidebar';
 import { DashboardContent } from '../../components/dashboard/DashboardContent';
-
-// Datos temporales para la demo
-const userData = {
-  name: "Matías",
-};
+import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 ---
 
 <DashboardLayout title="Dashboard | Yuppie">
-  <div class="min-h-screen">
-    <Sidebar client:load />
-    <main class="pl-64">
-      <DashboardContent client:load userData={userData} />
-    </main>
-  </div>
+  <ProtectedRoute client:load>
+    <div class="min-h-screen">
+      <Sidebar client:load />
+      <main class="pl-64">
+        <DashboardContent client:load />
+      </main>
+    </div>
+  </ProtectedRoute>
 </DashboardLayout>
+
+<script>
+  // Script del lado del cliente para verificar auth
+  import { auth } from '../../lib/firebase';
+  import { onAuthStateChanged } from 'firebase/auth';
+
+  if (auth) {
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = '/login';
+      }
+    });
+  } else {
+    window.location.href = '/login';
+  }
+</script>

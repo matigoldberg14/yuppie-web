@@ -20,14 +20,26 @@ interface Restaurant {
   };
 }
 
+interface RestaurantData {
+  id: number;
+  documentId: string;
+  name: string;
+  owner: {
+    firstName: string;
+    lastName: string;
+  };
+}
+
 interface Review {
-  restaurantId: string | number;
+  restaurantId: number;
+  documentId: string;
   calification: number;
-  typeImprovement?: string | null;
-  email?: string | null;
-  comment?: string | null;
-  googleSent?: boolean;
-  date?: string;
+  typeImprovement: string;
+  comment: string;
+  email: string;
+  googleSent: boolean;
+  date: string;
+  createdAt: string;
 }
 
 interface ApiError extends Error {
@@ -215,4 +227,89 @@ export async function getRestaurant(documentId: string) {
   }
 }
 
+// src/services/api.ts
+interface Owner {
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+interface Restaurant {
+  id: number;
+  documentId: string;
+  name: string;
+  firebaseUID: string;
+  owner: Owner;
+}
+
+export async function getRestaurantByFirebaseUID(firebaseUID: string) {
+  try {
+    console.log('Fetching restaurant for UID:', firebaseUID);
+    const response = await fetch(
+      `${
+        import.meta.env.PUBLIC_API_URL
+      }/restaurants?filters[firebaseUID][$eq]=${firebaseUID}&populate=owner`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('API Full Response:', JSON.stringify(result, null, 2));
+
+    if (!result.data || result.data.length === 0) {
+      throw new Error('No restaurant found');
+    }
+
+    const restaurantData = result.data[0];
+
+    // Estructura el objeto basándonos en la respuesta real
+    return {
+      id: restaurantData.id,
+      documentId: restaurantData.documentId, // Añadido
+      name: restaurantData.name,
+      owner: {
+        firstName: restaurantData.owner.name || '',
+        lastName: restaurantData.owner.lastName || '',
+      },
+    };
+  } catch (error) {
+    console.error('Error in getRestaurantByFirebaseUID:', error);
+    return null;
+  }
+}
+
+export async function getRestaurantReviews(restaurantId: string) {
+  try {
+    console.log('Fetching reviews for restaurant:', restaurantId);
+    const response = await fetch(
+      `${
+        import.meta.env.PUBLIC_API_URL
+      }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*&sort[0]=createdAt:desc`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const { data } = await response.json();
+    console.log('Reviews data:', data);
+
+    return data.map((review: any) => ({
+      id: review.id,
+      documentId: review.documentId,
+      calification: review.calification,
+      typeImprovement: review.typeImprovement,
+      comment: review.comment,
+      email: review.email,
+      googleSent: review.googleSent,
+      date: review.date,
+      createdAt: review.createdAt,
+    }));
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    return [];
+  }
+}
 export type { ApiError, ApiResponse, Restaurant, Review };

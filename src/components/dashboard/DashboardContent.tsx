@@ -1,5 +1,7 @@
 // src/components/dashboard/DashboardContent.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { auth } from '../../lib/firebase';
+import { getRestaurantByFirebaseUID } from '../../services/api';
 import {
   Bell,
   ChevronDown,
@@ -77,14 +79,59 @@ const recentActivity = [
   },
 ];
 
-interface DashboardContentProps {
-  userData: {
-    name: string;
+interface RestaurantData {
+  name: string;
+  owner: {
+    firstName: string;
+    lastName: string;
   };
 }
 
-export function DashboardContent({ userData }: DashboardContentProps) {
-  const [progress] = React.useState(78);
+export function DashboardContent() {
+  const [restaurantData, setRestaurantData] = useState<RestaurantData | null>(
+    null
+  );
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (!auth?.currentUser?.uid) {
+          console.log('No hay usuario autenticado');
+          return;
+        }
+
+        console.log('Fetching data for:', auth.currentUser.uid);
+        const data = await getRestaurantByFirebaseUID(auth.currentUser.uid);
+        console.log('Restaurant data:', data);
+        setRestaurantData(data);
+      } catch (error) {
+        console.error('Error fetching restaurant:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="animate-pulse text-white">Cargando datos...</div>
+      </div>
+    );
+  }
+
+  if (!restaurantData) {
+    return (
+      <div className="p-8">
+        <div className="text-white">
+          No se encontraron datos del restaurante.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -92,11 +139,10 @@ export function DashboardContent({ userData }: DashboardContentProps) {
       <header className="p-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">
-            ¡Hola {userData.name}!
+            ¡Bienvenido {restaurantData.owner.firstName}{' '}
+            {restaurantData.owner.lastName}!
           </h1>
-          <p className="text-white/60">
-            Aquí tienes tu dashboard para gestionar experiencias.
-          </p>
+          <p className="text-white/60">Restaurante: {restaurantData.name}</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative">
@@ -157,8 +203,6 @@ export function DashboardContent({ userData }: DashboardContentProps) {
               </p>
             </CardContent>
           </Card>
-
-          {/* Resto de las cards de estadísticas... */}
         </div>
 
         {/* Main Content Grid */}

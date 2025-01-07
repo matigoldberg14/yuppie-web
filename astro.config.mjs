@@ -5,6 +5,9 @@ import path from 'path';
 import vercel from '@astrojs/vercel/serverless';
 import icon from 'astro-icon';
 
+// Importar el middleware
+import { authMiddleware } from './src/middleware/auth';
+
 export default defineConfig({
   integrations: [tailwind(), react(), icon()],
   output: 'server',
