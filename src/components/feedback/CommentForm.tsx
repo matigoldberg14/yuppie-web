@@ -16,7 +16,7 @@ const commentSchema = z.object({
 type CommentFormData = z.infer<typeof commentSchema>;
 
 type Props = {
-  restaurantId: string;
+  restaurantId: string; // Mantenemos como string aquí
 };
 
 export function CommentForm({ restaurantId }: Props) {
@@ -64,26 +64,26 @@ export function CommentForm({ restaurantId }: Props) {
     try {
       setIsSubmitting(true);
 
-      // Validar datos del formulario
       const validatedData = commentSchema.parse(formData);
 
-      // Obtener datos guardados en localStorage
       const rating = Number(localStorage.getItem('yuppie_rating'));
-      const typeImprovement = localStorage.getItem('yuppie_improvement');
+      const typeImprovement =
+        localStorage.getItem('yuppie_improvement') || undefined;
 
       if (!rating) {
         throw new Error('No se encontró la calificación');
       }
 
-      if (!typeImprovement && rating < 5) {
-        throw new Error('No se encontró el tipo de mejora');
+      // Convertir restaurantId a número aquí
+      const restaurantIdNumber = parseInt(restaurantId, 10);
+      if (isNaN(restaurantIdNumber)) {
+        throw new Error('ID de restaurante inválido');
       }
 
-      // Crear la review completa
       await createReview({
-        restaurantId,
+        restaurantId: restaurantIdNumber, // Ahora pasamos un número
         calification: rating,
-        typeImprovement,
+        typeImprovement: typeImprovement || 'Otra', // Aseguramos que siempre sea string
         email: validatedData.email,
         comment: validatedData.comment.trim(),
         googleSent: rating === 5,
@@ -94,14 +94,12 @@ export function CommentForm({ restaurantId }: Props) {
       localStorage.removeItem('yuppie_rating');
       localStorage.removeItem('yuppie_restaurant');
 
-      // Mostrar mensaje de éxito
       toast({
         title: '¡Gracias por tu comentario!',
         description: 'Tu feedback nos ayuda a mejorar',
         duration: 2000,
       });
 
-      // Redireccionar a la página de agradecimiento
       setTimeout(() => {
         window.location.href = '/thanks';
       }, 1500);

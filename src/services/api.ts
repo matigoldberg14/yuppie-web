@@ -20,6 +20,15 @@ interface Restaurant {
   };
 }
 
+export interface CreateReviewInput {
+  restaurantId: number;
+  calification: number;
+  typeImprovement: string;
+  email: string;
+  comment: string;
+  googleSent: boolean;
+}
+
 interface RestaurantData {
   id: number;
   documentId: string;
@@ -179,21 +188,24 @@ export async function incrementTaps(documentId: string) {
   }
 }
 
-export async function createReview(reviewData: Review) {
+// src/services/api.ts
+export async function createReview(
+  reviewData: CreateReviewInput
+): Promise<ApiResponse<Review>> {
   try {
     const formattedData = {
       data: {
-        restaurant: reviewData.restaurantId, // documentId del restaurante
+        restaurant: reviewData.restaurantId,
         calification: reviewData.calification,
-        typeImprovement: reviewData.typeImprovement || null,
-        email: reviewData.email || null,
-        comment: reviewData.comment || null,
-        googleSent: reviewData.googleSent || false,
+        typeImprovement: reviewData.typeImprovement,
+        email: reviewData.email,
+        comment: reviewData.comment,
+        googleSent: reviewData.googleSent,
         date: new Date().toISOString().split('T')[0],
       },
     };
 
-    const reviewResponse = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
+    const response = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -201,11 +213,12 @@ export async function createReview(reviewData: Review) {
       body: JSON.stringify(formattedData),
     });
 
-    if (!reviewResponse.ok) {
+    if (!response.ok) {
       throw new Error('Failed to create review');
     }
 
-    return await reviewResponse.json();
+    const json = await response.json();
+    return json;
   } catch (error) {
     console.error('Error in createReview:', error);
     throw error;
@@ -378,14 +391,17 @@ export async function getEmployeesByRestaurant(restaurantId: string) {
   }
 }
 
+// src/services/api.ts
 export async function createEmployee(employeeData: {
-  restaurantId: string;
   firstName: string;
   lastName: string;
   position: string;
-  schedules: { day: string; startTime: string; endTime: string }[];
+  photo: File | null;
+  scheduleIds: number[];
+  restaurantId: string;
 }) {
   try {
+    // Primero creamos el empleado
     const response = await fetch(
       `${import.meta.env.PUBLIC_API_URL}/employees`,
       {
@@ -400,21 +416,44 @@ export async function createEmployee(employeeData: {
             position: employeeData.position,
             active: true,
             restaurant: employeeData.restaurantId,
-            schedules: employeeData.schedules,
+            schedules: employeeData.scheduleIds,
           },
         }),
       }
     );
 
     if (!response.ok) {
-      throw new Error('Error creating employee');
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Error creating employee');
     }
 
-    return await response.json();
+    const result = await response.json();
+
+    // Si hay una foto, la subimos
+    if (employeeData.photo) {
+      const photoFormData = new FormData();
+      photoFormData.append('files', employeeData.photo);
+      photoFormData.append('ref', 'api::employee.employee');
+      photoFormData.append('refId', result.data.id);
+      photoFormData.append('field', 'photo');
+
+      const uploadResponse = await fetch(
+        `${import.meta.env.PUBLIC_API_URL}/upload`,
+        {
+          method: 'POST',
+          body: photoFormData,
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        console.error('Error uploading photo');
+      }
+    }
+
+    return result;
   } catch (error) {
     console.error('Error in createEmployee:', error);
     throw error;
   }
 }
-
 export type { ApiError, ApiResponse, Restaurant, Review };

@@ -77,19 +77,28 @@ export function TeamContent() {
     fetchEmployees();
   }, []);
 
-  const handleAddEmployee = async (employeeData: any) => {
+  const handleAddEmployee = async (data: {
+    firstName: string;
+    lastName: string;
+    position: string;
+    photo: File | null;
+    scheduleIds: number[];
+  }) => {
     try {
       if (!restaurantId) throw new Error('No restaurant ID');
+
       await createEmployee({
-        ...employeeData,
+        ...data,
         restaurantId,
       });
+
       // Vuelve a cargar la lista de empleados
       const updatedEmployees = await getEmployeesByRestaurant(restaurantId);
       setEmployees(updatedEmployees);
       setIsAddingEmployee(false);
     } catch (error) {
       console.error('Error adding employee:', error);
+      throw error;
     }
   };
 
@@ -165,11 +174,14 @@ export function TeamContent() {
       </div>
 
       {/* Formulario para agregar empleado */}
-      <AddEmployeeForm
-        isOpen={isAddingEmployee}
-        onClose={() => setIsAddingEmployee(false)}
-        onSubmit={handleAddEmployee}
-      />
+      {restaurantId && (
+        <AddEmployeeForm
+          isOpen={isAddingEmployee}
+          onClose={() => setIsAddingEmployee(false)}
+          onSubmit={handleAddEmployee}
+          restaurantId={restaurantId}
+        />
+      )}
     </div>
   );
 }
