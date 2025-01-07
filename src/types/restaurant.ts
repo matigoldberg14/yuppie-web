@@ -6,7 +6,7 @@ export type Restaurant = {
     createdAt: string;
     updatedAt: string;
     publishedAt: string;
-    // Nota: documentId podría no existir en tu estructura actual
+    // Nota: documentId podría no existir en la estructura actual
     documentId?: string;
   };
 };

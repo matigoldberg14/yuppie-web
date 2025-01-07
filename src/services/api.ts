@@ -267,7 +267,7 @@ export async function getRestaurantByFirebaseUID(firebaseUID: string) {
     // Estructura el objeto basándonos en la respuesta real
     return {
       id: restaurantData.id,
-      documentId: restaurantData.documentId, // Añadido
+      documentId: restaurantData.documentId,
       name: restaurantData.name,
       owner: {
         firstName: restaurantData.owner.name || '',
@@ -312,4 +312,109 @@ export async function getRestaurantReviews(restaurantId: string) {
     return [];
   }
 }
+
+// src/services/api.ts
+// Añadir interfaces
+interface Employee {
+  id: number;
+  documentId: string;
+  firstName: string;
+  lastName: string;
+  position: string;
+  active: boolean;
+  photo?: {
+    url: string;
+    formats: {
+      thumbnail: {
+        url: string;
+      };
+    };
+  };
+  schedules: Schedule[];
+}
+
+interface Schedule {
+  id: number;
+  documentId: string;
+  day:
+    | 'monday'
+    | 'tuesday'
+    | 'wednesday'
+    | 'thursday'
+    | 'friday'
+    | 'saturday'
+    | 'sunday';
+  startTime: string;
+  endTime: string;
+}
+
+// Añadir funciones para empleados
+export async function getEmployeesByRestaurant(restaurantId: string) {
+  try {
+    const response = await fetch(
+      `${
+        import.meta.env.PUBLIC_API_URL
+      }/employees?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*`
+    );
+
+    if (!response.ok) {
+      throw new Error('Error fetching employees');
+    }
+
+    const { data } = await response.json();
+    return data.map((employee: any) => ({
+      id: employee.id,
+      documentId: employee.documentId,
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      position: employee.position,
+      active: employee.active,
+      photo: employee.photo,
+      schedules: employee.schedules,
+    }));
+  } catch (error) {
+    console.error('Error in getEmployeesByRestaurant:', error);
+    return [];
+  }
+}
+
+export async function createEmployee(employeeData: {
+  restaurantId: string;
+  firstName: string;
+  lastName: string;
+  position: string;
+  schedules: { day: string; startTime: string; endTime: string }[];
+}) {
+  try {
+    const response = await fetch(
+      `${import.meta.env.PUBLIC_API_URL}/employees`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: {
+            firstName: employeeData.firstName,
+            lastName: employeeData.lastName,
+            position: employeeData.position,
+            active: true,
+            restaurant: employeeData.restaurantId,
+            schedules: employeeData.schedules,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Error creating employee');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error in createEmployee:', error);
+    throw error;
+  }
+}
+
 export type { ApiError, ApiResponse, Restaurant, Review };

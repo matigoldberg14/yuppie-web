@@ -1,119 +1,175 @@
 // src/components/dashboard/TeamContent.tsx
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Input } from '../ui/input';
-import { Button } from '../ui/Button';
-import { Search, Plus, MoreVertical, Star } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
 
-const teamData = [
-  {
-    id: 1,
-    name: 'Ana Rodríguez',
-    role: 'Community Manager',
-    performance: 95,
-    reviewsHandled: 230,
-    avgRating: 4.8,
-    avatar: '/placeholder.svg',
-  },
-  {
-    id: 2,
-    name: 'Carlos Gómez',
-    role: 'Customer Success',
-    performance: 88,
-    reviewsHandled: 180,
-    avgRating: 4.6,
-    avatar: '/placeholder.svg',
-  },
-  // Puedes agregar más miembros aquí
-];
+import React, { useState, useEffect } from 'react';
+import { auth } from '../../lib/firebase';
+import {
+  getRestaurantByFirebaseUID,
+  getEmployeesByRestaurant,
+  createEmployee,
+} from '../../services/api';
+import { Plus, User } from 'lucide-react';
+import { Card, CardContent } from '../ui/Card';
+import { Button } from '../ui/Button';
+import { AddEmployeeForm } from './AddEmployeeForm';
+
+// En TeamContent.tsx, actualiza la interfaz Employee
+interface Schedule {
+  id: number;
+  documentId: string;
+  day: string;
+  startTime: string;
+  endTime: string;
+}
+
+interface Employee {
+  id: number;
+  documentId: string;
+  firstName: string;
+  lastName: string;
+  position: string;
+  active: boolean;
+  photo?: {
+    url: string;
+    formats: {
+      thumbnail: {
+        url: string;
+      };
+    };
+  };
+  schedules: Schedule[];
+}
 
 export function TeamContent() {
-  return (
-    <div className="p-6">
-      <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Equipo</h1>
-        <Button variant="primary">
-          <Plus className="mr-2 h-4 w-4" /> Agregar miembro
-        </Button>
-      </header>
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddingEmployee, setIsAddingEmployee] = useState(false);
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
-      <div className="mb-6 flex justify-between items-center">
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/60" />
-          <Input
-            placeholder="Buscar miembro..."
-            className="pl-9 bg-white/10 border-0 text-white"
-          />
-        </div>
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        if (!auth?.currentUser?.uid) {
+          console.log('No hay usuario autenticado');
+          return;
+        }
+
+        const restaurantData = await getRestaurantByFirebaseUID(
+          auth.currentUser.uid
+        );
+
+        if (!restaurantData) {
+          throw new Error('No se encontró el restaurante');
+        }
+
+        setRestaurantId(restaurantData.documentId);
+
+        const employeesData = await getEmployeesByRestaurant(
+          restaurantData.documentId
+        );
+        setEmployees(employeesData);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
+  const handleAddEmployee = async (employeeData: any) => {
+    try {
+      if (!restaurantId) throw new Error('No restaurant ID');
+      await createEmployee({
+        ...employeeData,
+        restaurantId,
+      });
+      // Vuelve a cargar la lista de empleados
+      const updatedEmployees = await getEmployeesByRestaurant(restaurantId);
+      setEmployees(updatedEmployees);
+      setIsAddingEmployee(false);
+    } catch (error) {
+      console.error('Error adding employee:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="animate-pulse text-white">Cargando equipo...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8">
+      {/* Encabezado */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-white">Equipo</h1>
+        <Button
+          onClick={() => setIsAddingEmployee(true)}
+          className="bg-white text-black hover:bg-white/90"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Agregar miembro
+        </Button>
       </div>
 
-      <Card className="bg-white/10 border-0">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-white/10">
-              <th className="text-left p-4 text-white/60">Miembro</th>
-              <th className="text-left p-4 text-white/60">Rol</th>
-              <th className="text-left p-4 text-white/60">Performance</th>
-              <th className="text-left p-4 text-white/60">Reseñas</th>
-              <th className="text-left p-4 text-white/60">Rating</th>
-              <th className="p-4"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {teamData.map((member) => (
-              <tr key={member.id} className="border-b border-white/10">
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src={member.avatar} />
-                      <AvatarFallback>{member.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-white font-medium">{member.name}</p>
+      {/* Lista de Empleados */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {employees.map((employee) => (
+          <Card key={employee.documentId} className="bg-white/10 border-0">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                  {employee.photo ? (
+                    <img
+                      src={`http://localhost:1337${employee.photo.formats.thumbnail.url}`}
+                      alt={`${employee.firstName} ${employee.lastName}`}
+                      className="h-12 w-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-6 w-6 text-white" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">
+                    {employee.firstName} {employee.lastName}
+                  </h3>
+                  <p className="text-sm text-white/60">{employee.position}</p>
+                </div>
+              </div>
+
+              {/* Horarios */}
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-white mb-2">
+                  Horarios:
+                </h4>
+                <div className="space-y-1">
+                  {employee.schedules.map((schedule) => (
+                    <div
+                      key={schedule.documentId}
+                      className="text-sm text-white/60"
+                    >
+                      {schedule.day.charAt(0).toUpperCase() +
+                        schedule.day.slice(1)}
+                      : {schedule.startTime.slice(0, 5)} -{' '}
+                      {schedule.endTime.slice(0, 5)}
                     </div>
-                  </div>
-                </td>
-                <td className="p-4 text-white">{member.role}</td>
-                <td className="p-4">
-                  <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-400">
-                    {member.performance}%
-                  </span>
-                </td>
-                <td className="p-4 text-white">{member.reviewsHandled}</td>
-                <td className="p-4">
-                  <div className="flex items-center text-white">
-                    {member.avgRating}
-                    <Star className="h-4 w-4 text-yellow-400 ml-1" />
-                  </div>
-                </td>
-                <td className="p-4">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem>Ver perfil</DropdownMenuItem>
-                      <DropdownMenuItem>Editar</DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Formulario para agregar empleado */}
+      <AddEmployeeForm
+        isOpen={isAddingEmployee}
+        onClose={() => setIsAddingEmployee(false)}
+        onSubmit={handleAddEmployee}
+      />
     </div>
   );
 }
