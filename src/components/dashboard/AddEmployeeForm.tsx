@@ -1,8 +1,8 @@
 // src/components/dashboard/AddEmployeeForm.tsx
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/input';
-import { Dialog, DialogContent } from '../ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
 import { X, Upload, User, Plus, Trash } from 'lucide-react';
 import { useToast } from '../ui/use-toast';
 
@@ -43,6 +43,7 @@ export function AddEmployeeForm({
   const [availableSchedules, setAvailableSchedules] = useState<Schedule[]>([]);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Cargar horarios disponibles
   useEffect(() => {
@@ -74,9 +75,34 @@ export function AddEmployeeForm({
     }));
   };
 
+  const handlePhotoClick = () => {
+    console.log('handlePhotoClick se disparó');
+    fileInputRef.current?.click();
+  };
+
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validar tipo de archivo
+      if (!file.type.startsWith('image/')) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Por favor seleccione una imagen válida',
+        });
+        return;
+      }
+
+      // Validar tamaño (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'La imagen no debe superar los 5MB',
+        });
+        return;
+      }
+
       setFormState((prev) => ({
         ...prev,
         photo: file,
@@ -160,7 +186,7 @@ export function AddEmployeeForm({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="bg-gray-900 text-white max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Agregar nuevo miembro</h2>
+          <DialogTitle>Agregar nuevo miembro</DialogTitle>
           <button
             onClick={handleClose}
             className="text-gray-500 hover:text-gray-400"
@@ -183,18 +209,23 @@ export function AddEmployeeForm({
                 <User className="w-12 h-12 text-gray-400" />
               )}
             </div>
-            <label className="cursor-pointer">
-              <Input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handlePhotoChange}
-              />
-              <div className="flex items-center gap-2 text-sm text-white/60 hover:text-white">
-                <Upload className="w-4 h-4" />
-                Subir foto
-              </div>
-            </label>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoChange}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handlePhotoClick}
+              className="text-sm text-white/60 hover:text-white flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Subir foto
+            </Button>
           </div>
 
           <div className="space-y-4">
