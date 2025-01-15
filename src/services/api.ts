@@ -391,15 +391,24 @@ export async function getEmployeesByRestaurant(restaurantId: string) {
   }
 }
 
-// src/services/api.ts
-export async function createEmployee(employeeData: {
+interface CreateEmployeeInput {
   firstName: string;
   lastName: string;
   position: string;
   photo: File | null;
-  scheduleIds: number[];
+  scheduleIds: string[];
   restaurantId: string;
-}) {
+}
+
+interface UpdateEmployeeData {
+  firstName: string;
+  lastName: string;
+  position: string;
+  scheduleIds: string[];
+  photo: File | null;
+}
+
+export async function createEmployee(employeeData: CreateEmployeeInput) {
   try {
     // Primero creamos el empleado
     const response = await fetch(
@@ -456,4 +465,66 @@ export async function createEmployee(employeeData: {
     throw error;
   }
 }
+
+export async function deleteEmployee(documentId: string): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `${import.meta.env.PUBLIC_API_URL}/employees/${documentId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Error deleting employee');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in deleteEmployee:', error);
+    throw error;
+  }
+}
+
+export async function updateEmployee(
+  documentId: string,
+  employeeData: UpdateEmployeeData
+): Promise<boolean> {
+  try {
+    // Actualizar solo los datos básicos del empleado
+    const response = await fetch(
+      `${import.meta.env.PUBLIC_API_URL}/employees/${documentId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: {
+            firstName: employeeData.firstName,
+            lastName: employeeData.lastName,
+            position: employeeData.position,
+            schedules: employeeData.scheduleIds,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error actualizando empleado:', errorText);
+      throw new Error('Error updating employee');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in updateEmployee:', error);
+    throw error;
+  }
+}
+
 export type { ApiError, ApiResponse, Restaurant, Review };

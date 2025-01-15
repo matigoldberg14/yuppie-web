@@ -6,15 +6,17 @@ import {
   getRestaurantByFirebaseUID,
   getEmployeesByRestaurant,
   createEmployee,
+  deleteEmployee,
+  updateEmployee,
 } from '../../services/api';
-import { Plus, User } from 'lucide-react';
+import { Plus, User, Trash, Edit2 } from 'lucide-react';
 import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { AddEmployeeForm } from './AddEmployeeForm';
+import { useToast } from '../ui/use-toast';
 
-// En TeamContent.tsx, actualiza la interfaz Employee
 interface Schedule {
-  id: number;
+  id: string;
   documentId: string;
   day: string;
   startTime: string;
@@ -43,7 +45,9 @@ export function TeamContent() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -82,7 +86,7 @@ export function TeamContent() {
     lastName: string;
     position: string;
     photo: File | null;
-    scheduleIds: number[];
+    scheduleIds: string[];
   }) => {
     try {
       if (!restaurantId) throw new Error('No restaurant ID');
@@ -96,9 +100,83 @@ export function TeamContent() {
       const updatedEmployees = await getEmployeesByRestaurant(restaurantId);
       setEmployees(updatedEmployees);
       setIsAddingEmployee(false);
+
+      toast({
+        title: 'Éxito',
+        description: 'Empleado agregado correctamente',
+      });
     } catch (error) {
       console.error('Error adding employee:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo agregar el empleado',
+      });
       throw error;
+    }
+  };
+
+  const handleEditEmployee = async (data: {
+    firstName: string;
+    lastName: string;
+    position: string;
+    photo: File | null;
+    scheduleIds: string[];
+  }) => {
+    try {
+      if (!editingEmployee) return;
+
+      await updateEmployee(editingEmployee.documentId, {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        position: data.position,
+        scheduleIds: data.scheduleIds,
+        photo: data.photo,
+      });
+
+      // Actualizar la lista de empleados
+      if (restaurantId) {
+        const updatedEmployees = await getEmployeesByRestaurant(restaurantId);
+        setEmployees(updatedEmployees);
+      }
+
+      setEditingEmployee(null);
+      toast({
+        title: 'Éxito',
+        description: 'Empleado actualizado correctamente',
+      });
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo actualizar el empleado',
+      });
+    }
+  };
+
+  const handleDeleteEmployee = async (employeeId: string) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este empleado?')) {
+      return;
+    }
+
+    try {
+      await deleteEmployee(employeeId);
+
+      // Actualizar la lista de empleados después de eliminar
+      setEmployees(employees.filter((emp) => emp.documentId !== employeeId));
+
+      toast({
+        title: 'Éxito',
+        description: 'Empleado eliminado correctamente',
+      });
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo eliminar el empleado',
+      });
     }
   };
 
@@ -129,23 +207,43 @@ export function TeamContent() {
         {employees.map((employee) => (
           <Card key={employee.documentId} className="bg-white/10 border-0">
             <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
-                  {employee.photo ? (
-                    <img
-                      src={`http://localhost:1337${employee.photo.formats.thumbnail.url}`}
-                      alt={`${employee.firstName} ${employee.lastName}`}
-                      className="h-12 w-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <User className="h-6 w-6 text-white" />
-                  )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                    {employee.photo ? (
+                      <img
+                        src={`http://localhost:1337${employee.photo.formats.thumbnail.url}`}
+                        alt={`${employee.firstName} ${employee.lastName}`}
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-6 w-6 text-white" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">
+                      {employee.firstName} {employee.lastName}
+                    </h3>
+                    <p className="text-sm text-white/60">{employee.position}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    {employee.firstName} {employee.lastName}
-                  </h3>
-                  <p className="text-sm text-white/60">{employee.position}</p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditingEmployee(employee)}
+                    className="text-blue-400 hover:text-blue-500 hover:bg-blue-400/10"
+                  >
+                    <Edit2 className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteEmployee(employee.documentId)}
+                    className="text-red-400 hover:text-red-500 hover:bg-red-400/10"
+                  >
+                    <Trash className="h-5 w-5" />
+                  </Button>
                 </div>
               </div>
 
@@ -173,13 +271,17 @@ export function TeamContent() {
         ))}
       </div>
 
-      {/* Formulario para agregar empleado */}
+      {/* Formulario para agregar/editar empleado */}
       {restaurantId && (
         <AddEmployeeForm
-          isOpen={isAddingEmployee}
-          onClose={() => setIsAddingEmployee(false)}
-          onSubmit={handleAddEmployee}
+          isOpen={isAddingEmployee || !!editingEmployee}
+          onClose={() => {
+            setIsAddingEmployee(false);
+            setEditingEmployee(null);
+          }}
+          onSubmit={editingEmployee ? handleEditEmployee : handleAddEmployee}
           restaurantId={restaurantId}
+          initialData={editingEmployee || undefined}
         />
       )}
     </div>

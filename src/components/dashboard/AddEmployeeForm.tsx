@@ -3,8 +3,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/input';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
-import { X, Upload, User, Plus, Trash } from 'lucide-react';
+import { X, Upload, User } from 'lucide-react';
 import { useToast } from '../ui/use-toast';
+
+interface Schedule {
+  id: string;
+  documentId: string;
+  day: string;
+  startTime: string;
+  endTime: string;
+}
 
 interface AddEmployeeFormProps {
   isOpen: boolean;
@@ -14,17 +22,29 @@ interface AddEmployeeFormProps {
     lastName: string;
     position: string;
     photo: File | null;
-    scheduleIds: number[];
+    scheduleIds: string[];
   }) => void;
   restaurantId: string;
-}
-
-interface Schedule {
-  id: number;
-  documentId: string;
-  day: string;
-  startTime: string;
-  endTime: string;
+  initialData?: {
+    firstName: string;
+    lastName: string;
+    position: string;
+    photo?: {
+      url: string;
+      formats: {
+        thumbnail: {
+          url: string;
+        };
+      };
+    };
+    schedules: Array<{
+      id: string;
+      documentId: string;
+      day: string;
+      startTime: string;
+      endTime: string;
+    }>;
+  };
 }
 
 export function AddEmployeeForm({
@@ -32,16 +52,23 @@ export function AddEmployeeForm({
   onClose,
   onSubmit,
   restaurantId,
+  initialData,
 }: AddEmployeeFormProps) {
   const [formState, setFormState] = useState({
-    firstName: '',
-    lastName: '',
-    position: '',
+    firstName: initialData?.firstName || '',
+    lastName: initialData?.lastName || '',
+    position: initialData?.position || '',
     photo: null as File | null,
-    selectedSchedules: [] as number[],
+    selectedSchedules:
+      initialData?.schedules.map((s) => s.documentId) || ([] as string[]),
   });
+
+  const [photoPreview, setPhotoPreview] = useState<string | null>(
+    initialData?.photo
+      ? `http://localhost:1337${initialData.photo.formats.thumbnail.url}`
+      : null
+  );
   const [availableSchedules, setAvailableSchedules] = useState<Schedule[]>([]);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,6 +94,24 @@ export function AddEmployeeForm({
     }
   }, [isOpen]);
 
+  // Efecto para actualizar el formulario cuando cambian los datos iniciales
+  useEffect(() => {
+    if (initialData) {
+      setFormState({
+        firstName: initialData.firstName,
+        lastName: initialData.lastName,
+        position: initialData.position,
+        photo: null,
+        selectedSchedules: initialData.schedules.map((s) => s.documentId),
+      });
+      if (initialData.photo) {
+        setPhotoPreview(
+          `http://localhost:1337${initialData.photo.formats.thumbnail.url}`
+        );
+      }
+    }
+  }, [initialData]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormState((prev) => ({
@@ -76,14 +121,12 @@ export function AddEmployeeForm({
   };
 
   const handlePhotoClick = () => {
-    console.log('handlePhotoClick se disparó');
     fileInputRef.current?.click();
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validar tipo de archivo
       if (!file.type.startsWith('image/')) {
         toast({
           variant: 'destructive',
@@ -93,7 +136,6 @@ export function AddEmployeeForm({
         return;
       }
 
-      // Validar tamaño (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           variant: 'destructive',
@@ -116,7 +158,7 @@ export function AddEmployeeForm({
     }
   };
 
-  const handleScheduleToggle = (scheduleId: number) => {
+  const handleScheduleToggle = (scheduleId: string) => {
     setFormState((prev) => ({
       ...prev,
       selectedSchedules: prev.selectedSchedules.includes(scheduleId)
@@ -149,13 +191,17 @@ export function AddEmployeeForm({
       handleClose();
       toast({
         title: 'Éxito',
-        description: 'Empleado agregado correctamente',
+        description: initialData
+          ? 'Empleado actualizado correctamente'
+          : 'Empleado agregado correctamente',
       });
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'No se pudo agregar el empleado',
+        description: initialData
+          ? 'No se pudo actualizar el empleado'
+          : 'No se pudo agregar el empleado',
       });
     }
   };
@@ -186,7 +232,9 @@ export function AddEmployeeForm({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="bg-gray-900 text-white max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
-          <DialogTitle>Agregar nuevo miembro</DialogTitle>
+          <DialogTitle>
+            {initialData ? 'Editar empleado' : 'Agregar nuevo miembro'}
+          </DialogTitle>
           <button
             onClick={handleClose}
             className="text-gray-500 hover:text-gray-400"
@@ -274,9 +322,11 @@ export function AddEmployeeForm({
                       <input
                         type="checkbox"
                         checked={formState.selectedSchedules.includes(
-                          schedule.id
+                          schedule.documentId
                         )}
-                        onChange={() => handleScheduleToggle(schedule.id)}
+                        onChange={() =>
+                          handleScheduleToggle(schedule.documentId)
+                        }
                         className="mr-3"
                       />
                       <span>
@@ -294,7 +344,9 @@ export function AddEmployeeForm({
             <Button type="button" onClick={handleClose} variant="secondary">
               Cancelar
             </Button>
-            <Button type="submit">Guardar</Button>
+            <Button type="submit">
+              {initialData ? 'Actualizar' : 'Guardar'}
+            </Button>
           </div>
         </form>
       </DialogContent>
