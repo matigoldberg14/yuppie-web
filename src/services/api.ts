@@ -282,6 +282,7 @@ export async function getRestaurantByFirebaseUID(firebaseUID: string) {
       id: restaurantData.id,
       documentId: restaurantData.documentId,
       name: restaurantData.name,
+      taps: restaurantData.taps || '0',
       owner: {
         firstName: restaurantData.owner.name || '',
         lastName: restaurantData.owner.lastName || '',

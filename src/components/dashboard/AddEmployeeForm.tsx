@@ -235,18 +235,15 @@ export function AddEmployeeForm({
           <DialogTitle>
             {initialData ? 'Editar empleado' : 'Agregar nuevo miembro'}
           </DialogTitle>
-          <button
-            onClick={handleClose}
-            className="text-gray-500 hover:text-gray-400"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Photo Upload */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+            <div
+              className="w-24 h-24 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center cursor-pointer hover:opacity-90"
+              onClick={handlePhotoClick} // Cambiado aquí
+            >
               {photoPreview ? (
                 <img
                   src={photoPreview}
@@ -264,6 +261,7 @@ export function AddEmployeeForm({
               accept="image/*"
               className="hidden"
               onChange={handlePhotoChange}
+              onClick={(e) => e.stopPropagation()}
             />
             <Button
               type="button"
