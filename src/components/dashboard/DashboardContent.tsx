@@ -6,7 +6,7 @@ import {
   getRestaurantReviews,
 } from '../../services/api';
 import { Star } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Progress } from '../ui/progress';
 import {
   LineChart,

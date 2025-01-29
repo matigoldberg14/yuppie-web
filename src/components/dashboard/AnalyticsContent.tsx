@@ -7,7 +7,7 @@ import {
   getMetricsHistory,
 } from '../../services/metrics';
 import type { MetricsData, TimeFilter } from '../../types/metrics';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/Button';
 import { Progress } from '../ui/progress';
 import {

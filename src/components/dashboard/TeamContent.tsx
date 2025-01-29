@@ -10,7 +10,7 @@ import {
   updateEmployee,
 } from '../../services/api';
 import { Plus, User, Trash, Edit2 } from 'lucide-react';
-import { Card, CardContent } from '../ui/Card';
+import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/Button';
 import { AddEmployeeForm } from './AddEmployeeForm';
 import { useToast } from '../ui/use-toast';
