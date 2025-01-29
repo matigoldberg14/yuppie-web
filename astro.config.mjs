@@ -13,8 +13,8 @@ export default defineConfig({
     webAnalytics: {
       enabled: true,
     },
-    devCommand: 'npm run dev',
-    buildCommand: 'npm run build',
+    maxDuration: 60,
+    regions: ['iad1'],
   }),
   site: 'https://yuppiecx.com.ar',
   vite: {
