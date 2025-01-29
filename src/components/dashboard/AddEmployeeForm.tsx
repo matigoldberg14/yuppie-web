@@ -65,7 +65,7 @@ export function AddEmployeeForm({
 
   const [photoPreview, setPhotoPreview] = useState<string | null>(
     initialData?.photo
-      ? `http://localhost:1337${initialData.photo.formats.thumbnail.url}`
+      ? `https://yuppieb-production.up.railway.app/${initialData.photo.formats.thumbnail.url}`
       : null
   );
   const [availableSchedules, setAvailableSchedules] = useState<Schedule[]>([]);
@@ -76,7 +76,9 @@ export function AddEmployeeForm({
   useEffect(() => {
     const fetchSchedules = async () => {
       try {
-        const response = await fetch('http://localhost:1337/api/schedules');
+        const response = await fetch(
+          'https://yuppieb-production.up.railway.app//api/schedules'
+        );
         const data = await response.json();
         setAvailableSchedules(data.data);
       } catch (error) {
@@ -106,7 +108,7 @@ export function AddEmployeeForm({
       });
       if (initialData.photo) {
         setPhotoPreview(
-          `http://localhost:1337${initialData.photo.formats.thumbnail.url}`
+          `https://yuppieb-production.up.railway.app/${initialData.photo.formats.thumbnail.url}`
         );
       }
     }

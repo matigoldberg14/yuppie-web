@@ -212,7 +212,7 @@ export function TeamContent() {
                   <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
                     {employee.photo ? (
                       <img
-                        src={`http://localhost:1337${employee.photo.formats.thumbnail.url}`}
+                        src={`https://yuppieb-production.up.railway.app/${employee.photo.formats.thumbnail.url}`}
                         alt={`${employee.firstName} ${employee.lastName}`}
                         className="h-12 w-12 rounded-full object-cover"
                       />

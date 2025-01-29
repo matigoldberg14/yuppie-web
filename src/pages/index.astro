@@ -27,7 +27,7 @@ const restaurants = response.data;
           <div class="w-full md:w-48 h-48 relative">
             {restaurant.cover ? (
               <img
-                src={`http://localhost:1337${restaurant.cover.url}`}
+                src={`https://yuppieb-production.up.railway.app/${restaurant.cover.url}`}
                 alt={restaurant.name}
                 class="w-full h-full object-cover"
                 onerror="this.onerror=null; this.src='/placeholder.png';"

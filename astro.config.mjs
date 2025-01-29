@@ -12,7 +12,7 @@ export default defineConfig({
   integrations: [tailwind(), react(), icon()],
   output: 'server',
   adapter: vercel(),
-  site: 'http://localhost:4321',
+  site: 'https://yuppiecx.com.ar',
   vite: {
     resolve: {
       alias: {
