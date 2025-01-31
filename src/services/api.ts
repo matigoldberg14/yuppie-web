@@ -1,5 +1,4 @@
 // src/services/api.ts
-import { sendBadReviewAlert } from './emailService';
 interface Restaurant {
   id: number;
   documentId: string;

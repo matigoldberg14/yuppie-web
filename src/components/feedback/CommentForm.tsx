@@ -64,7 +64,6 @@ export default function CommentForm({ restaurantId }: Props) {
       setIsSubmitting(true);
 
       const validatedData = commentSchema.parse(formData);
-
       const rating = Number(localStorage.getItem('yuppie_rating'));
       const typeImprovement =
         localStorage.getItem('yuppie_improvement') || undefined;
@@ -73,58 +72,38 @@ export default function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      // Convertir restaurantId a número aquí
       const restaurantIdNumber = parseInt(restaurantId, 10);
       if (isNaN(restaurantIdNumber)) {
         throw new Error('ID de restaurante inválido');
       }
 
-      const reviewResult = await createReview({
+      const review = {
         restaurantId: restaurantIdNumber,
         calification: rating,
         typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,
         comment: validatedData.comment.trim(),
         googleSent: rating === 5,
-      });
+      };
 
-      // Si la calificación es baja, enviar notificación
+      await createReview(review);
+
+      // Solo si es calificación baja
       if (rating <= 2) {
-        try {
-          // Obtener los datos del restaurante antes de enviar la notificación
-          const restaurantResponse = await fetch(
-            `/api/send-review-notification`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                calification: rating,
-                comment: validatedData.comment,
-                email: validatedData.email,
-                typeImprovement: typeImprovement || 'Otra',
-                restaurantId: restaurantIdNumber,
-              }),
-            }
-          );
-
-          if (!restaurantResponse.ok) {
-            console.error('Error sending notification');
-          }
-        } catch (error) {
-          console.error('Error sending notification:', error);
-        }
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(review),
+        });
       }
 
-      // Limpiar localStorage
+      toast.success('¡Gracias por tu comentario!');
+
       localStorage.removeItem('yuppie_improvement');
       localStorage.removeItem('yuppie_rating');
       localStorage.removeItem('yuppie_restaurant');
-
-      toast.success('¡Gracias por tu comentario!', {
-        description: 'Tu feedback nos ayuda a mejorar',
-      });
 
       setTimeout(() => {
         window.location.href = '/thanks';
