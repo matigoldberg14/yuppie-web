@@ -90,9 +90,9 @@ export default function CommentForm({ restaurantId }: Props) {
       // 2. Si la calificación es baja, enviamos el email
       if (rating <= 2) {
         console.log('Enviando notificación por email...');
-        // Usamos window.location.origin para asegurarnos de usar el dominio correcto
+        // Agregamos .json al endpoint para Vercel
         const notifResponse = await fetch(
-          `${window.location.origin}/api/send-review-notification`,
+          `${window.location.origin}/api/send-review-notification.json`,
           {
             method: 'POST',
             headers: {
@@ -103,7 +103,11 @@ export default function CommentForm({ restaurantId }: Props) {
         );
 
         if (!notifResponse.ok) {
-          const errorData = await notifResponse.json();
+          const errorData = await notifResponse
+            .json()
+            .catch(() => ({
+              error: 'Error al enviar la notificación por email',
+            }));
           throw new Error(
             errorData.error || 'Error al enviar la notificación por email'
           );
