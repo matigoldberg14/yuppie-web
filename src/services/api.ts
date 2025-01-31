@@ -1,4 +1,5 @@
 // src/services/api.ts
+import { sendBadReviewAlert } from './emailService';
 interface Restaurant {
   id: number;
   documentId: string;
@@ -190,7 +191,6 @@ export async function incrementTaps(documentId: string) {
   }
 }
 
-// src/services/api.ts
 export async function createReview(
   reviewData: CreateReviewInput
 ): Promise<ApiResponse<Review>> {
@@ -218,8 +218,41 @@ export async function createReview(
     if (!response.ok) {
       throw new Error('Failed to create review');
     }
-
     const json = await response.json();
+
+    // Si la calificación es 1 o 2, obtener los datos del restaurant y owner
+    if (reviewData.calification <= 2) {
+      try {
+        // Obtener datos del restaurante y owner
+        const restaurantResponse = await fetch(
+          `${API_CONFIG.baseUrl}/restaurants/${reviewData.restaurantId}?populate=owner`
+        );
+
+        if (restaurantResponse.ok) {
+          const restaurantData = await restaurantResponse.json();
+          const owner = restaurantData.data.owner;
+          const restaurantName = restaurantData.data.name;
+
+          // Enviar email de alerta
+          await sendBadReviewAlert({
+            ownerEmail: owner.email,
+            ownerName: `${owner.name} ${owner.lastName}`,
+            restaurantName: restaurantName,
+            review: {
+              calification: reviewData.calification,
+              comment: reviewData.comment,
+              typeImprovement: reviewData.typeImprovement,
+              email: reviewData.email,
+              date: formattedData.data.date,
+            },
+          });
+        }
+      } catch (emailError) {
+        console.error('Error sending bad review alert:', emailError);
+        // No lanzamos el error para no afectar la creación de la review
+      }
+    }
+
     return json;
   } catch (error) {
     console.error('Error in createReview:', error);
