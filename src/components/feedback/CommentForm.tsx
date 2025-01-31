@@ -78,6 +78,7 @@ export default function CommentForm({ restaurantId }: Props) {
       }
 
       const restaurantIdNumber = parseInt(restaurantId, 10);
+      console.log('Restaurant ID:', restaurantIdNumber);
       if (isNaN(restaurantIdNumber)) {
         throw new Error('ID de restaurante inválido');
       }
@@ -90,30 +91,37 @@ export default function CommentForm({ restaurantId }: Props) {
         comment: validatedData.comment.trim(),
         googleSent: rating === 5,
       };
-
-      await createReview(review);
+      console.log('Review a enviar:', review);
+      console.log('Intentando crear review...');
+      const response = await createReview(review);
+      console.log('Respuesta de createReview:', response);
 
       // Solo si es calificación baja
       if (rating <= 2) {
-        await fetch('/api/notifications', {
+        console.log('Enviando notificación...');
+        const notifResponse = await fetch('/api/notifications', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(review),
         });
+        console.log('Respuesta de notificación:', await notifResponse.json());
       }
 
-      toast.success('¡Gracias por tu comentario!');
-
+      console.log('Todo exitoso, limpiando localStorage...');
       localStorage.removeItem('yuppie_improvement');
       localStorage.removeItem('yuppie_rating');
       localStorage.removeItem('yuppie_restaurant');
 
+      toast.success('¡Gracias por tu comentario!');
+
+      console.log('Redirigiendo...');
       setTimeout(() => {
         window.location.href = '/thanks';
       }, 1500);
     } catch (error) {
+      console.error('Error en submit:', error);
       let errorMessage = 'Error desconocido';
 
       if (error instanceof z.ZodError) {
