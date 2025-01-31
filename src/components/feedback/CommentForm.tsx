@@ -79,14 +79,43 @@ export default function CommentForm({ restaurantId }: Props) {
         throw new Error('ID de restaurante inválido');
       }
 
-      await createReview({
-        restaurantId: restaurantIdNumber, // Ahora pasamos un número
+      const reviewResult = await createReview({
+        restaurantId: restaurantIdNumber,
         calification: rating,
-        typeImprovement: typeImprovement || 'Otra', // Aseguramos que siempre sea string
+        typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,
         comment: validatedData.comment.trim(),
         googleSent: rating === 5,
       });
+
+      // Si la calificación es baja, enviar notificación
+      if (rating <= 2) {
+        try {
+          // Obtener los datos del restaurante antes de enviar la notificación
+          const restaurantResponse = await fetch(
+            `/api/send-review-notification`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                calification: rating,
+                comment: validatedData.comment,
+                email: validatedData.email,
+                typeImprovement: typeImprovement || 'Otra',
+                restaurantId: restaurantIdNumber,
+              }),
+            }
+          );
+
+          if (!restaurantResponse.ok) {
+            console.error('Error sending notification');
+          }
+        } catch (error) {
+          console.error('Error sending notification:', error);
+        }
+      }
 
       // Limpiar localStorage
       localStorage.removeItem('yuppie_improvement');
