@@ -58,7 +58,7 @@ export default function CommentForm({ restaurantId }: Props) {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log('Submit iniciado'); // Verificar si se llama
+    console.log('Submit iniciado');
     e.preventDefault();
 
     try {
@@ -72,38 +72,36 @@ export default function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      console.log('Restaurant ID antes de parsear:', restaurantId); // Añade este log
-      const restaurantIdNumber = parseInt(restaurantId, 10);
-      console.log('Restaurant ID después de parsear:', restaurantIdNumber); // Y este
-      console.log('Restaurant ID:', restaurantIdNumber);
-      if (isNaN(restaurantIdNumber)) {
-        throw new Error('ID de restaurante inválido');
-      }
-
       const review = {
-        restaurantId: restaurantId, // Usa el documentId directamente
+        restaurantId: restaurantId,
         calification: rating,
         typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,
         comment: validatedData.comment.trim(),
         googleSent: rating === 5,
       };
+
       console.log('Review a enviar:', review);
       console.log('Intentando crear review...');
       const response = await createReview(review);
       console.log('Respuesta de createReview:', response);
 
-      // Solo si es calificación baja
+      // Solo si es calificación baja (2 o menos)
       if (rating <= 2) {
-        console.log('Enviando notificación...');
-        const notifResponse = await fetch('/api/notifications', {
+        console.log('Enviando notificación por email...');
+        const notifResponse = await fetch('/api/send-review-notification', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(review),
         });
-        console.log('Respuesta de notificación:', await notifResponse.json());
+
+        if (!notifResponse.ok) {
+          throw new Error('Error al enviar la notificación por email');
+        }
+
+        console.log('Notificación enviada correctamente');
       }
 
       console.log('Todo exitoso, limpiando localStorage...');
