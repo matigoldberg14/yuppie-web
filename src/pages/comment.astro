@@ -22,7 +22,7 @@ if (!restaurant) {
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">Dejanos tu comentario</h2>
         <CommentForm 
-          client:load 
+          client:only="react"
           restaurantId={restaurant.documentId}
         />
       </div>
@@ -38,4 +38,3 @@ if (!restaurant) {
     transform: translateY(-5px);
   }
 </style>
-

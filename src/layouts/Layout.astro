@@ -87,7 +87,9 @@ const canonicalURL = new URL(Astro.url.pathname, 'https://yuppiecx.com.ar');
   </head>
   <body class="min-h-screen bg-gradient font-['Poppins',sans-serif] text-white">
     <slot />
-    <Toaster richColors position="top-center" /> 
+    
+    <Toaster richColors position="top-center" /> <!-- Añade esta línea -->
+
     <!-- Progress Bar -->
     <div id="progress-bar" class="fixed top-0 left-0 h-1 bg-white/20 w-full z-50">
       <div class="h-full bg-white transform-origin-left"></div>
