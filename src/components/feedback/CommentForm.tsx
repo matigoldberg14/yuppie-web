@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createReview } from '../../services/api';
-import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
+import { toast } from 'sonner';
 
 const commentSchema = z.object({
   email: z.string().email('Por favor, ingresa un email válido'),
@@ -29,7 +29,6 @@ export function CommentForm({ restaurantId }: Props) {
   >({});
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
 
   // Validación del formulario
   useEffect(() => {
@@ -94,10 +93,8 @@ export function CommentForm({ restaurantId }: Props) {
       localStorage.removeItem('yuppie_rating');
       localStorage.removeItem('yuppie_restaurant');
 
-      toast({
-        title: '¡Gracias por tu comentario!',
+      toast.success('¡Gracias por tu comentario!', {
         description: 'Tu feedback nos ayuda a mejorar',
-        duration: 2000,
       });
 
       setTimeout(() => {
@@ -112,9 +109,7 @@ export function CommentForm({ restaurantId }: Props) {
         errorMessage = error.message;
       }
 
-      toast({
-        variant: 'destructive',
-        title: 'Error',
+      toast.error('Error', {
         description: errorMessage,
       });
 

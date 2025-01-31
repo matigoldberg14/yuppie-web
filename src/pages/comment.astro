@@ -23,7 +23,7 @@ if (!restaurant) {
         <h2 class="text-2xl font-semibold mb-4 text-center">Dejanos tu comentario</h2>
         <CommentForm 
           client:load 
-          restaurantId={restaurant.id.toString()}
+          restaurantId={restaurant.documentId}
         />
       </div>
     </div>
