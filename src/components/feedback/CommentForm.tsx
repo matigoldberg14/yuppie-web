@@ -90,9 +90,8 @@ export default function CommentForm({ restaurantId }: Props) {
       // 2. Si la calificación es baja (2 o menos)
       if (rating <= 2) {
         console.log('Enviando notificación por email...');
-
         const notifResponse = await fetch(
-          `${import.meta.env.PUBLIC_API_URL}/email/notifications`,
+          `${import.meta.env.PUBLIC_API_URL}/email/send-notification`,
           {
             method: 'POST',
             headers: {
