@@ -87,12 +87,13 @@ export default function CommentForm({ restaurantId }: Props) {
       const response = await createReview(review);
       console.log('Respuesta de createReview:', response);
 
-      // 2. Si la calificación es baja, enviamos el email
+      // 2. Si la calificación es baja (2 o menos)
       if (rating <= 2) {
         console.log('Enviando notificación por email...');
-        // Agregamos .json al endpoint para Vercel
+
+        // Aquí es donde hacemos el cambio principal
         const notifResponse = await fetch(
-          `${window.location.origin}/api/send-review-notification.json`,
+          `${import.meta.env.PUBLIC_API_URL}/notifications`,
           {
             method: 'POST',
             headers: {
@@ -103,14 +104,7 @@ export default function CommentForm({ restaurantId }: Props) {
         );
 
         if (!notifResponse.ok) {
-          const errorData = await notifResponse
-            .json()
-            .catch(() => ({
-              error: 'Error al enviar la notificación por email',
-            }));
-          throw new Error(
-            errorData.error || 'Error al enviar la notificación por email'
-          );
+          throw new Error('Error al enviar la notificación por email');
         }
 
         console.log('Notificación enviada correctamente');
