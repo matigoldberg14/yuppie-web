@@ -19,7 +19,7 @@ type Props = {
   restaurantId: string; // Mantenemos como string aquí
 };
 
-export function CommentForm({ restaurantId }: Props) {
+export default function CommentForm({ restaurantId }: Props) {
   const [formData, setFormData] = useState<CommentFormData>({
     comment: '',
     email: '',
