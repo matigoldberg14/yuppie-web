@@ -21,8 +21,8 @@ if (!restaurant) {
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">Dejanos tu comentario</h2>
         <CommentForm 
-          client:only="react"
-          restaurantId={restaurant.documentId}
+          client:load 
+          restaurantId={restaurant.id.toString()}
         />
       </div>
     </div>

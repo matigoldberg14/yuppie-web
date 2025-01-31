@@ -63,13 +63,8 @@ export default function CommentForm({ restaurantId }: Props) {
 
     try {
       setIsSubmitting(true);
-      console.log('Validando datos...'); // Verificar progreso
-
       const validatedData = commentSchema.parse(formData);
-      console.log('Datos validados:', validatedData); // Ver datos validados
-
       const rating = Number(localStorage.getItem('yuppie_rating'));
-      console.log('Rating:', rating); // Ver rating
       const typeImprovement =
         localStorage.getItem('yuppie_improvement') || undefined;
 
@@ -77,14 +72,16 @@ export default function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
+      console.log('Restaurant ID antes de parsear:', restaurantId); // Añade este log
       const restaurantIdNumber = parseInt(restaurantId, 10);
+      console.log('Restaurant ID después de parsear:', restaurantIdNumber); // Y este
       console.log('Restaurant ID:', restaurantIdNumber);
       if (isNaN(restaurantIdNumber)) {
         throw new Error('ID de restaurante inválido');
       }
 
       const review = {
-        restaurantId: restaurantIdNumber,
+        restaurantId: restaurantId, // Usa el documentId directamente
         calification: rating,
         typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,

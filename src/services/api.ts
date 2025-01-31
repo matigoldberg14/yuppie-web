@@ -21,7 +21,7 @@ interface Restaurant {
 }
 
 export interface CreateReviewInput {
-  restaurantId: number;
+  restaurantId: string; //  string
   calification: number;
   typeImprovement: string;
   email: string;
