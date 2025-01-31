@@ -1,65 +1,60 @@
 // src/pages/api/send-review-notification.ts
 import type { APIRoute } from 'astro';
-import nodemailer from 'nodemailer';
+import { sendBadReviewAlert } from '../../services/emailService';
 
 export const post: APIRoute = async ({ request }) => {
-  const data = await request.json();
-
   try {
-    // Primero obtener los datos del restaurante
+    const reviewData = await request.json();
+
+    // Obtener los datos del restaurante de Strapi
     const restaurantResponse = await fetch(
       `${import.meta.env.PUBLIC_API_URL}/restaurants/${
-        data.restaurantId
+        reviewData.restaurantId
       }?populate=owner`
     );
 
     if (!restaurantResponse.ok) {
-      throw new Error('Error fetching restaurant data');
+      throw new Error('Error al obtener datos del restaurante');
     }
 
     const restaurantData = await restaurantResponse.json();
-    const owner = restaurantData.data.owner;
-    const restaurantName = restaurantData.data.name;
+    const { owner, name: restaurantName } = restaurantData.data.attributes;
 
-    // Configurar el email
-    const emailTemplate = `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h1>Alerta de Review Negativa</h1>
-          <p>Restaurante: ${restaurantName}</p>
-          <p>Calificación: ${data.calification}</p>
-          <p>Comentario: ${data.comment}</p>
-          <p>Email del cliente: ${data.email}</p>
-          <p>Área de mejora: ${data.typeImprovement}</p>
-        </div>
-      `;
-
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+    // Enviar el email usando nuestro servicio de email
+    await sendBadReviewAlert({
+      ownerEmail: owner.email,
+      ownerName: `${owner.firstName} ${owner.lastName}`,
+      restaurantName,
+      review: {
+        calification: reviewData.calification,
+        comment: reviewData.comment,
+        typeImprovement: reviewData.typeImprovement,
+        email: reviewData.email,
+        date: new Date().toISOString(),
       },
-    });
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: owner.email,
-      subject: `⚠️ Review Negativa - ${restaurantName}`,
-      html: emailTemplate,
     });
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error en send-review-notification:', error);
     return new Response(
       JSON.stringify({
         error:
-          error instanceof Error ? error.message : 'Error sending notification',
+          error instanceof Error
+            ? error.message
+            : 'Error al enviar la notificación',
       }),
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
   }
 };

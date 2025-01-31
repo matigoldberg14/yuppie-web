@@ -81,24 +81,32 @@ export default function CommentForm({ restaurantId }: Props) {
         googleSent: rating === 5,
       };
 
+      // 1. Primero guardamos en Strapi
       console.log('Review a enviar:', review);
       console.log('Intentando crear review...');
       const response = await createReview(review);
       console.log('Respuesta de createReview:', response);
 
-      // Solo si es calificación baja (2 o menos)
+      // 2. Si la calificación es baja, enviamos el email
       if (rating <= 2) {
         console.log('Enviando notificación por email...');
-        const notifResponse = await fetch('/api/send-review-notification', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(review),
-        });
+        // Usamos window.location.origin para asegurarnos de usar el dominio correcto
+        const notifResponse = await fetch(
+          `${window.location.origin}/api/send-review-notification`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(review),
+          }
+        );
 
         if (!notifResponse.ok) {
-          throw new Error('Error al enviar la notificación por email');
+          const errorData = await notifResponse.json();
+          throw new Error(
+            errorData.error || 'Error al enviar la notificación por email'
+          );
         }
 
         console.log('Notificación enviada correctamente');
