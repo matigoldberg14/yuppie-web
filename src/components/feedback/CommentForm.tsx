@@ -91,9 +91,8 @@ export default function CommentForm({ restaurantId }: Props) {
       if (rating <= 2) {
         console.log('Enviando notificación por email...');
 
-        // Aquí es donde hacemos el cambio principal
         const notifResponse = await fetch(
-          `${import.meta.env.PUBLIC_API_URL}/notifications`,
+          `${import.meta.env.PUBLIC_API_URL}/email/notifications`,
           {
             method: 'POST',
             headers: {
