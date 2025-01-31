@@ -58,13 +58,18 @@ export default function CommentForm({ restaurantId }: Props) {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('Submit iniciado'); // Verificar si se llama
     e.preventDefault();
 
     try {
       setIsSubmitting(true);
+      console.log('Validando datos...'); // Verificar progreso
 
       const validatedData = commentSchema.parse(formData);
+      console.log('Datos validados:', validatedData); // Ver datos validados
+
       const rating = Number(localStorage.getItem('yuppie_rating'));
+      console.log('Rating:', rating); // Ver rating
       const typeImprovement =
         localStorage.getItem('yuppie_improvement') || undefined;
 
