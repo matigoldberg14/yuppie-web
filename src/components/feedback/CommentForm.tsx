@@ -1,5 +1,5 @@
 // src/components/feedback/CommentForm.tsx
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createReview } from '../../services/api';
 import { z } from 'zod';
