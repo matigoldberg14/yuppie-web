@@ -1,38 +1,27 @@
 // src/pages/api/send-review-notification.ts
 import type { APIRoute } from 'astro';
-import { sendBadReviewAlert } from '../../services/emailService';
 
 export const post: APIRoute = async ({ request }) => {
   try {
     const reviewData = await request.json();
 
-    // Obtener los datos del restaurante de Strapi
-    const restaurantResponse = await fetch(
-      `${import.meta.env.PUBLIC_API_URL}/restaurants/${
-        reviewData.restaurantId
-      }?populate=owner`
+    // Enviar la notificación usando el mismo servicio que ya funciona
+    const response = await fetch(
+      `${import.meta.env.PUBLIC_API_URL}/notifications`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reviewData),
+      }
     );
 
-    if (!restaurantResponse.ok) {
-      throw new Error('Error al obtener datos del restaurante');
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Error del servicio de notificaciones:', errorData);
+      throw new Error('Error al enviar la notificación');
     }
-
-    const restaurantData = await restaurantResponse.json();
-    const { owner, name: restaurantName } = restaurantData.data.attributes;
-
-    // Enviar el email usando nuestro servicio de email
-    await sendBadReviewAlert({
-      ownerEmail: owner.email,
-      ownerName: `${owner.firstName} ${owner.lastName}`,
-      restaurantName,
-      review: {
-        calification: reviewData.calification,
-        comment: reviewData.comment,
-        typeImprovement: reviewData.typeImprovement,
-        email: reviewData.email,
-        date: new Date().toISOString(),
-      },
-    });
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
