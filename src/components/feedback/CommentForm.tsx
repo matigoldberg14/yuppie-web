@@ -82,9 +82,8 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('ID de restaurante inválido');
       }
 
-      // Crear la review
       await createReview({
-        restaurantId: restaurantIdNumber,
+        restaurantId: restaurantIdNumber, // Asegurarnos de que sea un número
         calification: rating,
         typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,

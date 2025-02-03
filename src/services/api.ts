@@ -194,23 +194,19 @@ export async function createReview(
   reviewData: CreateReviewInput
 ): Promise<ApiResponse<Review>> {
   try {
-    console.log('Sending review data:', reviewData);
-
     const formattedData = {
       data: {
-        restaurant: {
-          connect: [{ id: reviewData.restaurantId }],
-        },
+        restaurant: reviewData.restaurantId,
         calification: reviewData.calification,
         typeImprovement: reviewData.typeImprovement,
         email: reviewData.email,
         comment: reviewData.comment,
         googleSent: reviewData.googleSent,
-        date: new Date().toISOString(), // Enviamos el datetime completo
+        date: new Date().toISOString(), // Cambiamos esto para que coincida con el formato datetime
       },
     };
 
-    console.log('Formatted data:', formattedData);
+    console.log('Attempting to create review with data:', formattedData);
 
     const response = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
       method: 'POST',
@@ -221,9 +217,11 @@ export async function createReview(
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Server error details:', errorData);
-      throw new Error(errorData.error?.message || 'Failed to create review');
+      const errorResponse = await response.json();
+      console.error('Detailed error from server:', errorResponse);
+      throw new Error(
+        errorResponse.error?.message || 'Failed to create review'
+      );
     }
 
     const json = await response.json();
