@@ -1,9 +1,13 @@
 // src/components/feedback/CommentForm.tsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createReview } from '../../services/api';
 import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
+import {
+  createReview,
+  sendLowRatingEmail,
+  getRestaurant,
+} from '../../services/api';
 
 const commentSchema = z.object({
   email: z.string().email('Por favor, ingresa un email válido'),
@@ -65,7 +69,6 @@ export function CommentForm({ restaurantId }: Props) {
       setIsSubmitting(true);
 
       const validatedData = commentSchema.parse(formData);
-
       const rating = Number(localStorage.getItem('yuppie_rating'));
       const typeImprovement =
         localStorage.getItem('yuppie_improvement') || undefined;
@@ -74,20 +77,38 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      // Convertir restaurantId a número aquí
       const restaurantIdNumber = parseInt(restaurantId, 10);
       if (isNaN(restaurantIdNumber)) {
         throw new Error('ID de restaurante inválido');
       }
 
+      // Crear la review
       await createReview({
-        restaurantId: restaurantIdNumber, // Ahora pasamos un número
+        restaurantId: restaurantIdNumber,
         calification: rating,
-        typeImprovement: typeImprovement || 'Otra', // Aseguramos que siempre sea string
+        typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,
         comment: validatedData.comment.trim(),
         googleSent: rating === 5,
       });
+
+      // Si la calificación es 1 o 2, enviar email al owner
+      if (rating <= 2) {
+        // Obtener la información del restaurante
+        const restaurant = await getRestaurant(restaurantId);
+
+        if (restaurant && restaurant.owner?.email) {
+          await sendLowRatingEmail({
+            restaurantId: restaurantIdNumber,
+            calification: rating,
+            comment: validatedData.comment.trim(),
+            email: validatedData.email,
+            typeImprovement: typeImprovement || 'Otra',
+            ownerEmail: restaurant.owner.email,
+            restaurantName: restaurant.name,
+          });
+        }
+      }
 
       // Limpiar localStorage
       localStorage.removeItem('yuppie_improvement');

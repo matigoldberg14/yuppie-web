@@ -530,4 +530,33 @@ export async function updateEmployee(
   }
 }
 
+export async function sendLowRatingEmail(reviewData: {
+  restaurantId: number;
+  calification: number;
+  comment: string;
+  email: string;
+  typeImprovement: string;
+  ownerEmail: string;
+  restaurantName: string;
+}) {
+  try {
+    const response = await fetch(`${API_CONFIG.baseUrl}/reviews/notify-owner`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(reviewData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send notification email');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending notification email:', error);
+    throw error;
+  }
+}
+
 export type { ApiError, ApiResponse, Restaurant, Review };
