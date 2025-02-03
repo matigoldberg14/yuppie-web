@@ -196,13 +196,13 @@ export async function createReview(
   try {
     const formattedData = {
       data: {
-        restaurant: reviewData.restaurantId,
+        restaurant: { id: reviewData.restaurantId }, // Cambiamos aquí la estructura
         calification: reviewData.calification,
         typeImprovement: reviewData.typeImprovement,
         email: reviewData.email,
         comment: reviewData.comment,
         googleSent: reviewData.googleSent,
-        date: new Date().toISOString(), // Cambiamos esto para que coincida con el formato datetime
+        date: new Date().toISOString(),
       },
     };
 
