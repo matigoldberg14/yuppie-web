@@ -77,14 +77,9 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      const restaurantIdNumber = parseInt(restaurantId, 10);
-      if (isNaN(restaurantIdNumber)) {
-        throw new Error('ID de restaurante inválido');
-      }
-
-      // Crear la review
+      // restaurantId ya es el documentId que viene como prop
       await createReview({
-        restaurantId: restaurantIdNumber.toString(), // Convertir a string
+        restaurantId: restaurantId, // Este es el documentId que recibimos
         calification: rating,
         typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,

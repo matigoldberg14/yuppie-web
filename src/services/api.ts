@@ -29,7 +29,7 @@ interface NotifyOwnerData {
 }
 
 export interface CreateReviewInput {
-  restaurantId: string; //  string
+  restaurantId: string; // Cambiado a string para usar documentId
   calification: number;
   typeImprovement: string;
   email: string;
