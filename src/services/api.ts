@@ -194,22 +194,22 @@ export async function createReview(
   reviewData: CreateReviewInput
 ): Promise<ApiResponse<Review>> {
   try {
-    // Log para ver qué datos estamos enviando
     console.log('Sending review data:', reviewData);
 
     const formattedData = {
       data: {
-        restaurant: reviewData.restaurantId,
+        restaurant: {
+          connect: [{ id: reviewData.restaurantId }],
+        },
         calification: reviewData.calification,
         typeImprovement: reviewData.typeImprovement,
         email: reviewData.email,
         comment: reviewData.comment,
         googleSent: reviewData.googleSent,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString(), // Enviamos el datetime completo
       },
     };
 
-    // Log para ver los datos formateados
     console.log('Formatted data:', formattedData);
 
     const response = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
