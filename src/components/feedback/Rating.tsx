@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+import { useToast } from '../ui/use-toast';
 
 interface Props {
   restaurantId: string;
@@ -21,6 +21,7 @@ const ratingOptions = [
 export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const handleRatingHover = (rating: number) => {
     if (!isSubmitting) {
@@ -49,7 +50,12 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
       console.error('Error procesando calificación:', error);
       setIsSubmitting(false);
 
-      toast.error(error instanceof Error ? error.message : 'Error desconocido');
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error desconocido',
+      });
     }
   };
 

@@ -23,7 +23,7 @@ export const validateReviewData = ({
 }: {
   email: string;
   comment: string;
-  typeImprovement: string | null; // Cambiar de undefined a null!
+  typeImprovement: string | null; // Cambiar de undefined a null
   calification: number;
 }) => {
   const errors: string[] = [];

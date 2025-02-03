@@ -1,10 +1,9 @@
 // src/components/feedback/CommentForm.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createReview } from '../../services/api';
+import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
-import { toast } from 'sonner';
-import emailjs from '@emailjs/browser';
 
 const commentSchema = z.object({
   email: z.string().email('Por favor, ingresa un email válido'),
@@ -20,7 +19,7 @@ type Props = {
   restaurantId: string; // Mantenemos como string aquí
 };
 
-export default function CommentForm({ restaurantId }: Props) {
+export function CommentForm({ restaurantId }: Props) {
   const [formData, setFormData] = useState<CommentFormData>({
     comment: '',
     email: '',
@@ -30,6 +29,7 @@ export default function CommentForm({ restaurantId }: Props) {
   >({});
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   // Validación del formulario
   useEffect(() => {
@@ -59,12 +59,13 @@ export default function CommentForm({ restaurantId }: Props) {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log('Submit iniciado');
     e.preventDefault();
 
     try {
       setIsSubmitting(true);
+
       const validatedData = commentSchema.parse(formData);
+
       const rating = Number(localStorage.getItem('yuppie_rating'));
       const typeImprovement =
         localStorage.getItem('yuppie_improvement') || undefined;
@@ -73,52 +74,36 @@ export default function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      // 1. Crear la review
-      const reviewData = {
-        restaurantId,
+      // Convertir restaurantId a número aquí
+      const restaurantIdNumber = parseInt(restaurantId, 10);
+      if (isNaN(restaurantIdNumber)) {
+        throw new Error('ID de restaurante inválido');
+      }
+
+      await createReview({
+        restaurantId: restaurantIdNumber, // Ahora pasamos un número
         calification: rating,
-        typeImprovement: typeImprovement || 'Otra',
+        typeImprovement: typeImprovement || 'Otra', // Aseguramos que siempre sea string
         email: validatedData.email,
         comment: validatedData.comment.trim(),
         googleSent: rating === 5,
-      };
+      });
 
-      await createReview(reviewData);
-
-      // 2. Si es calificación baja, enviar email
-      if (rating <= 2) {
-        try {
-          console.log('Enviando email de notificación...');
-          const emailResult = await emailjs.send(
-            'service_kovjo5m', // Tu Service ID
-            'template_5jlcmr6', // Tu Template ID
-            {
-              rating: rating,
-              improvement_type: typeImprovement || 'Otra',
-              comment: validatedData.comment,
-              customer_email: validatedData.email,
-            },
-            '3wONTqDb8Fwtqf1P0' // Tu Public Key
-          );
-          console.log('Email enviado:', emailResult);
-        } catch (emailError) {
-          console.error('Error enviando email:', emailError);
-          // No bloqueamos el flujo si falla el email
-        }
-      }
-
-      // Limpiar localStorage y redireccionar
+      // Limpiar localStorage
       localStorage.removeItem('yuppie_improvement');
       localStorage.removeItem('yuppie_rating');
       localStorage.removeItem('yuppie_restaurant');
 
-      toast.success('¡Gracias por tu comentario!');
+      toast({
+        title: '¡Gracias por tu comentario!',
+        description: 'Tu feedback nos ayuda a mejorar',
+        duration: 2000,
+      });
 
       setTimeout(() => {
         window.location.href = '/thanks';
       }, 1500);
     } catch (error) {
-      console.error('Error en submit:', error);
       let errorMessage = 'Error desconocido';
 
       if (error instanceof z.ZodError) {
@@ -127,7 +112,9 @@ export default function CommentForm({ restaurantId }: Props) {
         errorMessage = error.message;
       }
 
-      toast.error('Error', {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
         description: errorMessage,
       });
 

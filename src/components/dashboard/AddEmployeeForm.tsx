@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/input';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
 import { X, Upload, User } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '../ui/use-toast';
 
 interface Schedule {
   id: string;
@@ -69,6 +69,7 @@ export function AddEmployeeForm({
       : null
   );
   const [availableSchedules, setAvailableSchedules] = useState<Schedule[]>([]);
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Cargar horarios disponibles
@@ -82,7 +83,11 @@ export function AddEmployeeForm({
         setAvailableSchedules(data.data);
       } catch (error) {
         console.error('Error fetching schedules:', error);
-        toast.error('No se pudieron cargar los horarios disponibles');
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'No se pudieron cargar los horarios disponibles',
+        });
       }
     };
 
@@ -125,12 +130,20 @@ export function AddEmployeeForm({
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        toast.error('Por favor seleccione una imagen válida');
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Por favor seleccione una imagen válida',
+        });
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('La imagen no debe superar los 5MB');
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'La imagen no debe superar los 5MB',
+        });
         return;
       }
 
@@ -160,7 +173,11 @@ export function AddEmployeeForm({
     e.preventDefault();
 
     if (formState.selectedSchedules.length === 0) {
-      toast.error('Debe seleccionar al menos un horario');
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Debe seleccionar al menos un horario',
+      });
       return;
     }
 
@@ -174,24 +191,20 @@ export function AddEmployeeForm({
       });
 
       handleClose();
-      toast.success(
-        initialData
+      toast({
+        title: 'Éxito',
+        description: initialData
           ? 'Empleado actualizado correctamente'
           : 'Empleado agregado correctamente',
-        {
-          description: 'Los cambios han sido guardados',
-        }
-      );
+      });
     } catch (error) {
-      toast.error(
-        initialData
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: initialData
           ? 'No se pudo actualizar el empleado'
           : 'No se pudo agregar el empleado',
-        {
-          description:
-            error instanceof Error ? error.message : 'Error desconocido',
-        }
-      );
+      });
     }
   };
 

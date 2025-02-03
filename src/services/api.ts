@@ -21,7 +21,7 @@ interface Restaurant {
 }
 
 export interface CreateReviewInput {
-  restaurantId: string; //  string
+  restaurantId: number;
   calification: number;
   typeImprovement: string;
   email: string;
@@ -190,6 +190,7 @@ export async function incrementTaps(documentId: string) {
   }
 }
 
+// src/services/api.ts
 export async function createReview(
   reviewData: CreateReviewInput
 ): Promise<ApiResponse<Review>> {
@@ -218,7 +219,8 @@ export async function createReview(
       throw new Error('Failed to create review');
     }
 
-    return await response.json();
+    const json = await response.json();
+    return json;
   } catch (error) {
     console.error('Error in createReview:', error);
     throw error;
