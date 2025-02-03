@@ -15,6 +15,7 @@ export default defineConfig({
     },
     maxDuration: 60,
     regions: ['iad1'],
+    functionPerRoute: false,
   }),
   site: 'https://yuppiecx.com.ar',
   vite: {

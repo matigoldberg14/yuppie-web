@@ -20,6 +20,15 @@ interface Restaurant {
   };
 }
 
+export interface CreateReviewInput {
+  restaurantId: string; //  string
+  calification: number;
+  typeImprovement: string;
+  email: string;
+  comment: string;
+  googleSent: boolean;
+}
+
 interface RestaurantData {
   id: number;
   documentId: string;
@@ -181,23 +190,13 @@ export async function incrementTaps(documentId: string) {
   }
 }
 
-// src/services/api.ts
-export interface CreateReviewInput {
-  restaurantId: string; // Cambiado a string para usar documentId
-  calification: number;
-  typeImprovement: string;
-  email: string;
-  comment: string;
-  googleSent: boolean;
-}
-
 export async function createReview(
   reviewData: CreateReviewInput
 ): Promise<ApiResponse<Review>> {
   try {
     const formattedData = {
       data: {
-        restaurant: { documentId: reviewData.restaurantId }, // Cambiado aquí
+        restaurant: reviewData.restaurantId,
         calification: reviewData.calification,
         typeImprovement: reviewData.typeImprovement,
         email: reviewData.email,
@@ -206,8 +205,6 @@ export async function createReview(
         date: new Date().toISOString().split('T')[0],
       },
     };
-
-    console.log('Sending review data:', formattedData);
 
     const response = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
       method: 'POST',
@@ -218,13 +215,10 @@ export async function createReview(
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Error response:', errorData);
       throw new Error('Failed to create review');
     }
 
-    const json = await response.json();
-    return json;
+    return await response.json();
   } catch (error) {
     console.error('Error in createReview:', error);
     throw error;

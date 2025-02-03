@@ -13,8 +13,7 @@ import { Plus, User, Trash, Edit2 } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/Button';
 import { AddEmployeeForm } from './AddEmployeeForm';
-import { useToast } from '../ui/use-toast';
-
+import { toast } from 'sonner';
 interface Schedule {
   id: string;
   documentId: string;
@@ -47,7 +46,6 @@ export function TeamContent() {
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -101,17 +99,10 @@ export function TeamContent() {
       setEmployees(updatedEmployees);
       setIsAddingEmployee(false);
 
-      toast({
-        title: 'Éxito',
-        description: 'Empleado agregado correctamente',
-      });
+      toast.success('Empleado agregado correctamente');
     } catch (error) {
       console.error('Error adding employee:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo agregar el empleado',
-      });
+      toast.error('No se pudo agregar el empleado');
       throw error;
     }
   };
@@ -141,17 +132,10 @@ export function TeamContent() {
       }
 
       setEditingEmployee(null);
-      toast({
-        title: 'Éxito',
-        description: 'Empleado actualizado correctamente',
-      });
+      toast.success('Empleado actualizado correctamente');
     } catch (error) {
       console.error('Error updating employee:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo actualizar el empleado',
-      });
+      toast.error('No se pudo actualizar el empleado');
     }
   };
 
@@ -166,16 +150,14 @@ export function TeamContent() {
       // Actualizar la lista de empleados después de eliminar
       setEmployees(employees.filter((emp) => emp.documentId !== employeeId));
 
-      toast({
-        title: 'Éxito',
-        description: 'Empleado eliminado correctamente',
+      toast.success('Empleado eliminado correctamente', {
+        description: 'El empleado ha sido removido del sistema',
       });
     } catch (error) {
       console.error('Error deleting employee:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo eliminar el empleado',
+      toast.error('No se pudo eliminar el empleado', {
+        description:
+          error instanceof Error ? error.message : 'Error desconocido',
       });
     }
   };

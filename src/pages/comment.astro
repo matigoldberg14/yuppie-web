@@ -1,7 +1,6 @@
 ---
-// src/pages/comment.astro
 import Layout from '../layouts/Layout.astro';
-import { CommentForm } from '../components/feedback/CommentForm';
+import CommentForm from '../components/feedback/CommentForm';
 import { getRestaurant } from '../services/api';
 
 const restaurantId = Astro.url.searchParams.get('local');
@@ -22,9 +21,9 @@ if (!restaurant) {
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">Dejanos tu comentario</h2>
         <CommentForm 
-        client:load 
-        restaurantId={restaurant.documentId}
-      />
+          client:load 
+          restaurantId={restaurant.id.toString()}
+        />
       </div>
     </div>
   </div>
@@ -38,4 +37,3 @@ if (!restaurant) {
     transform: translateY(-5px);
   }
 </style>
-

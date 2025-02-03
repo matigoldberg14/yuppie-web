@@ -1,9 +1,9 @@
 // src/components/feedback/CommentForm.tsx
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createReview } from '../../services/api';
-import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
+import { toast } from 'sonner';
 
 const commentSchema = z.object({
   email: z.string().email('Por favor, ingresa un email válido'),
@@ -19,7 +19,7 @@ type Props = {
   restaurantId: string; // Mantenemos como string aquí
 };
 
-export function CommentForm({ restaurantId }: Props) {
+export default function CommentForm({ restaurantId }: Props) {
   const [formData, setFormData] = useState<CommentFormData>({
     comment: '',
     email: '',
@@ -29,7 +29,6 @@ export function CommentForm({ restaurantId }: Props) {
   >({});
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
 
   // Validación del formulario
   useEffect(() => {
@@ -59,6 +58,7 @@ export function CommentForm({ restaurantId }: Props) {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('Submit iniciado');
     e.preventDefault();
 
     try {
@@ -72,31 +72,55 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      // Ya no necesitamos convertir el restaurantId
-      await createReview({
-        restaurantId: restaurantId, // Usar directamente el documentId
+      const review = {
+        restaurantId: restaurantId,
         calification: rating,
         typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,
         comment: validatedData.comment.trim(),
         googleSent: rating === 5,
-      });
+      };
 
-      // Limpiar localStorage
+      // 1. Primero guardamos en Strapi
+      console.log('Review a enviar:', review);
+      console.log('Intentando crear review...');
+      const response = await createReview(review);
+      console.log('Respuesta de createReview:', response);
+
+      // 2. Si la calificación es baja (2 o menos)
+      if (rating <= 2) {
+        console.log('Enviando notificación por email...');
+        const notifResponse = await fetch(
+          `${import.meta.env.PUBLIC_API_URL}/email/send-notification`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(review),
+          }
+        );
+
+        if (!notifResponse.ok) {
+          throw new Error('Error al enviar la notificación por email');
+        }
+
+        console.log('Notificación enviada correctamente');
+      }
+
+      console.log('Todo exitoso, limpiando localStorage...');
       localStorage.removeItem('yuppie_improvement');
       localStorage.removeItem('yuppie_rating');
       localStorage.removeItem('yuppie_restaurant');
 
-      toast({
-        title: '¡Gracias por tu comentario!',
-        description: 'Tu feedback nos ayuda a mejorar',
-        duration: 2000,
-      });
+      toast.success('¡Gracias por tu comentario!');
 
+      console.log('Redirigiendo...');
       setTimeout(() => {
         window.location.href = '/thanks';
       }, 1500);
     } catch (error) {
+      console.error('Error en submit:', error);
       let errorMessage = 'Error desconocido';
 
       if (error instanceof z.ZodError) {
@@ -105,9 +129,7 @@ export function CommentForm({ restaurantId }: Props) {
         errorMessage = error.message;
       }
 
-      toast({
-        variant: 'destructive',
-        title: 'Error',
+      toast.error('Error', {
         description: errorMessage,
       });
 

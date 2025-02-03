@@ -25,7 +25,7 @@ export interface Employee {
   schedules: Schedule[];
 }
 
-// Nueva interfaz para el formulario!
+// Nueva interfaz para el formulario
 export interface EmployeeFormInput {
   firstName: string;
   lastName: string;
