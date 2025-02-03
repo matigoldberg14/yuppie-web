@@ -4,6 +4,8 @@
 import { ViewTransitions } from 'astro:transitions';
 import { SEO } from 'astro-seo';
 import '../styles/globals.css';
+import { Toaster } from 'sonner'; 
+import emailjs from '@emailjs/browser';
 
 interface Props {
   title: string;
@@ -20,6 +22,7 @@ const {
 } = Astro.props;
 
 const canonicalURL = new URL(Astro.url.pathname, 'https://yuppiecx.com.ar');
+emailjs.init("MITQYmXx6lHKGwj_z"); // Tu Public Key
 ---
 
 
@@ -86,12 +89,12 @@ const canonicalURL = new URL(Astro.url.pathname, 'https://yuppiecx.com.ar');
   </head>
   <body class="min-h-screen bg-gradient font-['Poppins',sans-serif] text-white">
     <slot />
-
+    <Toaster richColors position="top-center" />
+    
     <!-- Progress Bar -->
     <div id="progress-bar" class="fixed top-0 left-0 h-1 bg-white/20 w-full z-50">
       <div class="h-full bg-white transform-origin-left"></div>
     </div>
-
     <script>
       // Progress Bar
       document.addEventListener('astro:page-load', () => {

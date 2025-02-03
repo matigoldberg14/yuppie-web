@@ -20,16 +20,8 @@ interface Restaurant {
   };
 }
 
-interface NotifyOwnerData {
-  ownerEmail: string;
-  restaurantName: string;
-  calification: number;
-  comment: string;
-  typeImprovement: string;
-}
-
 export interface CreateReviewInput {
-  restaurantId: string; // Cambiado a string para usar documentId
+  restaurantId: string; //  string
   calification: number;
   typeImprovement: string;
   email: string;
@@ -532,27 +524,6 @@ export async function updateEmployee(
     return true;
   } catch (error) {
     console.error('Error in updateEmployee:', error);
-    throw error;
-  }
-}
-
-export async function sendLowRatingNotification(
-  data: NotifyOwnerData
-): Promise<void> {
-  try {
-    const response = await fetch(`${API_CONFIG.baseUrl}/reviews/notify-owner`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ data }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to send notification');
-    }
-  } catch (error) {
-    console.error('Error sending notification:', error);
     throw error;
   }
 }
