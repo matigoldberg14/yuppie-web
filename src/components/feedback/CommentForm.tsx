@@ -5,7 +5,7 @@ import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
 import {
   createReview,
-  sendLowRatingEmail,
+  sendLowRatingNotification,
   getRestaurant,
 } from '../../services/api';
 
@@ -82,8 +82,9 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('ID de restaurante inválido');
       }
 
+      // Crear la review
       await createReview({
-        restaurantId: restaurantIdNumber, // Asegurarnos de que sea un número
+        restaurantId: restaurantIdNumber.toString(), // Convertir a string
         calification: rating,
         typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,
@@ -91,20 +92,17 @@ export function CommentForm({ restaurantId }: Props) {
         googleSent: rating === 5,
       });
 
-      // Si la calificación es 1 o 2, enviar email al owner
+      // Si la calificación es baja, enviar notificación
       if (rating <= 2) {
-        // Obtener la información del restaurante
         const restaurant = await getRestaurant(restaurantId);
 
-        if (restaurant && restaurant.owner?.email) {
-          await sendLowRatingEmail({
-            restaurantId: restaurantIdNumber,
-            calification: rating,
-            comment: validatedData.comment.trim(),
-            email: validatedData.email,
-            typeImprovement: typeImprovement || 'Otra',
+        if (restaurant?.owner?.email) {
+          await sendLowRatingNotification({
             ownerEmail: restaurant.owner.email,
             restaurantName: restaurant.name,
+            calification: rating,
+            comment: validatedData.comment.trim(),
+            typeImprovement: typeImprovement || 'Otra',
           });
         }
       }

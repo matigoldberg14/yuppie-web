@@ -20,8 +20,16 @@ interface Restaurant {
   };
 }
 
+interface NotifyOwnerData {
+  ownerEmail: string;
+  restaurantName: string;
+  calification: number;
+  comment: string;
+  typeImprovement: string;
+}
+
 export interface CreateReviewInput {
-  restaurantId: number;
+  restaurantId: string; //  string
   calification: number;
   typeImprovement: string;
   email: string;
@@ -196,17 +204,15 @@ export async function createReview(
   try {
     const formattedData = {
       data: {
-        restaurant: { id: reviewData.restaurantId }, // Cambiamos aquí la estructura
+        restaurant: reviewData.restaurantId,
         calification: reviewData.calification,
         typeImprovement: reviewData.typeImprovement,
         email: reviewData.email,
         comment: reviewData.comment,
         googleSent: reviewData.googleSent,
-        date: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0],
       },
     };
-
-    console.log('Attempting to create review with data:', formattedData);
 
     const response = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
       method: 'POST',
@@ -217,15 +223,10 @@ export async function createReview(
     });
 
     if (!response.ok) {
-      const errorResponse = await response.json();
-      console.error('Detailed error from server:', errorResponse);
-      throw new Error(
-        errorResponse.error?.message || 'Failed to create review'
-      );
+      throw new Error('Failed to create review');
     }
 
-    const json = await response.json();
-    return json;
+    return await response.json();
   } catch (error) {
     console.error('Error in createReview:', error);
     throw error;
@@ -535,31 +536,23 @@ export async function updateEmployee(
   }
 }
 
-export async function sendLowRatingEmail(reviewData: {
-  restaurantId: number;
-  calification: number;
-  comment: string;
-  email: string;
-  typeImprovement: string;
-  ownerEmail: string;
-  restaurantName: string;
-}) {
+export async function sendLowRatingNotification(
+  data: NotifyOwnerData
+): Promise<void> {
   try {
     const response = await fetch(`${API_CONFIG.baseUrl}/reviews/notify-owner`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(reviewData),
+      body: JSON.stringify({ data }),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to send notification email');
+      throw new Error('Failed to send notification');
     }
-
-    return await response.json();
   } catch (error) {
-    console.error('Error sending notification email:', error);
+    console.error('Error sending notification:', error);
     throw error;
   }
 }
