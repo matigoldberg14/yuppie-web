@@ -204,13 +204,13 @@ export async function createReview(
   try {
     const formattedData = {
       data: {
-        restaurant: reviewData.restaurantId,
+        restaurant: { connect: [{ id: reviewData.restaurantId }] }, // ESTA ERA LA DIFERENCIA CLAVE
         calification: reviewData.calification,
         typeImprovement: reviewData.typeImprovement,
         email: reviewData.email,
         comment: reviewData.comment,
         googleSent: reviewData.googleSent,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString(),
       },
     };
 
