@@ -83,26 +83,31 @@ export default function CommentForm({ restaurantId }: Props) {
         googleSent: rating === 5,
       };
 
-      // Guardar en Strapi
       await createReview(reviewData);
 
       // 2. Si es calificación baja, enviar email
       if (rating <= 2) {
-        await emailjs.send(
-          'service_zx81qhq', // Tu Service ID
-          'template_83k8p0h', // Tu Template ID
-          {
-            restaurant_id: restaurantId,
-            rating: rating,
-            improvement_type: typeImprovement || 'Otra',
-            comment: validatedData.comment,
-            customer_email: validatedData.email,
-          },
-          'MITQYmXx6lHKGwj_z' // Tu Public Key
-        );
+        try {
+          console.log('Enviando email de notificación...');
+          const emailResult = await emailjs.send(
+            'service_kovjo5m', // Tu Service ID
+            'template_5jlcmr6', // Tu Template ID
+            {
+              rating: rating,
+              improvement_type: typeImprovement || 'Otra',
+              comment: validatedData.comment,
+              customer_email: validatedData.email,
+            },
+            '3wONTqDb8Fwtqf1P0' // Tu Public Key
+          );
+          console.log('Email enviado:', emailResult);
+        } catch (emailError) {
+          console.error('Error enviando email:', emailError);
+          // No bloqueamos el flujo si falla el email
+        }
       }
 
-      // Limpiar y redireccionar
+      // Limpiar localStorage y redireccionar
       localStorage.removeItem('yuppie_improvement');
       localStorage.removeItem('yuppie_rating');
       localStorage.removeItem('yuppie_restaurant');
