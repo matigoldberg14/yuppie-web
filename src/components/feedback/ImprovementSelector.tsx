@@ -1,7 +1,7 @@
 // src/components/feedback/ImprovementSelector.tsx
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { useToast } from '../ui/use-toast';
 
 const improvementOptions = [
   { id: 'Atención', label: 'Atención', icon: '🤝' },
@@ -18,6 +18,7 @@ type Props = {
 
 export function ImprovementSelector({ restaurantId, nextUrl }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const handleSelect = async (improvement: string) => {
     try {
@@ -44,7 +45,12 @@ export function ImprovementSelector({ restaurantId, nextUrl }: Props) {
       console.error('Error al seleccionar mejora:', error);
       setIsSubmitting(false);
 
-      toast.error(error instanceof Error ? error.message : 'Error desconocido');
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error desconocido',
+      });
     }
   };
 
