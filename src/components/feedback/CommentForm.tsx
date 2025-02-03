@@ -63,9 +63,7 @@ export function CommentForm({ restaurantId }: Props) {
 
     try {
       setIsSubmitting(true);
-
       const validatedData = commentSchema.parse(formData);
-
       const rating = Number(localStorage.getItem('yuppie_rating'));
       const typeImprovement =
         localStorage.getItem('yuppie_improvement') || undefined;
@@ -74,16 +72,11 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      // Convertir restaurantId a número aquí
-      const restaurantIdNumber = parseInt(restaurantId, 10);
-      if (isNaN(restaurantIdNumber)) {
-        throw new Error('ID de restaurante inválido');
-      }
-
+      // Ya no necesitamos convertir el restaurantId
       await createReview({
-        restaurantId: restaurantIdNumber, // Ahora pasamos un número
+        restaurantId: restaurantId, // Usar directamente el documentId
         calification: rating,
-        typeImprovement: typeImprovement || 'Otra', // Aseguramos que siempre sea string
+        typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,
         comment: validatedData.comment.trim(),
         googleSent: rating === 5,
