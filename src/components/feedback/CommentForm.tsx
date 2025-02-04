@@ -74,14 +74,16 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      const restaurantIdNumber = parseInt(restaurantId, 10);
-      if (isNaN(restaurantIdNumber)) {
-        throw new Error('ID de restaurante inválido');
+      // Obtener el restaurante ANTES de crear la review
+      console.log('Obteniendo restaurante:', restaurantId);
+      const restaurant = await getRestaurant(restaurantId);
+      if (!restaurant) {
+        throw new Error('No se encontró el restaurante');
       }
 
-      // Crear review
+      // Crear review usando el id numérico del restaurante
       await createReview({
-        restaurantId: restaurantIdNumber,
+        restaurantId: restaurant.id,
         calification: rating,
         typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,
@@ -90,24 +92,24 @@ export function CommentForm({ restaurantId }: Props) {
       });
 
       // Si es calificación baja, enviar email
-      if (rating <= 2) {
-        const restaurant = await getRestaurant(restaurantId);
-
+      if (rating <= 2 && restaurant.owner?.email) {
+        console.log('Enviando email a:', restaurant.owner.email);
         try {
           await emailjs.send(
             'service_kovjo5m',
-            'template_v2s559p',
+            'template_5jlcmr6',
             {
-              restaurant_name: restaurant?.name || 'Restaurante',
+              to_name: `${restaurant.owner.name} ${restaurant.owner.lastName}`,
+              to_email: restaurant.owner.email,
+              restaurant_name: restaurant.name,
               rating: rating,
               improvement_type: typeImprovement || 'Otra',
               comment: validatedData.comment.trim(),
               customer_email: validatedData.email,
-              owner_email: restaurant?.owner?.email || 'info@yuppie.com',
             },
             '3wONTqDb8Fwtqf1P0'
           );
-          console.log('Email de notificación enviado');
+          console.log('Email enviado exitosamente al owner');
         } catch (emailError) {
           console.error('Error enviando email:', emailError);
         }
