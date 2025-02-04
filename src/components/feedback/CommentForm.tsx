@@ -92,15 +92,31 @@ export function CommentForm({ restaurantId }: Props) {
       // SOLO agregamos esto para el email
       if (rating <= 2) {
         try {
+          // Obtener el email del owner
+          const restaurantResponse = await fetch(
+            `${
+              import.meta.env.PUBLIC_API_URL
+            }/restaurants/${restaurantId}?populate=owner`
+          );
+          const restaurantData = await restaurantResponse.json();
+          const ownerEmail = restaurantData.data.owner.email;
+
+          if (!ownerEmail) {
+            console.error('No se encontró email del owner');
+            return;
+          }
+
+          console.log('Enviando email a:', ownerEmail);
           await emailjs.send(
             'service_kovjo5m',
-            'template_v2s559p',
+            'template_5jlcmr6',
             {
-              to_email: 'matigarfio@gmail.com', // Email fijo por ahora
+              to_email: ownerEmail,
               comment: validatedData.comment.trim(),
               rating: rating,
               improvement_type: typeImprovement || 'Otra',
               customer_email: validatedData.email,
+              restaurant_name: restaurantData.data.name, // También agregamos el nombre del restaurante
             },
             '3wONTqDb8Fwtqf1P0'
           );
