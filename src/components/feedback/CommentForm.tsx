@@ -146,7 +146,7 @@ export function CommentForm({ restaurantId }: Props) {
 
       toast({
         title: '¡Gracias por tu comentario!',
-        description: 'Tu feedback nos ayuda a mejorar',
+        description: 'Tu feedback nos ayuda a mejorar!',
         duration: 2000,
       });
 
