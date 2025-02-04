@@ -96,6 +96,7 @@ export function CommentForm({ restaurantId }: Props) {
             'service_kovjo5m',
             'template_v2s559p',
             {
+              to_email: 'matigarfio@gmail.com', // Email fijo por ahora
               comment: validatedData.comment.trim(),
               rating: rating,
               improvement_type: typeImprovement || 'Otra',
@@ -103,11 +104,11 @@ export function CommentForm({ restaurantId }: Props) {
             },
             '3wONTqDb8Fwtqf1P0'
           );
+          console.log('Email enviado correctamente');
         } catch (emailError) {
           console.error('Error al enviar email:', emailError);
         }
       }
-
       // Limpiar y redireccionar (esto ya funciona, no lo tocamos)
       localStorage.removeItem('yuppie_improvement');
       localStorage.removeItem('yuppie_rating');
