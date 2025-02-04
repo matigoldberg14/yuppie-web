@@ -1,14 +1,16 @@
 // src/components/dashboard/CalendarContent.tsx
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/Button';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 
+// Simulamos un arreglo de "reseñas" (o eventos) para marzo 2024.
 const events = [
   {
     id: 1,
     title: 'Responder reseñas pendientes',
-    date: new Date(2024, 2, 15),
+    date: new Date(2024, 2, 15), // los meses son 0-indexados (2 = marzo)
     type: 'task',
   },
   {
@@ -26,6 +28,24 @@ const events = [
 ];
 
 export function CalendarContent() {
+  // Definimos el mes y año (en este ejemplo, marzo 2024)
+  const month = 2; // marzo (0-indexado: 0 = enero, 1 = febrero, 2 = marzo)
+  const year = 2024;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // Función auxiliar para contar cuántos eventos/reseñas hay en un día dado
+  const getReviewCountForDay = (day: number) => {
+    const cellDate = new Date(year, month, day);
+    return events.filter((event) => {
+      const eventDate = event.date;
+      return (
+        eventDate.getFullYear() === cellDate.getFullYear() &&
+        eventDate.getMonth() === cellDate.getMonth() &&
+        eventDate.getDate() === cellDate.getDate()
+      );
+    }).length;
+  };
+
   return (
     <div className="p-6">
       <header className="flex justify-between items-center mb-6">
@@ -37,6 +57,7 @@ export function CalendarContent() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Calendario principal */}
         <Card className="lg:col-span-2 bg-white/10 border-0">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -52,26 +73,40 @@ export function CalendarContent() {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Encabezado con días de la semana */}
             <div className="grid grid-cols-7 gap-1">
-              {/* Header de días */}
               {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
                 <div key={day} className="p-2 text-center text-white/60">
                   {day}
                 </div>
               ))}
-              {/* Grid de días (ejemplo simplificado) */}
-              {Array.from({ length: 31 }, (_, i) => (
-                <div
-                  key={i}
-                  className="aspect-square p-2 border border-white/10 rounded-lg text-white hover:bg-white/5 cursor-pointer"
-                >
-                  {i + 1}
-                </div>
-              ))}
+            </div>
+            {/* Grid de días del mes */}
+            <div className="grid grid-cols-7 gap-1 mt-2">
+              {Array.from({ length: daysInMonth }, (_, i) => {
+                const day = i + 1;
+                const reviewCount = getReviewCountForDay(day);
+                return (
+                  <div
+                    key={i}
+                    className="relative aspect-square p-2 border border-white/10 rounded-lg text-white hover:bg-white/5 cursor-pointer"
+                  >
+                    {/* Número del día */}
+                    <div className="text-center">{day}</div>
+                    {/* Badge con cantidad de reseñas (solo si reviewCount > 0) */}
+                    {reviewCount > 0 && (
+                      <span className="absolute top-1 right-1 bg-blue-500 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+                        {reviewCount}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
 
+        {/* Tarjeta de "Próximos eventos" */}
         <Card className="bg-white/10 border-0">
           <CardHeader>
             <CardTitle className="text-white">Próximos eventos</CardTitle>
