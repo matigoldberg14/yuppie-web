@@ -1,4 +1,5 @@
 // src/components/dashboard/AddEmployeeForm.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/input';
@@ -72,15 +73,21 @@ export function AddEmployeeForm({
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ================================
   // Cargar horarios disponibles
+  // Cambiamos la URL para quitar la doble barra y agregamos control de errores
   useEffect(() => {
     const fetchSchedules = async () => {
       try {
         const response = await fetch(
-          'https://yuppieb-production.up.railway.app//api/schedules'
+          'https://yuppieb-production.up.railway.app/api/schedules' // URL corregida (sin doble barra)
         );
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
-        setAvailableSchedules(data.data);
+        // Si data.data es null, asignamos un array vacío
+        setAvailableSchedules(data.data || []);
       } catch (error) {
         console.error('Error fetching schedules:', error);
         toast({
@@ -88,13 +95,16 @@ export function AddEmployeeForm({
           title: 'Error',
           description: 'No se pudieron cargar los horarios disponibles',
         });
+        // Aseguramos que availableSchedules sea un array para evitar errores en reduce
+        setAvailableSchedules([]);
       }
     };
 
     if (isOpen) {
       fetchSchedules();
     }
-  }, [isOpen]);
+  }, [isOpen, toast]);
+  // ================================
 
   // Efecto para actualizar el formulario cuando cambian los datos iniciales
   useEffect(() => {
@@ -220,7 +230,7 @@ export function AddEmployeeForm({
     onClose();
   };
 
-  // Agrupar horarios por día
+  // Agrupar horarios por día; availableSchedules es siempre un array (incluso si está vacío)
   const schedulesByDay = availableSchedules.reduce((acc, schedule) => {
     const day = schedule.day;
     if (!acc[day]) {
@@ -232,7 +242,18 @@ export function AddEmployeeForm({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="bg-gray-900 text-white max-h-[90vh] overflow-y-auto">
+      {/* ================================ accesibilidad en DialogContent  
+          Se añade el atributo aria-describedby y se incluye un elemento <p> con id="dialog-description"
+      ================================ */}
+      <DialogContent
+        aria-describedby="dialog-description"
+        className="bg-gray-900 text-white max-h-[90vh] overflow-y-auto"
+      >
+        {/* Este párrafo es para lectores de pantalla y no se mostrará visualmente */}
+        <p id="dialog-description" className="sr-only">
+          Completa el formulario para agregar o editar un empleado.
+        </p>
+
         <div className="flex justify-between items-center mb-4">
           <DialogTitle>
             {initialData ? 'Editar empleado' : 'Agregar nuevo miembro'}
@@ -244,7 +265,7 @@ export function AddEmployeeForm({
           <div className="flex flex-col items-center gap-2">
             <div
               className="w-24 h-24 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center cursor-pointer hover:opacity-90"
-              onClick={handlePhotoClick} // Cambiado aquí
+              onClick={handlePhotoClick}
             >
               {photoPreview ? (
                 <img
