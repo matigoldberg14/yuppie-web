@@ -5,6 +5,7 @@ import { auth } from '../../lib/firebase';
 import {
   getRestaurantByFirebaseUID,
   getRestaurantReviews,
+  updateReview, // Asegúrate de importar la función updateReview
 } from '../../services/api';
 import { Star } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -21,14 +22,16 @@ interface Review {
   googleSent: boolean;
   date: string;
   createdAt: string;
+  couponCode?: string; // Campo nuevo
+  couponUsed?: boolean; // Campo nuevo
 }
 
 export function ReviewsContent() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-  // Mapa para guardar el cupón enviado por review (key = review.id, value = cupón)
+  // Estado local para guardar los cupones enviados (si se quiere, se puede usar directamente review.couponCode)
   const [sentCoupons, setSentCoupons] = useState<{ [key: number]: string }>({});
-  // Almacena el nombre del restaurante (para incluirlo en el email)
+  // Almacenar el nombre del restaurante (para enviar en el email)
   const [restaurantName, setRestaurantName] = useState('');
 
   useEffect(() => {
@@ -39,17 +42,16 @@ export function ReviewsContent() {
           return;
         }
 
-        // Obtener los datos del restaurante basado en el usuario de Firebase
+        // Obtener el restaurante del usuario
         const restaurantData = await getRestaurantByFirebaseUID(
           auth.currentUser.uid
         );
         if (!restaurantData) {
           throw new Error('No se encontró el restaurante');
         }
-        // Se asume que restaurantData tiene la propiedad "name"
         setRestaurantName(restaurantData.name || 'Yuppie');
 
-        // Obtener las reviews del restaurante (filtradas por su documentId)
+        // Obtener las reviews del restaurante
         const reviewsData = await getRestaurantReviews(
           restaurantData.documentId
         );
@@ -75,51 +77,92 @@ export function ReviewsContent() {
     return result;
   };
 
-  // Función para enviar el cupón de descuento
+  // Función para enviar el cupón de descuento y actualizar Strapi
   const handleSendCoupon = (review: Review) => {
-    // Solicitar al usuario el porcentaje de descuento mediante prompt
+    // Solicitar el porcentaje de descuento
     const discountStr = window.prompt(
       'Ingrese el porcentaje de descuento (entre 10 y 100):'
     );
-    if (!discountStr) return; // Si se cancela el prompt, no se hace nada
-
+    if (!discountStr) return;
     const discount = parseInt(discountStr, 10);
     if (isNaN(discount) || discount < 10 || discount > 100) {
       alert('El valor debe ser un número entre 10 y 100.');
       return;
     }
 
-    // Generar un cupón aleatorio de 10 caracteres
+    // Generar el cupón
     const couponCode = generateCouponCode(10);
 
-    // Preparar los parámetros que se enviarán al template de EmailJS
+    // Parámetros para EmailJS
     const templateParams = {
-      to_email: review.email, // Se usará en el campo {{to_email}} del template
-      discount_percentage: discount, // Se usará en {{discount_percentage}}
-      coupon_code: couponCode, // Se usará en {{coupon_code}}
-      restaurant: restaurantName, // Se usará en el "from name": Yuppie {{restaurant}}
-      reply_to: 'contacto@tuempresa.com', // Se usará en {{reply_to}}
+      to_email: review.email, // Destinatario
+      discount_percentage: discount, // Porcentaje de descuento
+      coupon_code: couponCode, // Cupón generado
+      restaurant: restaurantName, // Nombre del restaurante
+      reply_to: 'contacto@tuempresa.com', // Email de contacto
     };
 
     emailjs
       .send(
-        'service_kovjo5m', // El Service ID
-        'template_em90fox', // El Template ID
+        'service_kovjo5m', // Service ID
+        'template_em90fox', // Template ID
         templateParams,
-        '3wONTqDb8Fwtqf1P0' // La Public Key (User ID)
+        '3wONTqDb8Fwtqf1P0' // Public Key
       )
       .then(
-        (result) => {
+        async (result) => {
           console.log('Email enviado correctamente', result.text);
           alert('Cupón enviado exitosamente.');
-          // Guardar el cupón enviado para esta review y evitar reenvíos
-          setSentCoupons((prev) => ({ ...prev, [review.id]: couponCode }));
+
+          // Actualizar la review en Strapi con el cupón generado y couponUsed en false
+          try {
+            await updateReview(review.documentId, {
+              couponCode: couponCode,
+              couponUsed: false,
+            });
+            // Actualizar el estado local
+            setSentCoupons((prev) => ({ ...prev, [review.id]: couponCode }));
+            // También actualizamos la review localmente para que incluya los nuevos campos
+            setReviews((prevReviews) =>
+              prevReviews.map((r) =>
+                r.id === review.id ? { ...r, couponCode, couponUsed: false } : r
+              )
+            );
+          } catch (updateError) {
+            console.error(
+              'Error actualizando la review con el cupón:',
+              updateError
+            );
+          }
         },
         (error) => {
           console.error('Error enviando cupón', error);
           alert('Error enviando el cupón.');
         }
       );
+  };
+
+  // Función para marcar el cupón como usado
+  const handleMarkCouponUsed = (review: Review) => {
+    const confirmation = window.confirm(
+      '¿Está seguro de que desea marcar este cupón como usado? Esta acción no se puede revertir.'
+    );
+    if (!confirmation) return;
+
+    updateReview(review.documentId, { couponUsed: true })
+      .then(() => {
+        alert('El cupón se ha marcado como usado.');
+        // Actualizar la review localmente
+        setReviews((prevReviews) =>
+          prevReviews.map((r) =>
+            r.id === review.id ? { ...r, couponUsed: true } : r
+          )
+        );
+      })
+      .catch((error) => {
+        console.error('Error marcando el cupón como usado:', error);
+        alert('Error al actualizar el estado del cupón.');
+      });
   };
 
   if (loading) {
@@ -175,10 +218,24 @@ export function ReviewsContent() {
                   </div>
                 )}
               </div>
-              {/* Si ya se envió un cupón para esta review, se muestra el código; de lo contrario, se muestra el botón */}
-              {sentCoupons[review.id] ? (
-                <div className="bg-green-600 text-white text-center py-2 rounded">
-                  Cupón de descuento: <strong>{sentCoupons[review.id]}</strong>
+              {/* Si ya se envió un cupón para esta review */}
+              {review.couponCode ? (
+                <div className="space-y-2">
+                  <div className="bg-green-600 text-white text-center py-2 rounded">
+                    Cupón de descuento: <strong>{review.couponCode}</strong>
+                  </div>
+                  {!review.couponUsed ? (
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleMarkCouponUsed(review)}
+                    >
+                      Marcar como usado
+                    </Button>
+                  ) : (
+                    <div className="text-sm text-white/60 text-center">
+                      Cupón usado
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Button

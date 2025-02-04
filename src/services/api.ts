@@ -68,7 +68,7 @@ interface ApiResponse<T> {
 export const API_CONFIG = {
   baseUrl:
     import.meta.env.PUBLIC_API_URL ||
-    'https://yuppieb-production.up.railway.app//api',
+    'https://yuppieb-production.up.railway.app/api',
   timeout: 10000,
   retryAttempts: 3,
   retryDelay: 1000,
@@ -526,6 +526,32 @@ export async function updateEmployee(
     return true;
   } catch (error) {
     console.error('Error in updateEmployee:', error);
+    throw error;
+  }
+}
+
+export async function updateReview(
+  reviewDocumentId: string,
+  data: any
+): Promise<any> {
+  try {
+    const response = await fetch(
+      `${API_CONFIG.baseUrl}/reviews/${reviewDocumentId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data }),
+      }
+    );
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error updating review: ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error in updateReview:', error);
     throw error;
   }
 }
