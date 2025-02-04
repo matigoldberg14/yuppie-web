@@ -5,54 +5,59 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/Button';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 
-// Simulación de eventos/notificaciones
+// Datos simulados para próximos eventos (por ejemplo, notificaciones)
 const sampleEvents = [
   {
     id: 1,
     title: 'Responder reseñas pendientes',
     date: new Date(2025, 1, 15), // 15 de febrero de 2025
-    type: 'notification',
+    type: 'event',
   },
   {
     id: 2,
     title: 'Reunión de equipo',
     date: new Date(2025, 1, 17), // 17 de febrero de 2025
-    type: 'notification',
+    type: 'event',
   },
   {
     id: 3,
     title: 'Análisis mensual',
     date: new Date(2025, 1, 20), // 20 de febrero de 2025
-    type: 'notification',
+    type: 'event',
   },
   {
     id: 4,
-    title: 'Notificación extra',
+    title: 'Evento extra',
     date: new Date(2025, 2, 5), // 5 de marzo de 2025 (para probar navegación)
-    type: 'notification',
+    type: 'event',
   },
 ];
 
+// Datos simulados para reviews (reseñas)
+const sampleReviews = [
+  { id: 1, title: 'Review A', date: new Date(2025, 1, 15) },
+  { id: 2, title: 'Review B', date: new Date(2025, 1, 15) },
+  { id: 3, title: 'Review C', date: new Date(2025, 1, 18) },
+  { id: 4, title: 'Review D', date: new Date(2025, 1, 20) },
+  { id: 5, title: 'Review E', date: new Date(2025, 1, 20) },
+];
+
 export function CalendarContent() {
-  // Estado que guarda la fecha del mes a mostrar (se inicializa con la fecha actual)
+  // Estado que guarda la fecha del mes a mostrar (inicialmente la fecha actual)
   const [displayDate, setDisplayDate] = useState(new Date());
 
-  // Extraer año y mes (0-indexado) del estado
+  // Extraer año y mes (mes es 0-indexado)
   const year = displayDate.getFullYear();
   const month = displayDate.getMonth();
-
-  // Nombre del mes en español (por ejemplo, "febrero")
   const monthName = displayDate.toLocaleString('es-ES', { month: 'long' });
 
-  // Calcular la cantidad de días del mes
+  // Cantidad de días del mes
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  // Calcular el día de la semana (0 = domingo, 1 = lunes, etc.) del primer día del mes
+  // Determinar en qué día de la semana inicia el mes (0 = domingo, 1 = lunes, …)
   const startDay = new Date(year, month, 1).getDay();
 
-  // Para construir la cuadrícula del calendario:
-  // 1. Agregamos celdas en blanco hasta el primer día (startDay).
-  // 2. Luego agregamos los días del 1 al daysInMonth.
+  // Construir un arreglo para la cuadrícula:
+  // Se agregan celdas en blanco hasta el primer día, luego los números del 1 al daysInMonth.
   const calendarCells = [];
   for (let i = 0; i < startDay; i++) {
     calendarCells.push(null);
@@ -61,8 +66,8 @@ export function CalendarContent() {
     calendarCells.push(day);
   }
 
-  // Función que cuenta cuántos eventos ocurren en un día dado
-  const getNotificationCountForDay = (day: number) => {
+  // Función para contar eventos en un día determinado
+  const getEventCountForDay = (day: number) => {
     const cellDate = new Date(year, month, day);
     return sampleEvents.filter((event) => {
       const eventDate = event.date;
@@ -74,12 +79,25 @@ export function CalendarContent() {
     }).length;
   };
 
-  // Cambiar al mes anterior
+  // Función para contar reviews en un día determinado
+  const getReviewCountForDay = (day: number) => {
+    const cellDate = new Date(year, month, day);
+    return sampleReviews.filter((review) => {
+      const reviewDate = review.date;
+      return (
+        reviewDate.getFullYear() === cellDate.getFullYear() &&
+        reviewDate.getMonth() === cellDate.getMonth() &&
+        reviewDate.getDate() === cellDate.getDate()
+      );
+    }).length;
+  };
+
+  // Navegar al mes anterior
   const handlePrevMonth = () => {
     setDisplayDate(new Date(year, month - 1, 1));
   };
 
-  // Cambiar al mes siguiente
+  // Navegar al mes siguiente
   const handleNextMonth = () => {
     setDisplayDate(new Date(year, month + 1, 1));
   };
@@ -96,7 +114,7 @@ export function CalendarContent() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Tarjeta del calendario principal */}
+        {/* Tarjeta principal del calendario */}
         <Card className="lg:col-span-2 bg-white/10 border-0">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -122,7 +140,7 @@ export function CalendarContent() {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Cabecera de días de la semana */}
+            {/* Cabecera con los días de la semana */}
             <div className="grid grid-cols-7 gap-1">
               {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
                 <div key={day} className="p-2 text-center text-white/60">
@@ -130,14 +148,15 @@ export function CalendarContent() {
                 </div>
               ))}
             </div>
-            {/* Cuadrícula del calendario */}
+            {/* Cuadrícula de días */}
             <div className="grid grid-cols-7 gap-1 mt-2">
               {calendarCells.map((cell, index) => {
                 if (cell === null) {
-                  // Celdas en blanco para alinear el primer día
+                  // Celda vacía para alinear el primer día
                   return <div key={index} className="aspect-square p-2"></div>;
                 }
-                const notificationCount = getNotificationCountForDay(cell);
+                const eventCount = getEventCountForDay(cell);
+                const reviewCount = getReviewCountForDay(cell);
                 return (
                   <div
                     key={index}
@@ -145,10 +164,16 @@ export function CalendarContent() {
                   >
                     {/* Número del día */}
                     <div className="text-center">{cell}</div>
-                    {/* Badge con la cantidad de notificaciones (si es mayor a 0) */}
-                    {notificationCount > 0 && (
+                    {/* Badge para eventos (top-right, azul) */}
+                    {eventCount > 0 && (
                       <span className="absolute top-1 right-1 bg-blue-500 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
-                        {notificationCount}
+                        {eventCount}
+                      </span>
+                    )}
+                    {/* Badge para reviews (top-left, rojo) */}
+                    {reviewCount > 0 && (
+                      <span className="absolute top-1 left-1 bg-red-500 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+                        {reviewCount}
                       </span>
                     )}
                   </div>
