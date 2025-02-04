@@ -1,13 +1,15 @@
 // src/components/dashboard/ReviewsContent.tsx
+
 import React, { useState, useEffect } from 'react';
 import { auth } from '../../lib/firebase';
 import {
   getRestaurantByFirebaseUID,
   getRestaurantReviews,
 } from '../../services/api';
-import { Star, MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/Button';
+import emailjs from '@emailjs/browser';
 
 interface Review {
   id: number;
@@ -24,6 +26,10 @@ interface Review {
 export function ReviewsContent() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  // Mapa para guardar el cupón enviado por review (key = review.id, value = cupón)
+  const [sentCoupons, setSentCoupons] = useState<{ [key: number]: string }>({});
+  // Almacena el nombre del restaurante (para incluirlo en el email)
+  const [restaurantName, setRestaurantName] = useState('');
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -33,15 +39,17 @@ export function ReviewsContent() {
           return;
         }
 
-        // Primero obtener el restaurante
+        // Obtener los datos del restaurante basado en el usuario de Firebase
         const restaurantData = await getRestaurantByFirebaseUID(
           auth.currentUser.uid
         );
         if (!restaurantData) {
           throw new Error('No se encontró el restaurante');
         }
+        // Se asume que restaurantData tiene la propiedad "name"
+        setRestaurantName(restaurantData.name || 'Yuppie');
 
-        // Luego obtener las reviews
+        // Obtener las reviews del restaurante (filtradas por su documentId)
         const reviewsData = await getRestaurantReviews(
           restaurantData.documentId
         );
@@ -55,6 +63,64 @@ export function ReviewsContent() {
 
     fetchReviews();
   }, []);
+
+  // Función para generar un cupón aleatorio de 10 dígitos alfanuméricos
+  const generateCouponCode = (length: number): string => {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const charactersLength = characters.length;
+    for (let i = 0; i < length; i++) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+  };
+
+  // Función para enviar el cupón de descuento
+  const handleSendCoupon = (review: Review) => {
+    // Solicitar al usuario el porcentaje de descuento mediante prompt
+    const discountStr = window.prompt(
+      'Ingrese el porcentaje de descuento (entre 10 y 100):'
+    );
+    if (!discountStr) return; // Si se cancela el prompt, no se hace nada
+
+    const discount = parseInt(discountStr, 10);
+    if (isNaN(discount) || discount < 10 || discount > 100) {
+      alert('El valor debe ser un número entre 10 y 100.');
+      return;
+    }
+
+    // Generar un cupón aleatorio de 10 caracteres
+    const couponCode = generateCouponCode(10);
+
+    // Preparar los parámetros que se enviarán al template de EmailJS
+    const templateParams = {
+      to_email: review.email, // Se usará en el campo {{to_email}} del template
+      discount_percentage: discount, // Se usará en {{discount_percentage}}
+      coupon_code: couponCode, // Se usará en {{coupon_code}}
+      restaurant: restaurantName, // Se usará en el "from name": Yuppie {{restaurant}}
+      reply_to: 'contacto@tuempresa.com', // Se usará en {{reply_to}}
+    };
+
+    emailjs
+      .send(
+        'service_kovjo5m', // El Service ID
+        'template_em90fox', // El Template ID
+        templateParams,
+        '3wONTqDb8Fwtqf1P0' // La Public Key (User ID)
+      )
+      .then(
+        (result) => {
+          console.log('Email enviado correctamente', result.text);
+          alert('Cupón enviado exitosamente.');
+          // Guardar el cupón enviado para esta review y evitar reenvíos
+          setSentCoupons((prev) => ({ ...prev, [review.id]: couponCode }));
+        },
+        (error) => {
+          console.error('Error enviando cupón', error);
+          alert('Error enviando el cupón.');
+        }
+      );
+  };
 
   if (loading) {
     return (
@@ -75,7 +141,6 @@ export function ReviewsContent() {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold text-white mb-6">Reseñas</h1>
-
       <div className="space-y-4">
         {reviews.map((review) => (
           <Card key={review.id} className="bg-white/10 border-0">
@@ -110,6 +175,19 @@ export function ReviewsContent() {
                   </div>
                 )}
               </div>
+              {/* Si ya se envió un cupón para esta review, se muestra el código; de lo contrario, se muestra el botón */}
+              {sentCoupons[review.id] ? (
+                <div className="bg-green-600 text-white text-center py-2 rounded">
+                  Cupón de descuento: <strong>{sentCoupons[review.id]}</strong>
+                </div>
+              ) : (
+                <Button
+                  variant="secondary"
+                  onClick={() => handleSendCoupon(review)}
+                >
+                  Enviar cupón de descuento
+                </Button>
+              )}
             </CardContent>
           </Card>
         ))}
