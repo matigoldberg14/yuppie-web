@@ -93,31 +93,23 @@ export function CommentForm({ restaurantId }: Props) {
       if (rating <= 2) {
         const restaurant = await getRestaurant(restaurantId);
 
-        if (restaurant?.owner?.email) {
-          // Verificamos que exista el email del owner
-          try {
-            await emailjs.send(
-              'service_kovjo5m',
-              'template_5jlcmr6',
-              {
-                to_email: restaurant.owner.email, // Email del owner
-                restaurant_name: restaurant.name,
-                rating: rating,
-                improvement_type: typeImprovement || 'Otra',
-                comment: validatedData.comment.trim(),
-                customer_email: validatedData.email,
-              },
-              '3wONTqDb8Fwtqf1P0'
-            );
-            console.log('Email enviado a:', restaurant.owner.email);
-          } catch (emailError) {
-            console.error('Error enviando email:', emailError);
-          }
-        } else {
-          console.warn(
-            'No se encontró email del owner para:',
-            restaurant?.name
+        try {
+          await emailjs.send(
+            'service_kovjo5m',
+            'template_v2s559p',
+            {
+              restaurant_name: restaurant?.name || 'Restaurante',
+              rating: rating,
+              improvement_type: typeImprovement || 'Otra',
+              comment: validatedData.comment.trim(),
+              customer_email: validatedData.email,
+              owner_email: restaurant?.owner?.email || 'info@yuppie.com',
+            },
+            '3wONTqDb8Fwtqf1P0'
           );
+          console.log('Email de notificación enviado');
+        } catch (emailError) {
+          console.error('Error enviando email:', emailError);
         }
       }
 
