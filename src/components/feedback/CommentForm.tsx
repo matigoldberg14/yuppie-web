@@ -1,9 +1,10 @@
 // src/components/feedback/CommentForm.tsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createReview } from '../../services/api';
+import { createReview, getRestaurant } from '../../services/api';
 import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
+import emailjs from '@emailjs/browser';
 
 const commentSchema = z.object({
   email: z.string().email('Por favor, ingresa un email válido'),
@@ -16,7 +17,7 @@ const commentSchema = z.object({
 type CommentFormData = z.infer<typeof commentSchema>;
 
 type Props = {
-  restaurantId: string; // Mantenemos como string aquí
+  restaurantId: string;
 };
 
 export function CommentForm({ restaurantId }: Props) {
@@ -24,14 +25,14 @@ export function CommentForm({ restaurantId }: Props) {
     comment: '',
     email: '',
   });
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof CommentFormData, string>>
-  >({});
+
+  const [errors, setErrors] = useState<{
+    [key in keyof CommentFormData]?: string;
+  }>({});
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  // Validación del formulario
   useEffect(() => {
     try {
       commentSchema.parse(formData);
@@ -39,7 +40,7 @@ export function CommentForm({ restaurantId }: Props) {
       setIsButtonDisabled(false);
     } catch (validationError) {
       if (validationError instanceof z.ZodError) {
-        const fieldErrors: Partial<Record<keyof CommentFormData, string>> = {};
+        const fieldErrors: { [key in keyof CommentFormData]?: string } = {};
         validationError.errors.forEach((err) => {
           if (err.path[0]) {
             fieldErrors[err.path[0] as keyof CommentFormData] = err.message;
@@ -65,7 +66,6 @@ export function CommentForm({ restaurantId }: Props) {
       setIsSubmitting(true);
 
       const validatedData = commentSchema.parse(formData);
-
       const rating = Number(localStorage.getItem('yuppie_rating'));
       const typeImprovement =
         localStorage.getItem('yuppie_improvement') || undefined;
@@ -74,22 +74,45 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      // Convertir restaurantId a número aquí
       const restaurantIdNumber = parseInt(restaurantId, 10);
       if (isNaN(restaurantIdNumber)) {
         throw new Error('ID de restaurante inválido');
       }
 
+      // Crear review
       await createReview({
-        restaurantId: restaurantIdNumber, // Ahora pasamos un número
+        restaurantId: restaurantIdNumber,
         calification: rating,
-        typeImprovement: typeImprovement || 'Otra', // Aseguramos que siempre sea string
+        typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,
         comment: validatedData.comment.trim(),
         googleSent: rating === 5,
       });
 
-      // Limpiar localStorage
+      // Si es calificación baja, enviar email
+      if (rating <= 2) {
+        const restaurant = await getRestaurant(restaurantId);
+
+        try {
+          await emailjs.send(
+            'service_kovjo5m',
+            'template_5jlcmr6',
+            {
+              restaurant_name: restaurant?.name || 'Restaurante',
+              rating: rating,
+              improvement_type: typeImprovement || 'Otra',
+              comment: validatedData.comment.trim(),
+              customer_email: validatedData.email,
+              owner_email: restaurant?.owner?.email || 'info@yuppie.com',
+            },
+            '3wONTqDb8Fwtqf1P0'
+          );
+          console.log('Email de notificación enviado');
+        } catch (emailError) {
+          console.error('Error enviando email:', emailError);
+        }
+      }
+
       localStorage.removeItem('yuppie_improvement');
       localStorage.removeItem('yuppie_rating');
       localStorage.removeItem('yuppie_restaurant');
@@ -122,6 +145,7 @@ export function CommentForm({ restaurantId }: Props) {
     }
   };
 
+  // El resto del componente (JSX) se mantiene exactamente igual
   return (
     <motion.form
       onSubmit={handleSubmit}

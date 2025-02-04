@@ -4,6 +4,8 @@
 import { ViewTransitions } from 'astro:transitions';
 import { SEO } from 'astro-seo';
 import '../styles/globals.css';
+import emailjs from '@emailjs/browser';
+emailjs.init("3wONTqDb8Fwtqf1P0");
 
 interface Props {
   title: string;
