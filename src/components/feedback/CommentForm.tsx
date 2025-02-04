@@ -92,17 +92,19 @@ export function CommentForm({ restaurantId }: Props) {
       // SOLO agregamos esto para el email
       if (rating <= 2) {
         try {
-          // Obtener el email del owner
-          const restaurantResponse = await fetch(
+          // Obtener el email del owner con la consulta que funciona
+          const ownerResponse = await fetch(
             `${
               import.meta.env.PUBLIC_API_URL
-            }/restaurants/${restaurantId}?populate=owner`
+            }/owners?filters[restaurant][documentId][$eq]=${restaurantId}`
           );
-          const restaurantData = await restaurantResponse.json();
-          const ownerEmail = restaurantData.data.owner.email;
+          const ownerData = await ownerResponse.json();
+
+          // Extraer el email del primer resultado
+          const ownerEmail = ownerData.data[0]?.email;
 
           if (!ownerEmail) {
-            console.error('No se encontró email del owner');
+            console.log('No se encontró email del owner');
             return;
           }
 
@@ -116,7 +118,6 @@ export function CommentForm({ restaurantId }: Props) {
               rating: rating,
               improvement_type: typeImprovement || 'Otra',
               customer_email: validatedData.email,
-              restaurant_name: restaurantData.data.name, // También agregamos el nombre del restaurante
             },
             '3wONTqDb8Fwtqf1P0'
           );
