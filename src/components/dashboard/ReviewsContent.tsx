@@ -102,7 +102,7 @@ export function ReviewsContent() {
     emailjs
       .send(
         'service_kovjo5m',
-        'template_discount_coupon',
+        'template_em90fox',
         templateParams,
         '3wONTqDb8Fwtqf1P0'
       )
