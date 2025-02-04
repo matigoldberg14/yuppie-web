@@ -1,11 +1,16 @@
 // src/components/dashboard/CalendarContent.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/Button';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { auth } from '../../lib/firebase';
+import {
+  getRestaurantByFirebaseUID,
+  getRestaurantReviews,
+} from '../../services/api';
 
-// Datos simulados para próximos eventos (por ejemplo, notificaciones)
+// Datos simulados para próximos eventos (puedes hacerlos dinámicos si lo requieres)
 const sampleEvents = [
   {
     id: 1,
@@ -33,31 +38,56 @@ const sampleEvents = [
   },
 ];
 
-// Datos simulados para reviews (reseñas)
-const sampleReviews = [
-  { id: 1, title: 'Review A', date: new Date(2025, 1, 15) },
-  { id: 2, title: 'Review B', date: new Date(2025, 1, 15) },
-  { id: 3, title: 'Review C', date: new Date(2025, 1, 18) },
-  { id: 4, title: 'Review D', date: new Date(2025, 1, 20) },
-  { id: 5, title: 'Review E', date: new Date(2025, 1, 20) },
-];
-
 export function CalendarContent() {
-  // Estado que guarda la fecha del mes a mostrar (inicialmente la fecha actual)
+  // Estado para la fecha del mes a mostrar (inicialmente la fecha actual)
   const [displayDate, setDisplayDate] = useState(new Date());
+  // Estado para almacenar las reviews obtenidas de Strapi
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
 
-  // Extraer año y mes (mes es 0-indexado)
+  // Al montar el componente, obtener las reviews del restaurante logueado
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!auth?.currentUser?.uid) {
+        console.log('No hay usuario autenticado');
+        setLoadingReviews(false);
+        return;
+      }
+      try {
+        // Obtener datos del restaurante según el Firebase UID
+        const restaurantData = await getRestaurantByFirebaseUID(
+          auth.currentUser.uid
+        );
+        if (!restaurantData) {
+          throw new Error('No se encontró el restaurante');
+        }
+        // Obtener las reviews del restaurante (usando el documentId)
+        const reviewsData = await getRestaurantReviews(
+          restaurantData.documentId
+        );
+        setReviews(reviewsData);
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+
+    fetchReviews();
+  }, []);
+
+  // Extraer año y mes (0-indexado) del mes a mostrar
   const year = displayDate.getFullYear();
   const month = displayDate.getMonth();
   const monthName = displayDate.toLocaleString('es-ES', { month: 'long' });
 
-  // Cantidad de días del mes
+  // Número de días del mes
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  // Determinar en qué día de la semana inicia el mes (0 = domingo, 1 = lunes, …)
+  // Día de la semana del primer día del mes (0 = domingo, 1 = lunes, …)
   const startDay = new Date(year, month, 1).getDay();
 
-  // Construir un arreglo para la cuadrícula:
-  // Se agregan celdas en blanco hasta el primer día, luego los números del 1 al daysInMonth.
+  // Construir arreglo para la cuadrícula:
+  // Primero celdas vacías para alinear el primer día y luego los días del 1 al daysInMonth.
   const calendarCells = [];
   for (let i = 0; i < startDay; i++) {
     calendarCells.push(null);
@@ -66,7 +96,7 @@ export function CalendarContent() {
     calendarCells.push(day);
   }
 
-  // Función para contar eventos en un día determinado
+  // Función para contar eventos en un día determinado (usando sampleEvents)
   const getEventCountForDay = (day: number) => {
     const cellDate = new Date(year, month, day);
     return sampleEvents.filter((event) => {
@@ -79,11 +109,12 @@ export function CalendarContent() {
     }).length;
   };
 
-  // Función para contar reviews en un día determinado
+  // Función para contar reviews en un día determinado usando las reviews obtenidas de Strapi
   const getReviewCountForDay = (day: number) => {
     const cellDate = new Date(year, month, day);
-    return sampleReviews.filter((review) => {
-      const reviewDate = review.date;
+    return reviews.filter((review) => {
+      // Suponemos que review.createdAt es una cadena de fecha
+      const reviewDate = new Date(review.createdAt);
       return (
         reviewDate.getFullYear() === cellDate.getFullYear() &&
         reviewDate.getMonth() === cellDate.getMonth() &&
@@ -92,12 +123,11 @@ export function CalendarContent() {
     }).length;
   };
 
-  // Navegar al mes anterior
+  // Funciones para navegar entre meses
   const handlePrevMonth = () => {
     setDisplayDate(new Date(year, month - 1, 1));
   };
 
-  // Navegar al mes siguiente
   const handleNextMonth = () => {
     setDisplayDate(new Date(year, month + 1, 1));
   };
