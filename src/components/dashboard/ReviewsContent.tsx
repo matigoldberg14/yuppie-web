@@ -22,16 +22,16 @@ interface Review {
   googleSent: boolean;
   date: string;
   createdAt: string;
-  couponCode?: string; // Campo nuevo
-  couponUsed?: boolean; // Campo nuevo
+  couponCode?: string; // Nuevo campo
+  couponUsed?: boolean; // Nuevo campo
 }
 
 export function ReviewsContent() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-  // Estado local para guardar los cupones enviados (aunque también se guarda en la review en Strapi)
+  // Estado para guardar cupones enviados (aunque la info viene de Strapi)
   const [sentCoupons, setSentCoupons] = useState<{ [key: number]: string }>({});
-  // Almacenar el nombre del restaurante (para enviarlo en el email)
+  // Almacenar el nombre del restaurante (para enviar en el email)
   const [restaurantName, setRestaurantName] = useState('');
 
   useEffect(() => {
@@ -62,18 +62,19 @@ export function ReviewsContent() {
     fetchReviews();
   }, []);
 
-  // Función para generar un cupón aleatorio de 10 dígitos alfanuméricos
+  // Función para generar un cupón aleatorio de 10 caracteres alfanuméricos
   const generateCouponCode = (length: number): string => {
     let result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const charactersLength = characters.length;
     for (let i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+      result += characters.charAt(
+        Math.floor(Math.random() * characters.length)
+      );
     }
     return result;
   };
 
-  // Función para enviar el cupón de descuento y actualizar Strapi
+  // Función para enviar el cupón y actualizar Strapi
   const handleSendCoupon = (review: Review) => {
     const discountStr = window.prompt(
       'Ingrese el porcentaje de descuento (entre 10 y 100):'
@@ -106,12 +107,13 @@ export function ReviewsContent() {
         async (result) => {
           console.log('Email enviado correctamente', result.text);
           alert('Cupón enviado exitosamente.');
-          // Actualiza la review en Strapi usando review.id (número)
           try {
+            // Actualizamos la review usando review.id (número)
             await updateReview(review.id, {
               couponCode: couponCode,
               couponUsed: false,
             });
+            // Actualizamos el estado local
             setSentCoupons((prev) => ({ ...prev, [review.id]: couponCode }));
             setReviews((prevReviews) =>
               prevReviews.map((r) =>
@@ -139,7 +141,6 @@ export function ReviewsContent() {
     );
     if (!confirmation) return;
 
-    // Usa review.id para actualizar
     updateReview(review.id, { couponUsed: true })
       .then(() => {
         alert('El cupón se ha marcado como usado.');

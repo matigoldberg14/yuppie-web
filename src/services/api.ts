@@ -66,7 +66,6 @@ interface ApiResponse<T> {
 }
 
 export const API_CONFIG = {
-  // Asegúrate de que PUBLIC_API_URL incluya el prefijo "/api"
   baseUrl:
     import.meta.env.PUBLIC_API_URL ||
     'https://yuppieb-production.up.railway.app/api',
@@ -113,10 +112,8 @@ const apiClient = {
           const error = await res.json();
           throw new Error(error.error?.message || 'API Error');
         }
-
         return res.json();
       });
-
       return response;
     } finally {
       clearTimeout(timeoutId);
@@ -309,8 +306,8 @@ export async function getRestaurantReviews(restaurantId: string) {
       googleSent: review.googleSent,
       date: review.date,
       createdAt: review.createdAt,
-      couponCode: review.couponCode, // Asegúrate de que se incluyan
-      couponUsed: review.couponUsed,
+      couponCode: review.couponCode, // Nuevo campo
+      couponUsed: review.couponUsed, // Nuevo campo
     }));
   } catch (error) {
     console.error('Error fetching reviews:', error);
@@ -520,7 +517,7 @@ export async function updateEmployee(
 
 export async function updateReview(reviewId: number, data: any): Promise<any> {
   try {
-    // Nota: Se usa reviewId (número) para formar la URL correcta.
+    // Usa reviewId (número) para formar la URL correcta: /reviews/{id}
     const response = await fetch(`${API_CONFIG.baseUrl}/reviews/${reviewId}`, {
       method: 'PUT',
       headers: {
@@ -539,4 +536,5 @@ export async function updateReview(reviewId: number, data: any): Promise<any> {
     throw error;
   }
 }
+
 export type { ApiError, ApiResponse, Restaurant, Review };
