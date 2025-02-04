@@ -92,14 +92,13 @@ export function CommentForm({ restaurantId }: Props) {
       // Si es rating bajo, intentar enviar email
       if (rating <= 2) {
         try {
-          // Obtener email del owner
-          const ownerResponse = await fetch(
+          const response = await fetch(
             `${
               import.meta.env.PUBLIC_API_URL
-            }/owners?filters[restaurant][documentId][$eq]=${restaurantId}&fields[0]=email`
+            }/restaurants?populate=owner&filters[documentId][$eq]=${restaurantId}`
           );
-          const ownerData = await ownerResponse.json();
-          const ownerEmail = ownerData.data[0]?.email;
+          const data = await response.json();
+          const ownerEmail = data.data[0]?.owner?.email;
 
           if (ownerEmail) {
             await emailjs.send(
@@ -114,10 +113,10 @@ export function CommentForm({ restaurantId }: Props) {
               },
               '3wONTqDb8Fwtqf1P0'
             );
+            console.log('Email enviado a:', ownerEmail);
           }
         } catch (emailError) {
           console.error('Error al enviar email:', emailError);
-          // Si falla el email, no afectamos el flujo principal
         }
       }
 
