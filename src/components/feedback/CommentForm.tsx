@@ -79,7 +79,7 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('ID de restaurante inválido');
       }
 
-      // Crear la review (esto ya funciona, no lo tocamos)
+      // Crear review (esto no se toca)
       await createReview({
         restaurantId: restaurantIdNumber,
         calification: rating,
@@ -89,44 +89,39 @@ export function CommentForm({ restaurantId }: Props) {
         googleSent: rating === 5,
       });
 
-      // SOLO agregamos esto para el email
+      // Si es rating bajo, intentar enviar email
       if (rating <= 2) {
         try {
-          // Obtener el email del owner con la consulta que funciona
+          // Obtener email del owner
           const ownerResponse = await fetch(
             `${
               import.meta.env.PUBLIC_API_URL
-            }/owners?filters[restaurant][documentId][$eq]=${restaurantId}`
+            }/owners?filters[restaurant][documentId][$eq]=${restaurantId}&fields[0]=email`
           );
           const ownerData = await ownerResponse.json();
-
-          // Extraer el email del primer resultado
           const ownerEmail = ownerData.data[0]?.email;
 
-          if (!ownerEmail) {
-            console.log('No se encontró email del owner');
-            return;
+          if (ownerEmail) {
+            await emailjs.send(
+              'service_kovjo5m',
+              'template_5jlcmr6',
+              {
+                to_email: ownerEmail,
+                comment: validatedData.comment.trim(),
+                rating: rating,
+                improvement_type: typeImprovement || 'Otra',
+                customer_email: validatedData.email,
+              },
+              '3wONTqDb8Fwtqf1P0'
+            );
           }
-
-          console.log('Enviando email a:', ownerEmail);
-          await emailjs.send(
-            'service_kovjo5m',
-            'template_5jlcmr6',
-            {
-              to_email: ownerEmail,
-              comment: validatedData.comment.trim(),
-              rating: rating,
-              improvement_type: typeImprovement || 'Otra',
-              customer_email: validatedData.email,
-            },
-            '3wONTqDb8Fwtqf1P0'
-          );
-          console.log('Email enviado correctamente');
         } catch (emailError) {
           console.error('Error al enviar email:', emailError);
+          // Si falla el email, no afectamos el flujo principal
         }
       }
-      // Limpiar y redireccionar (esto ya funciona, no lo tocamos)
+
+      // Limpiar y redireccionar (esto no se toca)
       localStorage.removeItem('yuppie_improvement');
       localStorage.removeItem('yuppie_rating');
       localStorage.removeItem('yuppie_restaurant');
