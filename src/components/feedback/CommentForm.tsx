@@ -74,16 +74,14 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      // Obtener el restaurante ANTES de crear la review
-      console.log('Obteniendo restaurante:', restaurantId);
-      const restaurant = await getRestaurant(restaurantId);
-      if (!restaurant) {
-        throw new Error('No se encontró el restaurante');
+      const restaurantIdNumber = parseInt(restaurantId, 10);
+      if (isNaN(restaurantIdNumber)) {
+        throw new Error('ID de restaurante inválido');
       }
 
-      // Crear review usando el id numérico del restaurante
+      // Crear la review (esto ya funciona, no lo tocamos)
       await createReview({
-        restaurantId: restaurant.id,
+        restaurantId: restaurantIdNumber,
         calification: rating,
         typeImprovement: typeImprovement || 'Otra',
         email: validatedData.email,
@@ -91,30 +89,26 @@ export function CommentForm({ restaurantId }: Props) {
         googleSent: rating === 5,
       });
 
-      // Si es calificación baja, enviar email
-      if (rating <= 2 && restaurant.owner?.email) {
-        console.log('Enviando email a:', restaurant.owner.email);
+      // SOLO agregamos esto para el email
+      if (rating <= 2) {
         try {
           await emailjs.send(
             'service_kovjo5m',
-            'template_5jlcmr6',
+            'template_v2s559p',
             {
-              to_name: `${restaurant.owner.name} ${restaurant.owner.lastName}`,
-              to_email: restaurant.owner.email,
-              restaurant_name: restaurant.name,
+              comment: validatedData.comment.trim(),
               rating: rating,
               improvement_type: typeImprovement || 'Otra',
-              comment: validatedData.comment.trim(),
               customer_email: validatedData.email,
             },
             '3wONTqDb8Fwtqf1P0'
           );
-          console.log('Email enviado exitosamente al owner');
         } catch (emailError) {
-          console.error('Error enviando email:', emailError);
+          console.error('Error al enviar email:', emailError);
         }
       }
 
+      // Limpiar y redireccionar (esto ya funciona, no lo tocamos)
       localStorage.removeItem('yuppie_improvement');
       localStorage.removeItem('yuppie_rating');
       localStorage.removeItem('yuppie_restaurant');
