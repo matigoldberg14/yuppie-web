@@ -66,6 +66,7 @@ interface ApiResponse<T> {
 }
 
 export const API_CONFIG = {
+  // Asegúrate de que PUBLIC_API_URL incluya el prefijo "/api"
   baseUrl:
     import.meta.env.PUBLIC_API_URL ||
     'https://yuppieb-production.up.railway.app/api',
@@ -92,7 +93,6 @@ const withRetry = async <T>(
   }
 };
 
-// Cliente base mejorado
 const apiClient = {
   async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const controller = new AbortController();
@@ -259,27 +259,19 @@ interface Restaurant {
 
 export async function getRestaurantByFirebaseUID(firebaseUID: string) {
   try {
-    console.log('Fetching restaurant for UID:', firebaseUID);
     const response = await fetch(
       `${
         import.meta.env.PUBLIC_API_URL
       }/restaurants?filters[firebaseUID][$eq]=${firebaseUID}&populate=owner`
     );
-
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-
     const result = await response.json();
-    console.log('API Full Response:', JSON.stringify(result, null, 2));
-
     if (!result.data || result.data.length === 0) {
       throw new Error('No restaurant found');
     }
-
     const restaurantData = result.data[0];
-
-    // Estructura el objeto basándonos en la respuesta real
     return {
       id: restaurantData.id,
       documentId: restaurantData.documentId,
@@ -298,20 +290,15 @@ export async function getRestaurantByFirebaseUID(firebaseUID: string) {
 
 export async function getRestaurantReviews(restaurantId: string) {
   try {
-    console.log('Fetching reviews for restaurant:', restaurantId);
     const response = await fetch(
       `${
         import.meta.env.PUBLIC_API_URL
       }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*&sort[0]=createdAt:desc`
     );
-
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-
     const { data } = await response.json();
-    console.log('Reviews data:', data);
-
     return data.map((review: any) => ({
       id: review.id,
       documentId: review.documentId,
@@ -322,6 +309,8 @@ export async function getRestaurantReviews(restaurantId: string) {
       googleSent: review.googleSent,
       date: review.date,
       createdAt: review.createdAt,
+      couponCode: review.couponCode, // Asegúrate de que se incluyan
+      couponUsed: review.couponUsed,
     }));
   } catch (error) {
     console.error('Error fetching reviews:', error);
@@ -329,7 +318,6 @@ export async function getRestaurantReviews(restaurantId: string) {
   }
 }
 
-// src/services/api.ts
 // Añadir interfaces
 interface Employee {
   id: number;
@@ -532,12 +520,13 @@ export async function updateEmployee(
 
 export async function updateReview(reviewId: number, data: any): Promise<any> {
   try {
+    // Nota: Se usa reviewId (número) para formar la URL correcta.
     const response = await fetch(`${API_CONFIG.baseUrl}/reviews/${reviewId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      // Strapi espera un objeto con la clave "data" que contenga los cambios
+      // Strapi espera { data: { ... } }
       body: JSON.stringify({ data }),
     });
     if (!response.ok) {

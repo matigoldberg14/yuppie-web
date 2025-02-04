@@ -41,8 +41,6 @@ export function ReviewsContent() {
           console.log('No hay usuario autenticado');
           return;
         }
-
-        // Obtener el restaurante del usuario
         const restaurantData = await getRestaurantByFirebaseUID(
           auth.currentUser.uid
         );
@@ -50,8 +48,6 @@ export function ReviewsContent() {
           throw new Error('No se encontró el restaurante');
         }
         setRestaurantName(restaurantData.name || 'Yuppie');
-
-        // Obtener las reviews del restaurante (asegúrate de que el endpoint incluya populate=*)
         const reviewsData = await getRestaurantReviews(
           restaurantData.documentId
         );
@@ -110,13 +106,12 @@ export function ReviewsContent() {
         async (result) => {
           console.log('Email enviado correctamente', result.text);
           alert('Cupón enviado exitosamente.');
-          // Usa review.id (número) para actualizar en Strapi
+          // Actualiza la review en Strapi usando review.id (número)
           try {
             await updateReview(review.id, {
               couponCode: couponCode,
               couponUsed: false,
             });
-            // Actualiza el estado local para que la review tenga el cupón
             setSentCoupons((prev) => ({ ...prev, [review.id]: couponCode }));
             setReviews((prevReviews) =>
               prevReviews.map((r) =>
