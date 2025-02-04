@@ -537,6 +537,7 @@ export async function updateReview(reviewId: number, data: any): Promise<any> {
       headers: {
         'Content-Type': 'application/json',
       },
+      // Strapi espera un objeto con la clave "data" que contenga los cambios
       body: JSON.stringify({ data }),
     });
     if (!response.ok) {
@@ -549,5 +550,4 @@ export async function updateReview(reviewId: number, data: any): Promise<any> {
     throw error;
   }
 }
-
 export type { ApiError, ApiResponse, Restaurant, Review };
