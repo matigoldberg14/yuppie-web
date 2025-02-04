@@ -109,7 +109,7 @@ export function ReviewsContent() {
           alert('Cupón enviado exitosamente.');
           try {
             // Actualizamos la review usando review.id (número)
-            await updateReview(review.id, {
+            await updateReview(review.documentId, {
               couponCode: couponCode,
               couponUsed: false,
             });
@@ -141,7 +141,7 @@ export function ReviewsContent() {
     );
     if (!confirmation) return;
 
-    updateReview(review.id, { couponUsed: true })
+    updateReview(review.documentId, { couponUsed: true })
       .then(() => {
         alert('El cupón se ha marcado como usado.');
         setReviews((prevReviews) =>

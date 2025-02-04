@@ -515,17 +515,21 @@ export async function updateEmployee(
   }
 }
 
-export async function updateReview(reviewId: number, data: any): Promise<any> {
+export async function updateReview(
+  reviewDocumentId: string,
+  data: any
+): Promise<any> {
   try {
-    // Usa reviewId (número) para formar la URL correcta: /reviews/{id}
-    const response = await fetch(`${API_CONFIG.baseUrl}/reviews/${reviewId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      // Strapi espera { data: { ... } }
-      body: JSON.stringify({ data }),
-    });
+    const response = await fetch(
+      `${API_CONFIG.baseUrl}/reviews/${reviewDocumentId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data }),
+      }
+    );
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Error updating review: ${errorText}`);
