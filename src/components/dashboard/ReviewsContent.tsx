@@ -79,7 +79,6 @@ export function ReviewsContent() {
 
   // Función para enviar el cupón de descuento y actualizar Strapi
   const handleSendCoupon = (review: Review) => {
-    // Solicitar el porcentaje de descuento
     const discountStr = window.prompt(
       'Ingrese el porcentaje de descuento (entre 10 y 100):'
     );
@@ -90,39 +89,34 @@ export function ReviewsContent() {
       return;
     }
 
-    // Generar el cupón
     const couponCode = generateCouponCode(10);
 
-    // Parámetros para EmailJS
     const templateParams = {
-      to_email: review.email, // Destinatario
-      discount_percentage: discount, // Porcentaje de descuento
-      coupon_code: couponCode, // Cupón generado
-      restaurant: restaurantName, // Nombre del restaurante
-      reply_to: 'contacto@tuempresa.com', // Email de contacto
+      to_email: review.email,
+      discount_percentage: discount,
+      coupon_code: couponCode,
+      restaurant: restaurantName,
+      reply_to: 'contacto@tuempresa.com',
     };
 
     emailjs
       .send(
-        'service_kovjo5m', // Service ID
-        'template_em90fox', // Template ID
+        'service_kovjo5m',
+        'template_discount_coupon',
         templateParams,
-        '3wONTqDb8Fwtqf1P0' // Public Key
+        '3wONTqDb8Fwtqf1P0'
       )
       .then(
         async (result) => {
           console.log('Email enviado correctamente', result.text);
           alert('Cupón enviado exitosamente.');
-
-          // Actualizar la review en Strapi con el cupón generado y couponUsed en false
+          // Usa review.id para actualizar en Strapi
           try {
-            await updateReview(review.documentId, {
+            await updateReview(review.id, {
               couponCode: couponCode,
               couponUsed: false,
             });
-            // Actualizar el estado local
             setSentCoupons((prev) => ({ ...prev, [review.id]: couponCode }));
-            // También actualizamos la review localmente para que incluya los nuevos campos
             setReviews((prevReviews) =>
               prevReviews.map((r) =>
                 r.id === review.id ? { ...r, couponCode, couponUsed: false } : r
@@ -149,7 +143,8 @@ export function ReviewsContent() {
     );
     if (!confirmation) return;
 
-    updateReview(review.documentId, { couponUsed: true })
+    // Usa review.id en lugar de review.documentId
+    updateReview(review.id, { couponUsed: true })
       .then(() => {
         alert('El cupón se ha marcado como usado.');
         // Actualizar la review localmente
