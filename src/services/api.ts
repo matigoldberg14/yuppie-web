@@ -20,16 +20,8 @@ interface Restaurant {
   };
 }
 
-interface NotifyOwnerData {
-  ownerEmail: string;
-  restaurantName: string;
-  calification: number;
-  comment: string;
-  typeImprovement: string;
-}
-
 export interface CreateReviewInput {
-  restaurantId: string; // Cambiado a string para usar documentId
+  restaurantId: number;
   calification: number;
   typeImprovement: string;
   email: string;
@@ -198,19 +190,20 @@ export async function incrementTaps(documentId: string) {
   }
 }
 
+// src/services/api.ts
 export async function createReview(
   reviewData: CreateReviewInput
 ): Promise<ApiResponse<Review>> {
   try {
     const formattedData = {
       data: {
-        restaurant: { connect: [{ id: reviewData.restaurantId }] }, // ESTA ERA LA DIFERENCIA CLAVE
+        restaurant: reviewData.restaurantId,
         calification: reviewData.calification,
         typeImprovement: reviewData.typeImprovement,
         email: reviewData.email,
         comment: reviewData.comment,
         googleSent: reviewData.googleSent,
-        date: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0],
       },
     };
 
@@ -226,7 +219,8 @@ export async function createReview(
       throw new Error('Failed to create review');
     }
 
-    return await response.json();
+    const json = await response.json();
+    return json;
   } catch (error) {
     console.error('Error in createReview:', error);
     throw error;
@@ -532,27 +526,6 @@ export async function updateEmployee(
     return true;
   } catch (error) {
     console.error('Error in updateEmployee:', error);
-    throw error;
-  }
-}
-
-export async function sendLowRatingNotification(
-  data: NotifyOwnerData
-): Promise<void> {
-  try {
-    const response = await fetch(`${API_CONFIG.baseUrl}/reviews/notify-owner`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ data }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to send notification');
-    }
-  } catch (error) {
-    console.error('Error sending notification:', error);
     throw error;
   }
 }

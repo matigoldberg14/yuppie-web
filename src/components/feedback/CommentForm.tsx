@@ -1,13 +1,9 @@
 // src/components/feedback/CommentForm.tsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createReview } from '../../services/api';
 import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
-import {
-  createReview,
-  sendLowRatingNotification,
-  getRestaurant,
-} from '../../services/api';
 
 const commentSchema = z.object({
   email: z.string().email('Por favor, ingresa un email válido'),
@@ -69,6 +65,7 @@ export function CommentForm({ restaurantId }: Props) {
       setIsSubmitting(true);
 
       const validatedData = commentSchema.parse(formData);
+
       const rating = Number(localStorage.getItem('yuppie_rating'));
       const typeImprovement =
         localStorage.getItem('yuppie_improvement') || undefined;
@@ -77,30 +74,20 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      // restaurantId ya es el documentId que viene como prop
+      // Convertir restaurantId a número aquí
+      const restaurantIdNumber = parseInt(restaurantId, 10);
+      if (isNaN(restaurantIdNumber)) {
+        throw new Error('ID de restaurante inválido');
+      }
+
       await createReview({
-        restaurantId: restaurantId, // Este es el documentId que recibimos
+        restaurantId: restaurantIdNumber, // Ahora pasamos un número
         calification: rating,
-        typeImprovement: typeImprovement || 'Otra',
+        typeImprovement: typeImprovement || 'Otra', // Aseguramos que siempre sea string
         email: validatedData.email,
         comment: validatedData.comment.trim(),
         googleSent: rating === 5,
       });
-
-      // Si la calificación es baja, enviar notificación
-      if (rating <= 2) {
-        const restaurant = await getRestaurant(restaurantId);
-
-        if (restaurant?.owner?.email) {
-          await sendLowRatingNotification({
-            ownerEmail: restaurant.owner.email,
-            restaurantName: restaurant.name,
-            calification: rating,
-            comment: validatedData.comment.trim(),
-            typeImprovement: typeImprovement || 'Otra',
-          });
-        }
-      }
 
       // Limpiar localStorage
       localStorage.removeItem('yuppie_improvement');
