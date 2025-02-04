@@ -123,7 +123,7 @@ export function CommentForm({ restaurantId }: Props) {
 
             const emailResponse = await emailjs.send(
               'service_kovjo5m',
-              'template_5jlcmr6',
+              'template_v2s559p',
               emailParams,
               '3wONTqDb8Fwtqf1P0'
             );
