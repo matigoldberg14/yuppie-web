@@ -92,28 +92,47 @@ export function CommentForm({ restaurantId }: Props) {
       // Si es rating bajo, intentar enviar email
       if (rating <= 2) {
         try {
-          const response = await fetch(
-            `${
-              import.meta.env.PUBLIC_API_URL
-            }/restaurants?populate=owner&filters[documentId][$eq]=${restaurantId}`
+          console.log(
+            'Iniciando envío de email para rating bajo. RestaurantId:',
+            restaurantId,
+            'Rating:',
+            rating
           );
+
+          const fetchUrl = `${
+            import.meta.env.PUBLIC_API_URL
+          }/restaurants?populate=owner&filters[documentId][$eq]=${restaurantId}`;
+          console.log('URL de fetch:', fetchUrl);
+
+          const response = await fetch(fetchUrl);
           const data = await response.json();
+          console.log('Datos del restaurante obtenidos:', data);
+
           const ownerEmail = data.data[0]?.owner?.email;
+          console.log('Email del owner obtenido:', ownerEmail);
 
           if (ownerEmail) {
-            await emailjs.send(
+            const emailParams = {
+              to_email: ownerEmail,
+              comment: validatedData.comment.trim(),
+              rating: rating,
+              improvement_type: typeImprovement || 'Otra',
+              customer_email: validatedData.email,
+            };
+            console.log('Parámetros que se enviarán a EmailJS:', emailParams);
+
+            const emailResponse = await emailjs.send(
               'service_kovjo5m',
               'template_5jlcmr6',
-              {
-                to_email: ownerEmail,
-                comment: validatedData.comment.trim(),
-                rating: rating,
-                improvement_type: typeImprovement || 'Otra',
-                customer_email: validatedData.email,
-              },
+              emailParams,
               '3wONTqDb8Fwtqf1P0'
             );
-            console.log('Email enviado a:', ownerEmail);
+            console.log('Respuesta de EmailJS:', emailResponse);
+          } else {
+            console.error(
+              'No se encontró email del owner para el restaurant con documentId:',
+              restaurantId
+            );
           }
         } catch (emailError) {
           console.error('Error al enviar email:', emailError);
