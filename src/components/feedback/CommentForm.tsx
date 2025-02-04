@@ -101,7 +101,7 @@ export function CommentForm({ restaurantId }: Props) {
 
           const fetchUrl = `${
             import.meta.env.PUBLIC_API_URL
-          }/restaurants?populate=owner&filters[documentId][$eq]=${restaurantId}`;
+          }/restaurants?populate=owner&filters[id][$eq]=${restaurantId}`;
           console.log('URL de fetch:', fetchUrl);
 
           const response = await fetch(fetchUrl);
