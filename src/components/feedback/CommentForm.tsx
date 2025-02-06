@@ -20,11 +20,11 @@ type Props = {
 };
 
 const improvementOptions = {
-  Atención: [
-    { id: 'tiempo', label: 'Tiempo de espera muy largo' },
-    { id: 'amabilidad', label: 'Falta de amabilidad del personal' },
-    { id: 'pedido', label: 'Errores en el pedido' },
-    { id: 'disponibilidad', label: 'Poca disponibilidad del personal' },
+  Bebidas: [
+    { id: 'temperatura', label: 'Temperatura inadecuada' },
+    { id: 'variedad', label: 'Poca variedad' },
+    { id: 'precio', label: 'Precio elevado' },
+    { id: 'calidad', label: 'Calidad de las bebidas' },
     { id: 'otro', label: 'Otro' },
   ],
   Comidas: [
@@ -34,11 +34,11 @@ const improvementOptions = {
     { id: 'presentacion', label: 'Presentación del plato' },
     { id: 'otro', label: 'Otro' },
   ],
-  Bebidas: [
-    { id: 'temperatura', label: 'Temperatura inadecuada' },
-    { id: 'variedad', label: 'Poca variedad' },
-    { id: 'precio', label: 'Precio elevado' },
-    { id: 'calidad', label: 'Calidad de las bebidas' },
+  Atención: [
+    { id: 'tiempo', label: 'Tiempo de espera muy largo' },
+    { id: 'amabilidad', label: 'Falta de amabilidad del personal' },
+    { id: 'pedido', label: 'Errores en el pedido' },
+    { id: 'disponibilidad', label: 'Poca disponibilidad del personal' },
     { id: 'otro', label: 'Otro' },
   ],
   Ambiente: [
@@ -48,7 +48,7 @@ const improvementOptions = {
     { id: 'comodidad', label: 'Comodidad del mobiliario' },
     { id: 'otro', label: 'Otro' },
   ],
-};
+} as const;
 
 export function CommentForm({ restaurantId }: Props) {
   const [formData, setFormData] = useState<CommentFormData>({
@@ -63,38 +63,43 @@ export function CommentForm({ restaurantId }: Props) {
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const improvementType = localStorage.getItem('yuppie_improvement');
+  const [improvementType, setImprovementType] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!improvementType || improvementType === 'Otra') {
+    // Obtener el tipo de mejora del localStorage al montar el componente
+    const storedImprovement = localStorage.getItem('yuppie_improvement');
+    setImprovementType(storedImprovement);
+
+    // Si es 'Otra' o no hay tipo, mostrar el textarea
+    if (!storedImprovement || storedImprovement === 'Otra') {
       setShowTextArea(true);
     }
-  }, [improvementType]);
+  }, []);
 
   useEffect(() => {
-    try {
-      if (showTextArea) {
+    if (showTextArea) {
+      try {
         commentSchema.parse(formData);
         setErrors({});
         setIsButtonDisabled(false);
-      } else {
-        setIsButtonDisabled(
-          !selectedOption ||
-            !formData.email ||
-            !z.string().email().safeParse(formData.email).success
-        );
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const fieldErrors: { [key in keyof CommentFormData]?: string } = {};
+          error.errors.forEach((err) => {
+            if (err.path[0]) {
+              fieldErrors[err.path[0] as keyof CommentFormData] = err.message;
+            }
+          });
+          setErrors(fieldErrors);
+        }
+        setIsButtonDisabled(true);
       }
-    } catch (validationError) {
-      if (validationError instanceof z.ZodError) {
-        const fieldErrors: { [key in keyof CommentFormData]?: string } = {};
-        validationError.errors.forEach((err) => {
-          if (err.path[0]) {
-            fieldErrors[err.path[0] as keyof CommentFormData] = err.message;
-          }
-        });
-        setErrors(fieldErrors);
-      }
-      setIsButtonDisabled(true);
+    } else {
+      setIsButtonDisabled(
+        !selectedOption ||
+          !formData.email ||
+          !z.string().email().safeParse(formData.email).success
+      );
     }
   }, [formData, selectedOption, showTextArea]);
 
@@ -112,23 +117,29 @@ export function CommentForm({ restaurantId }: Props) {
     } else {
       setSelectedOption(optionId);
       setShowTextArea(false);
-      setFormData((prev) => ({ ...prev, comment: '' }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     try {
       setIsSubmitting(true);
 
-      let commentText = showTextArea
-        ? formData.comment
-        : selectedOption
-        ? `${improvementType} - ${selectedOption}`
-        : '';
+      let finalComment = '';
+      if (showTextArea) {
+        finalComment = formData.comment;
+      } else if (selectedOption && improvementType) {
+        const selectedLabel = improvementOptions[
+          improvementType as keyof typeof improvementOptions
+        ].find((opt) => opt.id === selectedOption)?.label;
+        finalComment = `${improvementType} - ${selectedLabel}`;
+      }
 
-      if (!commentText) {
-        throw new Error('No se ha seleccionado ninguna opción');
+      if (!finalComment) {
+        throw new Error(
+          'Por favor, selecciona una opción o escribe un comentario'
+        );
       }
 
       const rating = Number(localStorage.getItem('yuppie_rating'));
@@ -146,7 +157,7 @@ export function CommentForm({ restaurantId }: Props) {
         calification: rating,
         typeImprovement: improvementType || 'Otra',
         email: formData.email,
-        comment: commentText.trim(),
+        comment: finalComment.trim(),
         googleSent: rating === 5,
       });
 
@@ -165,7 +176,7 @@ export function CommentForm({ restaurantId }: Props) {
               'template_v2s559p',
               {
                 to_email: ownerEmail,
-                comment: commentText.trim(),
+                comment: finalComment.trim(),
                 rating: rating,
                 improvement_type: improvementType || 'Otra',
                 customer_email: formData.email,
@@ -232,7 +243,7 @@ export function CommentForm({ restaurantId }: Props) {
         <div className="flex flex-col gap-3">
           {improvementOptions[
             improvementType as keyof typeof improvementOptions
-          ].map((option) => (
+          ]?.map((option) => (
             <motion.button
               key={option.id}
               type="button"
