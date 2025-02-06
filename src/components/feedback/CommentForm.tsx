@@ -77,8 +77,6 @@ export function CommentForm({ restaurantId }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasInteractedWithComment, setHasInteractedWithComment] =
     useState(false);
-  const [hasInteractedWithEmail, setHasInteractedWithEmail] = useState(false);
-  useState(false);
   const { toast } = useToast();
   const [improvementType, setImprovementType] = useState<string | null>(null);
 
@@ -92,50 +90,38 @@ export function CommentForm({ restaurantId }: Props) {
   }, []);
 
   useEffect(() => {
-    try {
-      const fieldErrors: { [key in keyof CommentFormData]?: string } = {};
-
-      if (showTextArea) {
-        if (hasInteractedWithComment && formData.comment.length < 10) {
-          fieldErrors.comment =
-            'El comentario debe tener al menos 10 caracteres';
+    if (showTextArea) {
+      try {
+        if (!hasInteractedWithComment) {
+          // No validamos el comentario si el usuario aún no ha interactuado
+          setErrors({});
+          setIsButtonDisabled(false);
+        } else {
+          commentSchema.parse(formData);
+          setErrors({});
+          setIsButtonDisabled(false);
+        }
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const fieldErrors: { [key in keyof CommentFormData]?: string } = {};
+          error.errors.forEach((err) => {
+            if (err.path[0] && hasInteractedWithComment) {
+              fieldErrors[err.path[0] as keyof CommentFormData] = err.message;
+            }
+          });
+          setErrors(fieldErrors);
+          setIsButtonDisabled(true);
         }
       }
-
-      if (
-        hasInteractedWithEmail &&
-        formData.email &&
-        !z.string().email().safeParse(formData.email).success
-      ) {
-        fieldErrors.email = 'Por favor, ingresa un email válido';
-      }
-
-      setErrors(fieldErrors);
-
-      // Lógica del botón disabled
-      if (showTextArea) {
-        const isCommentValid =
-          !hasInteractedWithComment || formData.comment.length >= 10;
-        const isEmailValid =
-          !formData.email ||
-          z.string().email().safeParse(formData.email).success;
-        setIsButtonDisabled(!isCommentValid || !isEmailValid);
-      } else {
-        const isEmailValid =
-          !formData.email ||
-          z.string().email().safeParse(formData.email).success;
-        setIsButtonDisabled(!selectedOption || !isEmailValid);
-      }
-    } catch (error) {
-      console.error('Error en validación:', error);
+    } else {
+      // Solo validamos el email si está presente
+      setIsButtonDisabled(
+        !selectedOption ||
+          (!!formData.email &&
+            !z.string().email().safeParse(formData.email).success)
+      );
     }
-  }, [
-    formData,
-    selectedOption,
-    showTextArea,
-    hasInteractedWithComment,
-    hasInteractedWithEmail,
-  ]);
+  }, [formData, selectedOption, showTextArea, hasInteractedWithComment]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -340,7 +326,7 @@ export function CommentForm({ restaurantId }: Props) {
                 name="comment"
                 value={formData.comment}
                 onChange={handleChange}
-                onFocus={() => setHasInteractedWithEmail(true)}
+                onFocus={handleTextAreaFocus}
                 placeholder="Cuéntanos tu experiencia (mínimo 10 caracteres)"
                 className={`w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 resize-none h-40 transition-all duration-200 ${
                   errors.comment
@@ -382,7 +368,6 @@ export function CommentForm({ restaurantId }: Props) {
           name="email"
           value={formData.email}
           onChange={handleChange}
-          onFocus={() => setHasInteractedWithEmail(true)}
           placeholder="Tu email"
           className={`w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 transition-all duration-200 ${
             errors.email ? 'border-2 border-red-500' : 'border border-white/10'
