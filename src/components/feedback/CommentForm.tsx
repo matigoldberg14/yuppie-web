@@ -4,6 +4,7 @@ import { createReview } from '../../services/api';
 import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
 import emailjs from '@emailjs/browser';
+import { FiArrowLeft } from 'react-icons/fi';
 
 const commentSchema = z.object({
   email: z.string().email('Por favor, ingresa un email válido').optional(),
@@ -308,11 +309,11 @@ export function CommentForm({ restaurantId }: Props) {
               <motion.button
                 type="button"
                 onClick={handleBackToOptions}
-                className="absolute -top-8 left-0 text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+                className="absolute -top-8 left-0 text-gray-400 hover:text-white transition-colors flex items-center gap-1"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
-                ← Volver a las opciones
+                <FiArrowLeft size={24} />
               </motion.button>
             )}
             <motion.div
@@ -367,7 +368,7 @@ export function CommentForm({ restaurantId }: Props) {
           name="email"
           value={formData.email}
           onChange={handleChange}
-          placeholder="Tu email (opcional)"
+          placeholder="Tu email"
           className={`w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 transition-all duration-200 ${
             errors.email ? 'border-2 border-red-500' : 'border border-white/10'
           } focus:ring-2 focus:ring-white/20 focus:outline-none`}
