@@ -11,6 +11,8 @@ import {
   BarChart3,
   Calendar,
   LogOut,
+  Target,
+  Lightbulb,
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -84,6 +86,24 @@ export function Sidebar() {
             >
               <Calendar className="mr-2 h-4 w-4" />
               Calendario
+            </Button>
+          </a>
+          <a href="/dashboard/objectives">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-white hover:bg-white/10"
+            >
+              <Target className="mr-2 h-4 w-4" />
+              Objetivos
+            </Button>
+          </a>
+          <a href="/dashboard/improvements">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-white hover:bg-white/10"
+            >
+              <Lightbulb className="mr-2 h-4 w-4" />
+              Mejoras
             </Button>
           </a>
         </nav>

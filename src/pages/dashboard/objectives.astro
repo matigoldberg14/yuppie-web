@@ -1,0 +1,18 @@
+---
+// src/pages/dashboard/objectives.astro
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { Sidebar } from '../../components/dashboard/Sidebar';
+import { ObjectivesContent } from '../../components/dashboard/ObjectivesContent';
+import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
+---
+
+<DashboardLayout title="Objetivos | Yuppie">
+  <ProtectedRoute client:load>
+    <div class="min-h-screen">
+      <Sidebar client:load />
+      <main class="pl-64">
+        <ObjectivesContent client:load />
+      </main>
+    </div>
+  </ProtectedRoute>
+</DashboardLayout>
