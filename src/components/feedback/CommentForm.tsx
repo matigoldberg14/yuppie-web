@@ -1,7 +1,6 @@
-// src/components/feedback/CommentForm.tsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createReview, getRestaurant } from '../../services/api';
+import { createReview } from '../../services/api';
 import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
 import emailjs from '@emailjs/browser';
@@ -20,24 +19,71 @@ type Props = {
   restaurantId: string;
 };
 
+const improvementOptions = {
+  Atención: [
+    { id: 'tiempo', label: 'Tiempo de espera muy largo' },
+    { id: 'amabilidad', label: 'Falta de amabilidad del personal' },
+    { id: 'pedido', label: 'Errores en el pedido' },
+    { id: 'disponibilidad', label: 'Poca disponibilidad del personal' },
+    { id: 'otro', label: 'Otro' },
+  ],
+  Comidas: [
+    { id: 'temperatura', label: 'Temperatura inadecuada' },
+    { id: 'sabor', label: 'Sabor no cumplió expectativas' },
+    { id: 'porcion', label: 'Tamaño de las porciones' },
+    { id: 'presentacion', label: 'Presentación del plato' },
+    { id: 'otro', label: 'Otro' },
+  ],
+  Bebidas: [
+    { id: 'temperatura', label: 'Temperatura inadecuada' },
+    { id: 'variedad', label: 'Poca variedad' },
+    { id: 'precio', label: 'Precio elevado' },
+    { id: 'calidad', label: 'Calidad de las bebidas' },
+    { id: 'otro', label: 'Otro' },
+  ],
+  Ambiente: [
+    { id: 'ruido', label: 'Nivel de ruido elevado' },
+    { id: 'temperatura', label: 'Temperatura del local' },
+    { id: 'limpieza', label: 'Limpieza del local' },
+    { id: 'comodidad', label: 'Comodidad del mobiliario' },
+    { id: 'otro', label: 'Otro' },
+  ],
+};
+
 export function CommentForm({ restaurantId }: Props) {
   const [formData, setFormData] = useState<CommentFormData>({
     comment: '',
     email: '',
   });
-
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [showTextArea, setShowTextArea] = useState(false);
   const [errors, setErrors] = useState<{
     [key in keyof CommentFormData]?: string;
   }>({});
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const improvementType = localStorage.getItem('yuppie_improvement');
+
+  useEffect(() => {
+    if (!improvementType || improvementType === 'Otra') {
+      setShowTextArea(true);
+    }
+  }, [improvementType]);
 
   useEffect(() => {
     try {
-      commentSchema.parse(formData);
-      setErrors({});
-      setIsButtonDisabled(false);
+      if (showTextArea) {
+        commentSchema.parse(formData);
+        setErrors({});
+        setIsButtonDisabled(false);
+      } else {
+        setIsButtonDisabled(
+          !selectedOption ||
+            !formData.email ||
+            !z.string().email().safeParse(formData.email).success
+        );
+      }
     } catch (validationError) {
       if (validationError instanceof z.ZodError) {
         const fieldErrors: { [key in keyof CommentFormData]?: string } = {};
@@ -50,7 +96,7 @@ export function CommentForm({ restaurantId }: Props) {
       }
       setIsButtonDisabled(true);
     }
-  }, [formData]);
+  }, [formData, selectedOption, showTextArea]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -59,17 +105,33 @@ export function CommentForm({ restaurantId }: Props) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleOptionSelect = (optionId: string) => {
+    if (optionId === 'otro') {
+      setShowTextArea(true);
+      setSelectedOption(null);
+    } else {
+      setSelectedOption(optionId);
+      setShowTextArea(false);
+      setFormData((prev) => ({ ...prev, comment: '' }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       setIsSubmitting(true);
 
-      const validatedData = commentSchema.parse(formData);
-      const rating = Number(localStorage.getItem('yuppie_rating'));
-      const typeImprovement =
-        localStorage.getItem('yuppie_improvement') || undefined;
+      let commentText = showTextArea
+        ? formData.comment
+        : selectedOption
+        ? `${improvementType} - ${selectedOption}`
+        : '';
 
+      if (!commentText) {
+        throw new Error('No se ha seleccionado ninguna opción');
+      }
+
+      const rating = Number(localStorage.getItem('yuppie_rating'));
       if (!rating) {
         throw new Error('No se encontró la calificación');
       }
@@ -79,59 +141,36 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('ID de restaurante inválido');
       }
 
-      // Crear review (esto no se toca)
       await createReview({
         restaurantId: restaurantIdNumber,
         calification: rating,
-        typeImprovement: typeImprovement || 'Otra',
-        email: validatedData.email,
-        comment: validatedData.comment.trim(),
+        typeImprovement: improvementType || 'Otra',
+        email: formData.email,
+        comment: commentText.trim(),
         googleSent: rating === 5,
       });
 
-      // Si es rating bajo, intentar enviar email
       if (rating <= 2) {
         try {
-          console.log(
-            'Iniciando envío de email para rating bajo. RestaurantId:',
-            restaurantId,
-            'Rating:',
-            rating
-          );
-
           const fetchUrl = `${
             import.meta.env.PUBLIC_API_URL
           }/restaurants?populate=owner&filters[id][$eq]=${restaurantId}`;
-          console.log('URL de fetch:', fetchUrl);
-
           const response = await fetch(fetchUrl);
           const data = await response.json();
-          console.log('Datos del restaurante obtenidos:', data);
-
           const ownerEmail = data.data[0]?.owner?.email;
-          console.log('Email del owner obtenido:', ownerEmail);
 
           if (ownerEmail) {
-            const emailParams = {
-              to_email: ownerEmail,
-              comment: validatedData.comment.trim(),
-              rating: rating,
-              improvement_type: typeImprovement || 'Otra',
-              customer_email: validatedData.email,
-            };
-            console.log('Parámetros que se enviarán a EmailJS:', emailParams);
-
-            const emailResponse = await emailjs.send(
+            await emailjs.send(
               'service_kovjo5m',
               'template_v2s559p',
-              emailParams,
+              {
+                to_email: ownerEmail,
+                comment: commentText.trim(),
+                rating: rating,
+                improvement_type: improvementType || 'Otra',
+                customer_email: formData.email,
+              },
               '3wONTqDb8Fwtqf1P0'
-            );
-            console.log('Respuesta de EmailJS:', emailResponse);
-          } else {
-            console.error(
-              'No se encontró email del owner para el restaurant con documentId:',
-              restaurantId
             );
           }
         } catch (emailError) {
@@ -139,7 +178,6 @@ export function CommentForm({ restaurantId }: Props) {
         }
       }
 
-      // Limpiar y redireccionar (esto no se toca)
       localStorage.removeItem('yuppie_improvement');
       localStorage.removeItem('yuppie_rating');
       localStorage.removeItem('yuppie_restaurant');
@@ -155,7 +193,6 @@ export function CommentForm({ restaurantId }: Props) {
       }, 1500);
     } catch (error) {
       let errorMessage = 'Error desconocido';
-
       if (error instanceof z.ZodError) {
         errorMessage = error.errors.map((e) => e.message).join('\n');
       } else if (error instanceof Error) {
@@ -172,7 +209,6 @@ export function CommentForm({ restaurantId }: Props) {
     }
   };
 
-  // El resto del componente (JSX) se mantiene exactamente igual
   return (
     <motion.form
       onSubmit={handleSubmit}
@@ -187,51 +223,77 @@ export function CommentForm({ restaurantId }: Props) {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
       >
-        Por último ¿Nos quisieras dejar un comentario?
+        {showTextArea
+          ? 'Por último ¿Nos quisieras dejar un comentario?'
+          : `¿Cuál de estos aspectos de ${improvementType?.toLowerCase()} podríamos mejorar?`}
       </motion.h2>
 
-      <div className="flex flex-col gap-2">
-        <motion.div
-          className="relative"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <textarea
-            name="comment"
-            value={formData.comment}
-            onChange={handleChange}
-            placeholder="Cuéntanos tu experiencia (mínimo 10 caracteres)"
-            className={`w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 resize-none h-40 transition-all duration-200 ${
-              errors.comment
-                ? 'border-2 border-red-500'
-                : 'border border-white/10'
-            } focus:ring-2 focus:ring-white/20 focus:outline-none`}
-            disabled={isSubmitting}
-          />
-
-          <span
-            className={`absolute bottom-2 right-2 text-sm ${
-              formData.comment.length > 500 ? 'text-red-400' : 'text-gray-400'
-            }`}
-          >
-            {formData.comment.length}/500
-          </span>
-        </motion.div>
-
-        <AnimatePresence>
-          {errors.comment && (
-            <motion.p
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="text-red-400 text-sm"
+      {!showTextArea && improvementType && improvementType !== 'Otra' && (
+        <div className="flex flex-col gap-3">
+          {improvementOptions[
+            improvementType as keyof typeof improvementOptions
+          ].map((option) => (
+            <motion.button
+              key={option.id}
+              type="button"
+              onClick={() => handleOptionSelect(option.id)}
+              className={`w-full p-4 rounded-lg text-left transition-all duration-200 ${
+                selectedOption === option.id
+                  ? 'bg-white text-black'
+                  : 'bg-white/5 text-white hover:bg-white/10'
+              }`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              {errors.comment}
-            </motion.p>
-          )}
-        </AnimatePresence>
-      </div>
+              {option.label}
+            </motion.button>
+          ))}
+        </div>
+      )}
+
+      {showTextArea && (
+        <div className="flex flex-col gap-2">
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <textarea
+              name="comment"
+              value={formData.comment}
+              onChange={handleChange}
+              placeholder="Cuéntanos tu experiencia (mínimo 10 caracteres)"
+              className={`w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 resize-none h-40 transition-all duration-200 ${
+                errors.comment
+                  ? 'border-2 border-red-500'
+                  : 'border border-white/10'
+              } focus:ring-2 focus:ring-white/20 focus:outline-none`}
+              disabled={isSubmitting}
+            />
+            <span
+              className={`absolute bottom-2 right-2 text-sm ${
+                formData.comment.length > 500 ? 'text-red-400' : 'text-gray-400'
+              }`}
+            >
+              {formData.comment.length}/500
+            </span>
+          </motion.div>
+
+          <AnimatePresence>
+            {errors.comment && (
+              <motion.p
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="text-red-400 text-sm"
+              >
+                {errors.comment}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <motion.input
