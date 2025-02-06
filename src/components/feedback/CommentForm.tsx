@@ -107,21 +107,16 @@ export function CommentForm({ restaurantId }: Props) {
         }
       }
 
-      // Validación del email (solo se ejecuta si el usuario hizo focus en el input de email)
-      if (hasInteractedWithEmail) {
-        if (!formData.email.trim()) {
-          newErrors.email = 'Por favor, ingresa un email válido';
-          valid = false;
-        } else {
-          try {
-            z.string()
-              .email('Por favor, ingresa un email válido')
-              .parse(formData.email);
-          } catch (error) {
-            if (error instanceof z.ZodError) {
-              newErrors.email = error.errors[0].message;
-              valid = false;
-            }
+      // Validación del email: se valida solo si hay contenido en el input
+      if (hasInteractedWithEmail && formData.email.trim()) {
+        try {
+          z.string()
+            .email('Por favor, ingresa un email válido')
+            .parse(formData.email);
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            newErrors.email = error.errors[0].message;
+            valid = false;
           }
         }
       }
@@ -131,21 +126,16 @@ export function CommentForm({ restaurantId }: Props) {
         valid = false;
       }
 
-      // Validación del email (solo se ejecuta si el usuario hizo focus en el input de email)
-      if (hasInteractedWithEmail) {
-        if (!formData.email.trim()) {
-          newErrors.email = 'Por favor, ingresa un email válido';
-          valid = false;
-        } else {
-          try {
-            z.string()
-              .email('Por favor, ingresa un email válido')
-              .parse(formData.email);
-          } catch (error) {
-            if (error instanceof z.ZodError) {
-              newErrors.email = error.errors[0].message;
-              valid = false;
-            }
+      // Validación del email: se valida solo si hay contenido en el input
+      if (hasInteractedWithEmail && formData.email.trim()) {
+        try {
+          z.string()
+            .email('Por favor, ingresa un email válido')
+            .parse(formData.email);
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            newErrors.email = error.errors[0].message;
+            valid = false;
           }
         }
       }
@@ -226,14 +216,14 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('ID de restaurante inválido');
       }
 
-      // Si no hay email, usamos una cadena vacía
-      const emailToSend = formData.email || '';
+      const emailToSend =
+        formData.email.trim() || 'prefirio-no-dar-su-email@nodiosuemail.com';
 
       await createReview({
         restaurantId: restaurantIdNumber,
         calification: rating,
         typeImprovement: improvementType || 'Otra',
-        email: emailToSend, // Aquí usamos la cadena vacía si no hay email
+        email: emailToSend,
         comment: finalComment.trim(),
         googleSent: rating === 5,
       });
