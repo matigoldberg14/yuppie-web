@@ -1,5 +1,4 @@
-// src/components/dashboard/Sidebar.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { auth } from '../../lib/firebase';
 import { signOut, type Auth } from 'firebase/auth';
@@ -13,10 +12,13 @@ import {
   LogOut,
   Target,
   Lightbulb,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 export function Sidebar() {
   const { user } = useAuth();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -32,15 +34,39 @@ export function Sidebar() {
   };
 
   return (
-    <div className="fixed left-0 top-0 h-full w-64 bg-white/10 backdrop-blur-xl p-4 flex flex-col">
+    <div
+      className={`fixed left-0 top-0 h-full ${
+        isCollapsed ? 'w-16' : 'w-64'
+      } bg-white/10 backdrop-blur-xl p-4 flex flex-col transition-all duration-300`}
+    >
+      {/* Botón para colapsar */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="absolute -right-4 top-6 h-8 w-8 rounded-full bg-white/10 text-white hover:bg-white/20"
+      >
+        {isCollapsed ? (
+          <ChevronRight className="h-4 w-4" />
+        ) : (
+          <ChevronLeft className="h-4 w-4" />
+        )}
+      </Button>
+
       {/* Logo y navegación principal */}
       <div>
         <div className="mb-8">
-          <img
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logos-03.jpg-HGxPXf7O388oQVUwJRZhvoGnQoIWQG.jpeg"
-            alt="Yuppie Logo"
-            className="h-8 w-auto"
-          />
+          {isCollapsed ? (
+            <span className="text-2xl font-bold text-white mx-auto block text-center">
+              Y
+            </span>
+          ) : (
+            <img
+              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logos-03.jpg-HGxPXf7O388oQVUwJRZhvoGnQoIWQG.jpeg"
+              alt="Yuppie Logo"
+              className="h-8 w-auto"
+            />
+          )}
         </div>
         <nav className="space-y-2">
           <a href="/dashboard">
@@ -48,8 +74,8 @@ export function Sidebar() {
               variant="ghost"
               className="w-full justify-start text-white hover:bg-white/10"
             >
-              <Home className="mr-2 h-4 w-4" />
-              Dashboard
+              <Home className={`${isCollapsed ? '' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && 'Dashboard'}
             </Button>
           </a>
           <a href="/dashboard/reviews">
@@ -57,8 +83,10 @@ export function Sidebar() {
               variant="ghost"
               className="w-full justify-start text-white hover:bg-white/10"
             >
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Reseñas
+              <MessageSquare
+                className={`${isCollapsed ? '' : 'mr-2'} h-4 w-4`}
+              />
+              {!isCollapsed && 'Reseñas'}
             </Button>
           </a>
           <a href="/dashboard/team">
@@ -66,8 +94,8 @@ export function Sidebar() {
               variant="ghost"
               className="w-full justify-start text-white hover:bg-white/10"
             >
-              <Users2 className="mr-2 h-4 w-4" />
-              Equipo
+              <Users2 className={`${isCollapsed ? '' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && 'Equipo'}
             </Button>
           </a>
           <a href="/dashboard/analytics">
@@ -75,8 +103,8 @@ export function Sidebar() {
               variant="ghost"
               className="w-full justify-start text-white hover:bg-white/10"
             >
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Analytics
+              <BarChart3 className={`${isCollapsed ? '' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && 'Analytics'}
             </Button>
           </a>
           <a href="/dashboard/calendar">
@@ -84,8 +112,8 @@ export function Sidebar() {
               variant="ghost"
               className="w-full justify-start text-white hover:bg-white/10"
             >
-              <Calendar className="mr-2 h-4 w-4" />
-              Calendario
+              <Calendar className={`${isCollapsed ? '' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && 'Calendario'}
             </Button>
           </a>
           <a href="/dashboard/objectives">
@@ -93,8 +121,8 @@ export function Sidebar() {
               variant="ghost"
               className="w-full justify-start text-white hover:bg-white/10"
             >
-              <Target className="mr-2 h-4 w-4" />
-              Objetivos
+              <Target className={`${isCollapsed ? '' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && 'Objetivos'}
             </Button>
           </a>
           <a href="/dashboard/improvements">
@@ -102,8 +130,8 @@ export function Sidebar() {
               variant="ghost"
               className="w-full justify-start text-white hover:bg-white/10"
             >
-              <Lightbulb className="mr-2 h-4 w-4" />
-              Mejoras
+              <Lightbulb className={`${isCollapsed ? '' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && 'Mejoras'}
             </Button>
           </a>
         </nav>
@@ -116,8 +144,14 @@ export function Sidebar() {
           onClick={handleLogout}
           className="w-full justify-start text-white hover:bg-white/10 group"
         >
-          <LogOut className="mr-2 h-4 w-4 group-hover:text-red-400" />
-          <span className="group-hover:text-red-400">Cerrar sesión</span>
+          <LogOut
+            className={`${
+              isCollapsed ? '' : 'mr-2'
+            } h-4 w-4 group-hover:text-red-400`}
+          />
+          {!isCollapsed && (
+            <span className="group-hover:text-red-400">Cerrar sesión</span>
+          )}
         </Button>
       </div>
     </div>
