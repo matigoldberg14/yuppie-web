@@ -79,6 +79,7 @@ export function CommentForm({ restaurantId }: Props) {
     useState(false);
   const { toast } = useToast();
   const [improvementType, setImprovementType] = useState<string | null>(null);
+  const [hasInteractedWithEmail, setHasInteractedWithEmail] = useState(false);
 
   useEffect(() => {
     // Obtener el tipo de mejora del localStorage al montar el componente
@@ -90,38 +91,75 @@ export function CommentForm({ restaurantId }: Props) {
   }, []);
 
   useEffect(() => {
+    let valid = true;
+    const newErrors: { [key in keyof CommentFormData]?: string } = {};
+
     if (showTextArea) {
-      try {
-        if (!hasInteractedWithComment) {
-          // No validamos el comentario si el usuario aún no ha interactuado
-          setErrors({});
-          setIsButtonDisabled(false);
-        } else {
-          commentSchema.parse(formData);
-          setErrors({});
-          setIsButtonDisabled(false);
+      // Validación del comentario (solo si el usuario ya interactuó con el textarea)
+      if (hasInteractedWithComment) {
+        if (formData.comment.trim().length < 10) {
+          newErrors.comment = 'El comentario debe tener al menos 10 caracteres';
+          valid = false;
+        } else if (formData.comment.trim().length > 500) {
+          newErrors.comment =
+            'El comentario no puede exceder los 500 caracteres';
+          valid = false;
         }
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          const fieldErrors: { [key in keyof CommentFormData]?: string } = {};
-          error.errors.forEach((err) => {
-            if (err.path[0] && hasInteractedWithComment) {
-              fieldErrors[err.path[0] as keyof CommentFormData] = err.message;
+      }
+
+      // Validación del email (solo se ejecuta si el usuario hizo focus en el input de email)
+      if (hasInteractedWithEmail) {
+        if (!formData.email.trim()) {
+          newErrors.email = 'Por favor, ingresa un email válido';
+          valid = false;
+        } else {
+          try {
+            z.string()
+              .email('Por favor, ingresa un email válido')
+              .parse(formData.email);
+          } catch (error) {
+            if (error instanceof z.ZodError) {
+              newErrors.email = error.errors[0].message;
+              valid = false;
             }
-          });
-          setErrors(fieldErrors);
-          setIsButtonDisabled(true);
+          }
         }
       }
     } else {
-      // Solo validamos el email si está presente
-      setIsButtonDisabled(
-        !selectedOption ||
-          (!!formData.email &&
-            !z.string().email().safeParse(formData.email).success)
-      );
+      // En la sección de opciones, se requiere que se haya seleccionado una opción
+      if (!selectedOption) {
+        valid = false;
+      }
+
+      // Validación del email (solo se ejecuta si el usuario hizo focus en el input de email)
+      if (hasInteractedWithEmail) {
+        if (!formData.email.trim()) {
+          newErrors.email = 'Por favor, ingresa un email válido';
+          valid = false;
+        } else {
+          try {
+            z.string()
+              .email('Por favor, ingresa un email válido')
+              .parse(formData.email);
+          } catch (error) {
+            if (error instanceof z.ZodError) {
+              newErrors.email = error.errors[0].message;
+              valid = false;
+            }
+          }
+        }
+      }
     }
-  }, [formData, selectedOption, showTextArea, hasInteractedWithComment]);
+
+    setErrors(newErrors);
+    setIsButtonDisabled(!valid);
+  }, [
+    formData,
+    selectedOption,
+    showTextArea,
+    hasInteractedWithComment,
+    hasInteractedWithEmail,
+  ]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -368,6 +406,7 @@ export function CommentForm({ restaurantId }: Props) {
           name="email"
           value={formData.email}
           onChange={handleChange}
+          onFocus={() => setHasInteractedWithEmail(true)}
           placeholder="Tu email"
           className={`w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 transition-all duration-200 ${
             errors.email ? 'border-2 border-red-500' : 'border border-white/10'
