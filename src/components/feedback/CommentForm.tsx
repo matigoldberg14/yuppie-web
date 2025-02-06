@@ -6,17 +6,29 @@ import { z } from 'zod';
 import emailjs from '@emailjs/browser';
 
 const commentSchema = z.object({
-  email: z.string().email('Por favor, ingresa un email válido'),
+  email: z.string().email('Por favor, ingresa un email válido').optional(),
   comment: z
     .string()
     .min(10, 'El comentario debe tener al menos 10 caracteres')
     .max(500, 'El comentario no puede exceder los 500 caracteres'),
 });
 
-type CommentFormData = z.infer<typeof commentSchema>;
+type CommentFormData = {
+  email: string;
+  comment: string;
+};
 
 type Props = {
   restaurantId: string;
+};
+
+type CreateReviewInput = {
+  restaurantId: number;
+  calification: number;
+  typeImprovement: string;
+  email: string;
+  comment: string;
+  googleSent: boolean;
 };
 
 const improvementOptions = {
@@ -62,6 +74,8 @@ export function CommentForm({ restaurantId }: Props) {
   }>({});
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasInteractedWithComment, setHasInteractedWithComment] =
+    useState(false);
   const { toast } = useToast();
   const [improvementType, setImprovementType] = useState<string | null>(null);
 
@@ -71,37 +85,42 @@ export function CommentForm({ restaurantId }: Props) {
     setImprovementType(storedImprovement);
 
     // Si es 'Otra' o no hay tipo, mostrar el textarea
-    if (!storedImprovement || storedImprovement === 'Otra') {
-      setShowTextArea(true);
-    }
+    setShowTextArea(storedImprovement === null || storedImprovement === 'Otra');
   }, []);
 
   useEffect(() => {
     if (showTextArea) {
       try {
-        commentSchema.parse(formData);
-        setErrors({});
-        setIsButtonDisabled(false);
+        if (!hasInteractedWithComment) {
+          // No validamos el comentario si el usuario aún no ha interactuado
+          setErrors({});
+          setIsButtonDisabled(false);
+        } else {
+          commentSchema.parse(formData);
+          setErrors({});
+          setIsButtonDisabled(false);
+        }
       } catch (error) {
         if (error instanceof z.ZodError) {
           const fieldErrors: { [key in keyof CommentFormData]?: string } = {};
           error.errors.forEach((err) => {
-            if (err.path[0]) {
+            if (err.path[0] && hasInteractedWithComment) {
               fieldErrors[err.path[0] as keyof CommentFormData] = err.message;
             }
           });
           setErrors(fieldErrors);
+          setIsButtonDisabled(true);
         }
-        setIsButtonDisabled(true);
       }
     } else {
+      // Solo validamos el email si está presente
       setIsButtonDisabled(
         !selectedOption ||
-          !formData.email ||
-          !z.string().email().safeParse(formData.email).success
+          (!!formData.email &&
+            !z.string().email().safeParse(formData.email).success)
       );
     }
-  }, [formData, selectedOption, showTextArea]);
+  }, [formData, selectedOption, showTextArea, hasInteractedWithComment]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -111,6 +130,11 @@ export function CommentForm({ restaurantId }: Props) {
   };
 
   const handleOptionSelect = (optionId: string) => {
+    if (optionId === selectedOption) {
+      setSelectedOption(null);
+      return;
+    }
+
     if (optionId === 'otro') {
       setShowTextArea(true);
       setSelectedOption(null);
@@ -118,6 +142,17 @@ export function CommentForm({ restaurantId }: Props) {
       setSelectedOption(optionId);
       setShowTextArea(false);
     }
+  };
+
+  const handleTextAreaFocus = () => {
+    setHasInteractedWithComment(true);
+  };
+
+  const handleBackToOptions = () => {
+    setShowTextArea(false);
+    setSelectedOption(null);
+    setFormData((prev) => ({ ...prev, comment: '' }));
+    setHasInteractedWithComment(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,16 +187,20 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('ID de restaurante inválido');
       }
 
+      // Si no hay email, usamos una cadena vacía
+      const emailToSend = formData.email || '';
+
       await createReview({
         restaurantId: restaurantIdNumber,
         calification: rating,
         typeImprovement: improvementType || 'Otra',
-        email: formData.email,
+        email: emailToSend, // Aquí usamos la cadena vacía si no hay email
         comment: finalComment.trim(),
         googleSent: rating === 5,
       });
 
-      if (rating <= 2) {
+      // Solo intentamos enviar el email si hay uno proporcionado
+      if (rating <= 2 && formData.email) {
         try {
           const fetchUrl = `${
             import.meta.env.PUBLIC_API_URL
@@ -264,45 +303,61 @@ export function CommentForm({ restaurantId }: Props) {
 
       {showTextArea && (
         <div className="flex flex-col gap-2">
-          <motion.div
-            className="relative"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <textarea
-              name="comment"
-              value={formData.comment}
-              onChange={handleChange}
-              placeholder="Cuéntanos tu experiencia (mínimo 10 caracteres)"
-              className={`w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 resize-none h-40 transition-all duration-200 ${
-                errors.comment
-                  ? 'border-2 border-red-500'
-                  : 'border border-white/10'
-              } focus:ring-2 focus:ring-white/20 focus:outline-none`}
-              disabled={isSubmitting}
-            />
-            <span
-              className={`absolute bottom-2 right-2 text-sm ${
-                formData.comment.length > 500 ? 'text-red-400' : 'text-gray-400'
-              }`}
-            >
-              {formData.comment.length}/500
-            </span>
-          </motion.div>
-
-          <AnimatePresence>
-            {errors.comment && (
-              <motion.p
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="text-red-400 text-sm"
+          <div className="relative">
+            {improvementType && improvementType !== 'Otra' && (
+              <motion.button
+                type="button"
+                onClick={handleBackToOptions}
+                className="absolute -top-8 left-0 text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
               >
-                {errors.comment}
-              </motion.p>
+                ← Volver a las opciones
+              </motion.button>
             )}
-          </AnimatePresence>
+            <motion.div
+              className="relative"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <textarea
+                name="comment"
+                value={formData.comment}
+                onChange={handleChange}
+                onFocus={handleTextAreaFocus}
+                placeholder="Cuéntanos tu experiencia (mínimo 10 caracteres)"
+                className={`w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 resize-none h-40 transition-all duration-200 ${
+                  errors.comment
+                    ? 'border-2 border-red-500'
+                    : 'border border-white/10'
+                } focus:ring-2 focus:ring-white/20 focus:outline-none`}
+                disabled={isSubmitting}
+              />
+              <span
+                className={`absolute bottom-2 right-2 text-sm ${
+                  formData.comment.length > 500
+                    ? 'text-red-400'
+                    : 'text-gray-400'
+                }`}
+              >
+                {formData.comment.length}/500
+              </span>
+            </motion.div>
+
+            <AnimatePresence>
+              {errors.comment && hasInteractedWithComment && (
+                <motion.p
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="text-red-400 text-sm"
+                >
+                  {errors.comment}
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       )}
 
@@ -312,12 +367,21 @@ export function CommentForm({ restaurantId }: Props) {
           name="email"
           value={formData.email}
           onChange={handleChange}
-          placeholder="Tu email"
+          placeholder="Tu email (opcional)"
           className={`w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 transition-all duration-200 ${
             errors.email ? 'border-2 border-red-500' : 'border border-white/10'
           } focus:ring-2 focus:ring-white/20 focus:outline-none`}
           disabled={isSubmitting}
         />
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-sm text-gray-400 italic text-center"
+        >
+          Dejanos tu email para recibir descuentos exclusivos y recompensas
+          especiales
+        </motion.p>
 
         <AnimatePresence>
           {errors.email && (
