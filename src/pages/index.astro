@@ -1,12 +1,14 @@
 ---
 // src/pages/index.astro
 import Layout from '../layouts/Layout.astro';
-import { getAllRestaurants } from '../services/api';
 
 // Obtener todos los restaurantes de la base de datos
+/*
+import { getAllRestaurants } from '../services/api';
 const response = await getAllRestaurants();
 const restaurants = response.data;
----
+
+
 
 <Layout title="Inicio | Yuppie">
   <main class="flex min-h-screen flex-col items-center justify-center p-4 text-center">
@@ -50,3 +52,7 @@ const restaurants = response.data;
     </div>
   </main>
 </Layout>
+
+*/
+return Astro.redirect('/404');
+---
