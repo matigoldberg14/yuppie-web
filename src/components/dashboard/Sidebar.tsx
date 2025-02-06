@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { auth } from '../../lib/firebase';
 import { signOut, type Auth } from 'firebase/auth';
@@ -19,6 +19,14 @@ import {
 export function Sidebar() {
   const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Actualizar el padding del contenido principal cuando cambia el estado del sidebar
+  useEffect(() => {
+    const mainContent = document.querySelector('main');
+    if (mainContent) {
+      mainContent.style.paddingLeft = isCollapsed ? '4rem' : '16rem';
+    }
+  }, [isCollapsed]);
 
   const handleLogout = async () => {
     try {
@@ -44,12 +52,12 @@ export function Sidebar() {
         variant="ghost"
         size="icon"
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-4 top-6 h-8 w-8 rounded-full bg-white/10 text-white hover:bg-white/20"
+        className="absolute -right-3 top-6 h-6 w-6 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center"
       >
         {isCollapsed ? (
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-3 w-3" />
         ) : (
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-3 w-3" />
         )}
       </Button>
 
