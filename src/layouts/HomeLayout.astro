@@ -1,6 +1,7 @@
 ---
-//src/layouts/HomeLayout.astro
+// src/layouts/HomeLayout.astro
 import { ViewTransitions } from 'astro:transitions';
+import Head from '../components/common/Head.astro';
 import '../styles/globals.css';
 
 interface Props {
@@ -17,16 +18,7 @@ const {
 <!DOCTYPE html>
 <html lang="es">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content={description} />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32" />
-    <link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16" />
-    <link rel="manifest" href="/site.webmanifest">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <title>{title}</title>
+    <Head title={title} description={description} />
     <ViewTransitions />
   </head>
   <body class="min-h-screen bg-gradient font-['Poppins',sans-serif] text-white">
