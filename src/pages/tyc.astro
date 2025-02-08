@@ -1,0 +1,135 @@
+---
+// src/pages/tyc.astro
+import Layout from '../layouts/Layout.astro';
+import { Card } from '../components/ui/card';
+
+const sections = [
+  {
+    title: "1. Términos del Servicio",
+    content: `
+      1.1. Al acceder y utilizar la plataforma Yuppie ("el Servicio"), usted acepta cumplir y estar sujeto a estos términos y condiciones.
+      
+      1.2. Nos reservamos el derecho de modificar estos términos en cualquier momento. Los cambios entrarán en vigor inmediatamente después de su publicación en el Servicio.
+    `
+  },
+  {
+    title: "2. Uso del Servicio",
+    content: `
+      2.1. Para utilizar nuestro Servicio, debe tener al menos 18 años de edad y tener la capacidad legal para celebrar contratos vinculantes.
+      
+      2.2. Usted es responsable de mantener la confidencialidad de su cuenta y contraseña.
+      
+      2.3. Nos reservamos el derecho de rechazar el servicio, eliminar cuentas, editar o eliminar contenido a nuestra sola discreción.
+    `
+  },
+  {
+    title: "3. Suscripciones y Pagos",
+    content: `
+      3.1. Algunos aspectos de nuestro Servicio se basan en suscripciones pagadas.
+      
+      3.2. Las suscripciones se renuevan automáticamente a menos que se cancelen con al menos 24 horas de anticipación.
+      
+      3.3. Los reembolsos se manejarán caso por caso, de acuerdo con nuestra política de reembolsos.
+    `
+  },
+  {
+    title: "4. Privacidad y Datos",
+    content: `
+      4.1. Nuestra Política de Privacidad explica cómo recopilamos y utilizamos su información.
+      
+      4.2. Al utilizar nuestro Servicio, usted acepta nuestra recopilación y uso de información de acuerdo con nuestra Política de Privacidad.
+    `
+  },
+  {
+    title: "5. Propiedad Intelectual",
+    content: `
+      5.1. El Servicio y su contenido original, características y funcionalidad son propiedad de Yuppie y están protegidos por leyes internacionales de derechos de autor y marcas registradas.
+      
+      5.2. No puede copiar, modificar, distribuir, vender o arrendar ninguna parte del Servicio sin nuestro permiso explícito.
+    `
+  }
+];
+---
+
+<Layout title="Términos y Condiciones | Yuppie">
+  <div class="min-h-screen bg-gradient-to-b from-[#2F02CC] to-gray-900">
+    <header class="px-4 lg:px-6 h-16 flex items-center border-b border-white/10">
+      <a class="flex items-center justify-center" href="/">
+        <img
+          src="/logo_grande.png"
+          alt="Yuppie Logo"
+          class="h-8 w-auto"
+        />
+      </a>
+      <nav class="ml-auto flex gap-4 sm:gap-6">
+        <a class="text-sm font-medium text-white hover:text-white/80" href="/">
+          Inicio
+        </a>
+      </nav>
+    </header>
+
+    <main class="container mx-auto px-4 py-12">
+      <div class="max-w-4xl mx-auto">
+        <h1 class="text-4xl font-bold text-white mb-8 text-center">
+          Términos y Condiciones
+        </h1>
+        
+        <Card className="bg-white/10 border-0 p-6 space-y-8">
+          <p class="text-white/80 text-lg">
+            Última actualización: {new Date().toLocaleDateString()}
+          </p>
+
+          <p class="text-white/80">
+            Bienvenido a Yuppie. Estos términos y condiciones describen las reglas y regulaciones para el uso de la plataforma Yuppie.
+          </p>
+
+          <div class="space-y-8">
+            {sections.map(section => (
+              <div class="space-y-4">
+                <h2 class="text-2xl font-semibold text-white">
+                  {section.title}
+                </h2>
+                <div class="text-white/80 space-y-4">
+                  {section.content.split('\n').map(paragraph => (
+                    paragraph.trim() && <p>{paragraph.trim()}</p>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div class="mt-8 pt-8 border-t border-white/10">
+            <h2 class="text-2xl font-semibold text-white mb-4">
+              Contacto
+            </h2>
+            <p class="text-white/80">
+              Si tiene alguna pregunta sobre estos Términos y Condiciones, puede contactarnos:
+            </p>
+            <ul class="list-disc list-inside text-white/80 mt-2">
+              <li>Por email: legal@yuppie.com</li>
+              <li>Por teléfono: +54 (11) 1234-5678</li>
+            </ul>
+          </div>
+        </Card>
+      </div>
+    </main>
+
+    <footer class="w-full py-6 bg-gray-900 mt-12">
+      <div class="container mx-auto px-4">
+        <div class="text-center text-gray-400">
+          <p>© 2024 Yuppie. Todos los derechos reservados.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+</Layout>
+
+<style>
+  .container {
+    max-width: 1200px;
+  }
+  
+  .bg-gradient {
+    background-image: linear-gradient(to bottom, var(--tw-gradient-stops));
+  }
+</style>

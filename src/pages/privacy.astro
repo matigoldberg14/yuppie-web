@@ -1,0 +1,155 @@
+---
+// src/pages/privacy.astro
+import Layout from '../layouts/Layout.astro';
+import { Card } from '../components/ui/card';
+
+const sections = [
+  {
+    title: "1. Información que Recopilamos",
+    content: `
+      1.1. Información Personal
+      Recopilamos información que usted nos proporciona directamente, incluyendo:
+      - Nombre y apellido
+      - Dirección de correo electrónico
+      - Información de facturación
+      - Información del negocio
+      
+      1.2. Información Automática
+      Cuando utiliza nuestro servicio, recopilamos automáticamente cierta información, incluyendo:
+      - Datos de uso
+      - Información del dispositivo
+      - Datos de registro
+    `
+  },
+  {
+    title: "2. Uso de la Información",
+    content: `
+      2.1. Utilizamos la información recopilada para:
+      - Proporcionar y mantener nuestro Servicio
+      - Notificarle sobre cambios en nuestro Servicio
+      - Permitirle participar en funciones interactivas
+      - Proporcionar atención al cliente
+      - Analizar y mejorar nuestro Servicio
+      
+      2.2. No vendemos su información personal a terceros.
+    `
+  },
+  {
+    title: "3. Protección de Datos",
+    content: `
+      3.1. Seguridad
+      Implementamos medidas de seguridad apropiadas para proteger contra el acceso no autorizado, la alteración, la divulgación o la destrucción de su información personal.
+      
+      3.2. Retención de Datos
+      Mantenemos su información personal solo durante el tiempo necesario para los fines establecidos en esta Política de Privacidad.
+    `
+  },
+  {
+    title: "4. Sus Derechos",
+    content: `
+      4.1. Usted tiene derecho a:
+      - Acceder a su información personal
+      - Corregir datos inexactos
+      - Solicitar la eliminación de sus datos
+      - Oponerse al procesamiento de sus datos
+      - Solicitar la portabilidad de sus datos
+      
+      4.2. Puede ejercer estos derechos contactándonos a través de los medios proporcionados.
+    `
+  },
+  {
+    title: "5. Cookies y Tecnologías de Seguimiento",
+    content: `
+      5.1. Utilizamos cookies y tecnologías similares para:
+      - Mantener su sesión
+      - Recordar sus preferencias
+      - Analizar el uso de nuestro Servicio
+      
+      5.2. Puede configurar su navegador para rechazar todas las cookies o para indicar cuándo se envía una cookie.
+    `
+  }
+];
+---
+
+<Layout title="Política de Privacidad | Yuppie">
+  <div class="min-h-screen bg-gradient-to-b from-[#2F02CC] to-gray-900">
+    <header class="px-4 lg:px-6 h-16 flex items-center border-b border-white/10">
+      <a class="flex items-center justify-center" href="/">
+        <img
+          src="/logo_grande.png"
+          alt="Yuppie Logo"
+          class="h-8 w-auto"
+        />
+      </a>
+      <nav class="ml-auto flex gap-4 sm:gap-6">
+        <a class="text-sm font-medium text-white hover:text-white/80" href="/">
+          Inicio
+        </a>
+      </nav>
+    </header>
+
+    <main class="container mx-auto px-4 py-12">
+      <div class="max-w-4xl mx-auto">
+        <h1 class="text-4xl font-bold text-white mb-8 text-center">
+          Política de Privacidad
+        </h1>
+        
+        <Card className="bg-white/10 border-0 p-6 space-y-8">
+          <p class="text-white/80 text-lg">
+            Última actualización: {new Date().toLocaleDateString()}
+          </p>
+
+          <p class="text-white/80">
+            En Yuppie, nos tomamos muy en serio la privacidad de nuestros usuarios. Esta Política de Privacidad describe nuestras políticas y procedimientos sobre la recopilación, uso y divulgación de su información cuando utiliza el Servicio.
+          </p>
+
+          <div class="space-y-8">
+            {sections.map(section => (
+              <div class="space-y-4">
+                <h2 class="text-2xl font-semibold text-white">
+                  {section.title}
+                </h2>
+                <div class="text-white/80 space-y-4">
+                  {section.content.split('\n').map(paragraph => (
+                    paragraph.trim() && <p>{paragraph.trim()}</p>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div class="mt-8 pt-8 border-t border-white/10">
+            <h2 class="text-2xl font-semibold text-white mb-4">
+              Contacto sobre Privacidad
+            </h2>
+            <p class="text-white/80">
+              Si tiene preguntas sobre esta Política de Privacidad, puede contactarnos:
+            </p>
+            <ul class="list-disc list-inside text-white/80 mt-2">
+              <li>Por email: privacy@yuppie.com</li>
+              <li>Por teléfono: +54 (11) 1234-5678</li>
+            </ul>
+          </div>
+        </Card>
+      </div>
+    </main>
+
+    <footer class="w-full py-6 bg-gray-900 mt-12">
+      <div class="container mx-auto px-4">
+        <div class="text-center text-gray-400">
+          <p>© 2024 Yuppie. Todos los derechos reservados.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+</Layout>
+
+<style>
+  .container {
+    max-width: 1200px;
+  }
+  
+  .bg-gradient {
+    background-image: linear-gradient(to bottom, var(--tw-gradient-stops));
+  }
+</style>

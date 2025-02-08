@@ -1,58 +1,435 @@
 ---
 // src/pages/index.astro
 import Layout from '../layouts/Layout.astro';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/card';
+import { AccordionDemo } from '../components/ui/AccordionDemo';
+import {
+  Star,
+  AlertCircle,
+  MessageSquare,
+  Users2,
+  BarChart3,
+  Calendar,
+  Target,
+  Lightbulb,
+  Home,
+  TrendingUp,
+  Smartphone,
+  Nfc,
+  Users,
+} from 'lucide-react';
 
-// Obtener todos los restaurantes de la base de datos
-/*
-import { getAllRestaurants } from '../services/api';
-const response = await getAllRestaurants();
-const restaurants = response.data;
+const features = [
+  {
+    Icon: Nfc,
+    title: 'Recibe más reseñas con facilidad',
+    description: 'Sistema NFC y encuestas rápidas en solo 4 clics, sin molestar al cliente'
+  },
+  {
+    Icon: AlertCircle,
+    title: 'Actúa en tiempo real ante reseñas negativas',
+    description: 'Recibe alertas automáticas de reseñas negativas y mejora al instante'
+  },
+  {
+    Icon: BarChart3,
+    title: 'Obtén métricas clave',
+    description: 'Análisis automatizado de calificaciones y tendencias'
+  }
+];
 
+const process = [
+  {
+    Icon: AlertCircle,
+    title: 'Responde en minutos',
+    description: 'Alertas automáticas de nuevas reseñas'
+  },
+  {
+    Icon: Smartphone,
+    title: 'Fácil recolección',
+    description: 'A través de NFC y encuestas rápidas'
+  },
+  {
+    Icon: TrendingUp,
+    title: 'Análisis de calificaciones',
+    description: 'Identifica patrones y detecta áreas de mejora'
+  },
+  {
+    Icon: Users,
+    title: 'Evaluación del Equipo',
+    description: 'Evalúa el desempeño de tu equipo'
+  }
+];
 
+const pricingTiers = [
+  {
+    range: '1-5',
+    monthly: 125,
+    annual: 104,
+    setupFee: 50
+  },
+  {
+    range: '6-10',
+    monthly: 110,
+    annual: 92,
+    setupFee: 0
+  },
+  {
+    range: '11-25',
+    monthly: 90,
+    annual: 75,
+    setupFee: 0
+  },
+  {
+    range: '25+',
+    monthly: 75,
+    annual: 63,
+    setupFee: 0
+  }
+];
+
+const testimonials = [
+  {
+    text: "Con Yuppie, conseguimos un 30% más de reseñas en un mes, y nuestra calificación promedio subió de 4.2 a 4.6.",
+    author: "Restaurante Palermo"
+  },
+  {
+    text: "La facilidad de uso y el sistema NFC han revolucionado la forma en que recolectamos feedback de nuestros clientes.",
+    author: "Café Central"
+  }
+];
+
+const faqs = [
+  {
+    question: "¿Cómo funciona el sistema NFC?",
+    answer: "El sistema NFC permite a tus clientes dejar reseñas simplemente acercando su teléfono al punto NFC. No necesitan descargar ninguna aplicación."
+  },
+  {
+    question: "¿Puedo cambiar mi cantidad de locales en el futuro?",
+    answer: "Sí, puedes modificar la cantidad de locales en cualquier momento. El precio se ajustará automáticamente según tu nuevo plan."
+  },
+  {
+    question: "¿Qué pasa si cancelo mi suscripción anual?",
+    answer: "Si cancelas tu suscripción anual, podrás seguir usando el servicio hasta el final del período pagado."
+  }
+];
+---
 
 <Layout title="Inicio | Yuppie">
-  <main class="flex min-h-screen flex-col items-center justify-center p-4 text-center">
-    <h1 class="text-4xl font-bold mb-8">
-      Bienvenido a Yuppie
-    </h1>
-    
-    <p class="text-xl mb-8 max-w-md">
-      Tu plataforma para gestionar la reputación de tu negocio
-    </p>
-
-    <div class="grid gap-4 md:grid-cols-2 max-w-4xl">
-      {restaurants && restaurants.map((restaurant) => (
-        <a 
-          href={`/rating?local=${restaurant.documentId}`}
-          class="flex flex-col md:flex-row items-center bg-white/5 rounded-lg hover:bg-white/10 transition-all overflow-hidden"
-        >
-          <div class="w-full md:w-48 h-48 relative">
-            {restaurant.cover ? (
-              <img
-                src={`https://yuppieb-production.up.railway.app/${restaurant.cover.url}`}
-                alt={restaurant.name}
-                class="w-full h-full object-cover"
-                onerror="this.onerror=null; this.src='/placeholder.png';"
-              />
-            ) : (
-              <div class="w-full h-full bg-gray-800 flex items-center justify-center">
-                <span class="text-gray-500">Sin imagen</span>
-              </div>
-            )}
-          </div>
-          
-          <div class="p-6 flex-1">
-            <h2 class="text-xl font-bold mb-2">
-              {restaurant.name}
-            </h2>
-            <p class="text-gray-400">Deja tu opinión sobre tu experiencia</p>
-          </div>
+  <div class="flex flex-col min-h-screen">
+    <!-- Header actualizado -->
+    <header class="px-8 lg:px-12 h-20 flex items-center bg-white border-b border-gray-200">
+      <a class="flex items-center justify-center" href="#">
+        <img
+          src="/logo_grande.png"
+          alt="Yuppie Logo"
+          class="h-10 w-auto"
+        />
+      </a>
+      <nav class="ml-auto flex gap-6 sm:gap-8">
+        <a class="text-base font-medium text-[#2F02CC] hover:text-[#2F02CC]/80" href="#features">
+          Características
         </a>
+        <a class="text-base font-medium text-[#2F02CC] hover:text-[#2F02CC]/80" href="#pricing">
+          Precios
+        </a>
+        <a class="text-base font-medium text-[#2F02CC] hover:text-[#2F02CC]/80" href="/contact">
+          Contacto
+        </a>
+      </nav>
+    </header>
+
+    <main class="flex-1">
+      <!-- Hero Section actualizada -->
+      <section class="w-full py-20 md:py-32 bg-[#2F02CC]">
+        <div class="container px-4 md:px-6 mx-auto">
+          <div class="grid gap-8 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px]">
+            <div class="flex flex-col justify-center max-w-3xl mx-auto text-center lg:text-left lg:mx-0">
+              <h1 class="text-4xl font-bold tracking-tighter sm:text-6xl xl:text-7xl/none text-white mb-8">
+                Gestiona tus reseñas de manera rápida, fácil y efectiva
+              </h1>
+              <p class="text-xl text-gray-200 mb-10">
+                Con Yuppie, responde reseñas, mejora tu reputación y optimiza tu visibilidad online
+              </p>
+              <div>
+                <a href="/contact" class="inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-[#2F02CC] bg-white rounded-full hover:bg-gray-100 transition-colors">
+                  Solicita una Demo Gratis
+                </a>
+              </div>
+            </div>
+            <div class="flex items-center justify-center">
+              <img
+                src="/dashboard-preview.png"
+                alt="Yuppie Dashboard"
+                class="rounded-lg shadow-2xl w-full"
+                width={600}
+                height={400}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features Section actualizada -->
+      <section id="features" class="w-full py-20 bg-white">
+        <div class="container px-4 md:px-6 mx-auto">
+          <div class="grid gap-10 sm:px-10">
+            <div class="space-y-4 text-center">
+              <h2 class="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-primary">
+                ¿Por qué elegir Yuppie?
+              </h2>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+              {features.map(({ Icon, title, description }) => (
+                <Card className="border-2 border-[#2F02CC]/20 bg-white">
+                  <div class="p-6">
+                    <Icon className="h-12 w-12 mb-4 text-[#2F02CC]" />
+                    <h3 class="text-xl font-bold mb-2 text-primary-dark">{title}</h3>
+                    <p class="text-gray-600">{description}</p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Process Section actualizada -->
+      <section class="w-full py-20 bg-[#f9fafb]">
+        <div class="container px-4 md:px-6 mx-auto">
+          <div class="grid gap-10">
+            <div class="space-y-4 text-center">
+              <h2 class="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-primary-dark">
+                Cómo Yuppie simplifica la gestión de tus reseñas
+              </h2>
+            </div>
+            <div class="grid md:grid-cols-4 gap-8">
+              {process.map(({ Icon, title, description }) => (
+                <div class="flex flex-col items-center text-center space-y-4">
+                  <div class="p-4 bg-[#2F02CC] rounded-full">
+                    <Icon className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 class="text-xl font-bold text-primary-dark">{title}</h3>
+                  <p class="text-gray-600">{description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pricing Section -->
+      <section id="pricing" class="w-full py-20 bg-white">
+        <div class="container px-4 md:px-6 mx-auto">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-primary-dark">
+              Elige la opción que mejor se adapte a tu negocio
+            </h2>
+          </div>
+          <div class="max-w-3xl mx-auto">
+            <Card className="border-2 border-[#2F02CC]/20">
+              <div class="p-6">
+                <!-- Contenido del pricing aquí -->
+                <div class="grid gap-6">
+                  <div class="flex justify-between items-center">
+                    <div>
+                      <h3 class="text-2xl font-bold text-[#2F02CC]">Plan Flexible</h3>
+                      <p class="text-gray-600">Paga por local, sin compromisos</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-3xl font-bold text-[#2F02CC]">$125 USD</p>
+                      <p class="text-gray-600">por local/mes</p>
+                    </div>
+                  </div>
+                  <Button className="w-full bg-[#2F02CC] text-white hover:bg-[#2F02CC]/90">
+                    Comenzar ahora
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      <!-- Testimonials Section -->
+      <section class="w-full py-20 bg-[#2F02CC]">
+        <div class="container px-4 md:px-6 mx-auto">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-white">
+              Así hemos ayudado a negocios como el tuyo
+            </h2>
+          </div>
+          <div class="grid md:grid-cols-2 gap-8">
+            {testimonials.map(({ text, author }) => (
+              <Card className="bg-white">
+  <div class="p-6">
+    <div class="flex items-center space-x-1 mb-4">
+      {[...Array(5)].map(() => (
+        <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
       ))}
     </div>
-  </main>
+    <p class="text-lg mb-4 text-gray-600">{text}</p>
+    <p class="font-bold text-primary-dark">{author}</p>
+  </div>
+</Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+<!-- FAQ Section -->
+<section class="w-full py-20 bg-white">
+  <div class="container px-4 md:px-6 mx-auto">
+    <div class="text-center mb-12">
+      <h2 class="text-4xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-primary-dark">
+        Preguntas Frecuentes
+      </h2>
+    </div>
+    <div class="max-w-3xl mx-auto">
+      <AccordionDemo client:load faqs={faqs} />
+    </div>
+  </div>
+</section>
+
+      <!-- Contact Section actualizada -->
+      <section class="w-full py-20 bg-white">
+        <div class="container px-4 md:px-6 mx-auto">
+          <div class="max-w-3xl mx-auto text-center">
+            <h2 class="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-gray-900 mb-8">
+              ¿Necesitas más información?
+            </h2>
+            <Card className="border-2 border-[#2F02CC]/20">
+              <div class="p-6">
+                <form class="space-y-6">
+                  <div class="space-y-2">
+                    <label class="text-sm font-medium text-primary-dark">Nombre</label>
+                    <input 
+                      type="text" 
+                      placeholder="Tu nombre" 
+                      class="w-full p-3 bg-white/5 border border-primary/20 rounded-md text-primary-dark placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200" 
+                    />
+                  </div>
+                  <div class="space-y-2">
+                    <label class="text-sm font-medium text-primary-dark">Email</label>
+                    <input 
+                      type="email" 
+                      placeholder="tu@email.com" 
+                      class="w-full p-3 bg-white/5 border border-primary/20 rounded-md text-primary-dark placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200" 
+                    />
+                  </div>
+                  <div class="space-y-2">
+                    <label class="text-sm font-medium text-primary-dark">Mensaje</label>
+                    <textarea 
+                      placeholder="¿En qué podemos ayudarte?" 
+                      class="w-full p-3 bg-white/5 border border-primary/20 rounded-md text-primary-dark placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200 h-32" 
+                    />
+                  </div>
+                  <Button type="submit" className="w-full bg-[#2F02CC] text-white hover:bg-[#2F02CC]/90">
+                    Enviar Consulta
+                  </Button>
+                </form>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer actualizado -->
+    <footer class="w-full py-12 bg-primary">
+      <div class="container px-4 md:px-6 mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div class="space-y-4">
+            <h3 class="text-lg font-medium text-white">Sobre Nosotros</h3>
+            <ul class="space-y-2">
+              <li>
+                <a href="/blog" class="text-gray-300 hover:text-white">Blog</a>
+              </li>
+              <li>
+                <a href="/contact" class="text-gray-300 hover:text-white">Contacto</a>
+              </li>
+            </ul>
+          </div>
+          
+          <div class="space-y-4">
+            <h3 class="text-lg font-medium text-white">Legal</h3>
+            <ul class="space-y-2">
+              <li>
+                <a href="/tyc" class="text-gray-300 hover:text-white">Términos y Condiciones</a>
+              </li>
+              <li>
+                <a href="/privacy" class="text-gray-300 hover:text-white">Privacidad</a>
+              </li>
+            </ul>
+          </div>
+          
+          <div class="space-y-4">
+            <h3 class="text-lg font-medium text-white">Redes Sociales</h3>
+            <ul class="space-y-2">
+              <li>
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                  LinkedIn
+                </a>
+              </li>
+              <li>
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-white flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                  </svg>
+                  Instagram
+                </a>
+              </li>
+            </ul>
+          </div>
+          
+          <div class="space-y-4">
+            <h3 class="text-lg font-medium text-white">Newsletter</h3>
+            <form class="flex flex-col sm:flex-row gap-2">
+              <input
+                type="email"
+                placeholder="tu@email.com"
+                class="flex-1 px-4 py-2 rounded-md bg-white/10 border border-white/20 text-white placeholder:text-gray-400"
+              />
+              <Button type="submit" variant="secondary" className="whitespace-nowrap">
+                Suscribirse
+              </Button>
+            </form>
+          </div>
+        </div>
+        
+        <div class="mt-8 pt-8 border-t border-gray-800">
+          <p class="text-center text-gray-400">
+            © 2024 Yuppie. Todos los derechos reservados.
+          </p>
+        </div>
+      </div>
+    </footer>
+  </div>
 </Layout>
 
-*/
-return Astro.redirect('/404');
----
+<style>
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  /* Asegurarse que los íconos en las cards tengan el tamaño correcto */
+  :global(.card-icon) {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  /* Estilizar los inputs del formulario */
+  input:focus, textarea:focus {
+    outline: 2px solid #2F02CC;
+    outline-offset: 2px;
+  }
+  
+  /* Asegurar que las imágenes mantengan su aspecto */
+  img {
+    object-fit: cover;
+  }
+</style>
