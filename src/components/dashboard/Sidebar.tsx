@@ -87,9 +87,8 @@ export function Sidebar() {
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
-
       <div
-        className={`fixed left-0 top-0 h-full bg-white/10 backdrop-blur-xl p-4 flex flex-col z-50
+        className={`fixed left-0 top-0 h-full bg-white/10 backdrop-blur-xl flex flex-col z-50
           md:translate-x-0 transition-all duration-300
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
           ${isCollapsed ? 'md:w-16' : 'md:w-64'}
@@ -110,92 +109,97 @@ export function Sidebar() {
         </Button>
 
         {/* Logo */}
-        <div className="mb-8">
+        <div className="px-2 pt-4">
           {isCollapsed && !isMobileMenuOpen ? (
             <span className="text-2xl font-bold text-white mx-auto block text-center">
-              Y
+              <img
+                src="/yblanca.png"
+                alt="Yuppie Logo chico"
+                className="h-8 w-auto"
+              />
             </span>
           ) : (
             <img
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logos-03.jpg-HGxPXf7O388oQVUwJRZhvoGnQoIWQG.jpeg"
+              src="/logo_grande.png"
               alt="Yuppie Logo"
               className="h-8 w-auto"
             />
           )}
         </div>
-
         {/* Navegación */}
-        <nav className="space-y-2">
-          {[
-            {
-              icon: <Home className="h-4 w-4" />,
-              text: 'Dashboard',
-              href: '/dashboard',
-            },
-            {
-              icon: <MessageSquare className="h-4 w-4" />,
-              text: 'Reseñas',
-              href: '/dashboard/reviews',
-            },
-            {
-              icon: <Users2 className="h-4 w-4" />,
-              text: 'Equipo',
-              href: '/dashboard/team',
-            },
-            {
-              icon: <BarChart3 className="h-4 w-4" />,
-              text: 'Analytics',
-              href: '/dashboard/analytics',
-            },
-            {
-              icon: <Calendar className="h-4 w-4" />,
-              text: 'Calendario',
-              href: '/dashboard/calendar',
-            },
-            {
-              icon: <Target className="h-4 w-4" />,
-              text: 'Objetivos',
-              href: '/dashboard/objectives',
-            },
-            {
-              icon: <Lightbulb className="h-4 w-4" />,
-              text: 'Mejoras',
-              href: '/dashboard/improvements',
-            },
-          ].map((item) => (
-            <a key={item.href} href={item.href}>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-white hover:bg-white/10"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <span
-                  className={isCollapsed && !isMobileMenuOpen ? '' : 'mr-2'}
+        <div className="flex flex-col flex-1 justify-between mt-8">
+          <nav className="space-y-4">
+            {[
+              {
+                icon: <Home className="h-4 w-4" />,
+                text: 'Dashboard',
+                href: '/dashboard',
+              },
+              {
+                icon: <MessageSquare className="h-4 w-4" />,
+                text: 'Reseñas',
+                href: '/dashboard/reviews',
+              },
+              {
+                icon: <Users2 className="h-4 w-4" />,
+                text: 'Equipo',
+                href: '/dashboard/team',
+              },
+              {
+                icon: <BarChart3 className="h-4 w-4" />,
+                text: 'Analytics',
+                href: '/dashboard/analytics',
+              },
+              {
+                icon: <Calendar className="h-4 w-4" />,
+                text: 'Calendario',
+                href: '/dashboard/calendar',
+              },
+              {
+                icon: <Target className="h-4 w-4" />,
+                text: 'Objetivos',
+                href: '/dashboard/objectives',
+              },
+              {
+                icon: <Lightbulb className="h-4 w-4" />,
+                text: 'Mejoras',
+                href: '/dashboard/improvements',
+              },
+            ].map((item) => (
+              <a key={item.href} href={item.href}>
+                <Button
+                  variant="ghost"
+                  className="w-full flex items-center text-white hover:bg-white/10 px-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  {item.icon}
-                </span>
-                {(!isCollapsed || isMobileMenuOpen) && item.text}
-              </Button>
-            </a>
-          ))}
-        </nav>
+                  <div className="w-8 flex items-center justify-start">
+                    {item.icon}
+                  </div>
+                  {(!isCollapsed || isMobileMenuOpen) && (
+                    <span className="text-lg">{item.text}</span>
+                  )}
+                </Button>
+              </a>
+            ))}
+          </nav>
 
-        {/* Botón de cerrar sesión */}
-        <div className="mt-auto pt-4 border-t border-white/10">
-          <Button
-            variant="ghost"
-            onClick={handleLogout}
-            className="w-full justify-start text-white hover:bg-white/10 group"
-          >
-            <LogOut
-              className={`${
-                isCollapsed && !isMobileMenuOpen ? '' : 'mr-2'
-              } h-4 w-4 group-hover:text-red-400`}
-            />
-            {(!isCollapsed || isMobileMenuOpen) && (
-              <span className="group-hover:text-red-400">Cerrar sesión</span>
-            )}
-          </Button>
+          {/* Botón de cerrar sesión */}
+          <div className="mt-auto pt-4 border-t border-white/10">
+            <Button
+              variant="ghost"
+              onClick={handleLogout}
+              className="w-full flex items-center text-white hover:bg-white/10 px-2 group"
+            >
+              <div className="w-8 flex items-center justify-start">
+                <LogOut className="h-4 w-4 group-hover:text-red-400" />
+              </div>
+              {(!isCollapsed || isMobileMenuOpen) && (
+                <span className="text-lg group-hover:text-red-400">
+                  Cerrar sesión
+                </span>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </>
