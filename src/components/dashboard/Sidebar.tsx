@@ -100,7 +100,7 @@ export function Sidebar() {
           variant="ghost"
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-6 h-6 w-6 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center hidden md:flex"
+          className="absolute -right-3 top-6 h-6 w-6 rounded-full bg-white/10 text-white hover:bg-white/20 items-center justify-center hidden md:flex"
         >
           {isCollapsed ? (
             <ChevronRight className="h-3 w-3" />

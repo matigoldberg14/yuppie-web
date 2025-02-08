@@ -7,10 +7,11 @@ import {
   getRestaurantReviews,
   updateReview,
 } from '../../services/api';
-import { Star } from 'lucide-react';
+import { Star, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/Button';
 import emailjs from '@emailjs/browser';
+import * as XLSX from 'xlsx';
 
 interface Review {
   id: number;
@@ -22,8 +23,8 @@ interface Review {
   googleSent: boolean;
   date: string;
   createdAt: string;
-  couponCode?: string; // Nuevo campo
-  couponUsed?: boolean; // Nuevo campo
+  couponCode?: string;
+  couponUsed?: boolean;
 }
 
 export function ReviewsContent() {
@@ -33,6 +34,49 @@ export function ReviewsContent() {
   const [sentCoupons, setSentCoupons] = useState<{ [key: number]: string }>({});
   // Almacenar el nombre del restaurante (para enviar en el email)
   const [restaurantName, setRestaurantName] = useState('');
+
+  // Función para exportar a Excel
+  const handleExportToExcel = () => {
+    // Preparar los datos para el Excel
+    const exportData = reviews.map((review) => ({
+      Fecha: new Date(review.createdAt).toLocaleDateString(),
+      Email: review.email,
+      Calificación: review.calification,
+      'Tipo de Mejora': review.typeImprovement,
+      Comentario: review.comment,
+      'Enviado a Google': review.googleSent ? 'Sí' : 'No',
+      'Código de Cupón': review.couponCode || 'No enviado',
+      'Cupón Usado': review.couponUsed ? 'Sí' : 'No',
+      'ID de Review': review.documentId,
+    }));
+
+    // Crear el libro de Excel
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Ajustar el ancho de las columnas
+    const columnWidths = [
+      { wch: 12 }, // Fecha
+      { wch: 30 }, // Email
+      { wch: 12 }, // Calificación
+      { wch: 15 }, // Tipo de Mejora
+      { wch: 50 }, // Comentario
+      { wch: 15 }, // Enviado a Google
+      { wch: 15 }, // Código de Cupón
+      { wch: 12 }, // Cupón Usado
+      { wch: 20 }, // ID de Review
+    ];
+    ws['!cols'] = columnWidths;
+
+    // Agregar la hoja al libro
+    XLSX.utils.book_append_sheet(wb, ws, 'Reseñas');
+
+    // Generar el archivo y descargarlo
+    const fileName = `reseñas_${restaurantName}_${
+      new Date().toISOString().split('T')[0]
+    }.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  };
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -174,7 +218,17 @@ export function ReviewsContent() {
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold text-white mb-6">Reseñas</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-white">Reseñas</h1>
+        <Button
+          variant="ghost"
+          className="text-white hover:bg-white/10"
+          onClick={handleExportToExcel}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Exportar
+        </Button>
+      </div>
       <div className="space-y-4">
         {reviews.map((review) => (
           <Card key={review.id} className="bg-white/10 border-0">
