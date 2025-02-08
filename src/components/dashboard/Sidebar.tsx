@@ -1,3 +1,4 @@
+//src/components/dashboard/Sidebar.tsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { auth } from '../../lib/firebase';
@@ -109,21 +110,23 @@ export function Sidebar() {
         </Button>
 
         {/* Logo */}
-        <div className="px-2 pt-4">
+        <div className="px-2 pt-4 flex items-center">
           {isCollapsed && !isMobileMenuOpen ? (
-            <span className="text-2xl font-bold text-white mx-auto block text-center">
+            <div className="w-full flex justify-center items-center">
               <img
                 src="/yblanca.png"
                 alt="Yuppie Logo chico"
                 className="h-8 w-auto"
               />
-            </span>
+            </div>
           ) : (
-            <img
-              src="/logo_grande.png"
-              alt="Yuppie Logo"
-              className="h-8 w-auto"
-            />
+            <div className="w-full flex items-center px-2">
+              <img
+                src="/logo_grande.png"
+                alt="Yuppie Logo"
+                className="h-8 w-auto"
+              />
+            </div>
           )}
         </div>
         {/* Navegación */}
