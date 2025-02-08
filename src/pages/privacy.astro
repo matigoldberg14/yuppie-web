@@ -1,142 +1,137 @@
 ---
 // src/pages/privacy.astro
 import Layout from '../layouts/Layout.astro';
-import { Card } from '../components/ui/card';
-
-const sections = [
-  {
-    title: "1. Información que Recopilamos",
-    content: `
-      1.1. Información Personal
-      Recopilamos información que usted nos proporciona directamente, incluyendo:
-      - Nombre y apellido
-      - Dirección de correo electrónico
-      - Información de facturación
-      - Información del negocio
-      
-      1.2. Información Automática
-      Cuando utiliza nuestro servicio, recopilamos automáticamente cierta información, incluyendo:
-      - Datos de uso
-      - Información del dispositivo
-      - Datos de registro
-    `
-  },
-  {
-    title: "2. Uso de la Información",
-    content: `
-      2.1. Utilizamos la información recopilada para:
-      - Proporcionar y mantener nuestro Servicio
-      - Notificarle sobre cambios en nuestro Servicio
-      - Permitirle participar en funciones interactivas
-      - Proporcionar atención al cliente
-      - Analizar y mejorar nuestro Servicio
-      
-      2.2. No vendemos su información personal a terceros.
-    `
-  },
-  {
-    title: "3. Protección de Datos",
-    content: `
-      3.1. Seguridad
-      Implementamos medidas de seguridad apropiadas para proteger contra el acceso no autorizado, la alteración, la divulgación o la destrucción de su información personal.
-      
-      3.2. Retención de Datos
-      Mantenemos su información personal solo durante el tiempo necesario para los fines establecidos en esta Política de Privacidad.
-    `
-  },
-  {
-    title: "4. Sus Derechos",
-    content: `
-      4.1. Usted tiene derecho a:
-      - Acceder a su información personal
-      - Corregir datos inexactos
-      - Solicitar la eliminación de sus datos
-      - Oponerse al procesamiento de sus datos
-      - Solicitar la portabilidad de sus datos
-      
-      4.2. Puede ejercer estos derechos contactándonos a través de los medios proporcionados.
-    `
-  },
-  {
-    title: "5. Cookies y Tecnologías de Seguimiento",
-    content: `
-      5.1. Utilizamos cookies y tecnologías similares para:
-      - Mantener su sesión
-      - Recordar sus preferencias
-      - Analizar el uso de nuestro Servicio
-      
-      5.2. Puede configurar su navegador para rechazar todas las cookies o para indicar cuándo se envía una cookie.
-    `
-  }
-];
 ---
 
 <Layout title="Política de Privacidad | Yuppie">
-  <div class="min-h-screen bg-gradient-to-b from-[#2F02CC] to-gray-900">
-    <header class="px-4 lg:px-6 h-16 flex items-center border-b border-white/10">
+  <div class="min-h-screen">
+    <header class="px-8 lg:px-12 h-20 flex items-center bg-white border-b border-gray-200">
       <a class="flex items-center justify-center" href="/">
         <img
           src="/logo_grande.png"
           alt="Yuppie Logo"
-          class="h-8 w-auto"
+          class="h-10 w-auto"
         />
       </a>
-      <nav class="ml-auto flex gap-4 sm:gap-6">
-        <a class="text-sm font-medium text-white hover:text-white/80" href="/">
+      <nav class="ml-auto flex gap-6 sm:gap-8">
+        <a class="text-base font-medium text-primary hover:text-primary-light transition-colors" href="/">
           Inicio
         </a>
       </nav>
     </header>
 
-    <main class="container mx-auto px-4 py-12">
-      <div class="max-w-4xl mx-auto">
-        <h1 class="text-4xl font-bold text-white mb-8 text-center">
-          Política de Privacidad
-        </h1>
-        
-        <Card className="bg-white/10 border-0 p-6 space-y-8">
-          <p class="text-white/80 text-lg">
-            Última actualización: {new Date().toLocaleDateString()}
-          </p>
-
-          <p class="text-white/80">
-            En Yuppie, nos tomamos muy en serio la privacidad de nuestros usuarios. Esta Política de Privacidad describe nuestras políticas y procedimientos sobre la recopilación, uso y divulgación de su información cuando utiliza el Servicio.
-          </p>
-
-          <div class="space-y-8">
-            {sections.map(section => (
-              <div class="space-y-4">
-                <h2 class="text-2xl font-semibold text-white">
-                  {section.title}
-                </h2>
-                <div class="text-white/80 space-y-4">
-                  {section.content.split('\n').map(paragraph => (
-                    paragraph.trim() && <p>{paragraph.trim()}</p>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div class="mt-8 pt-8 border-t border-white/10">
-            <h2 class="text-2xl font-semibold text-white mb-4">
-              Contacto sobre Privacidad
-            </h2>
+    <main>
+      <section class="bg-primary py-12">
+        <div class="container mx-auto px-4">
+          <div class="max-w-3xl mx-auto text-center">
+            <h1 class="text-4xl font-bold text-white mb-4">
+              Política de Privacidad
+            </h1>
             <p class="text-white/80">
-              Si tiene preguntas sobre esta Política de Privacidad, puede contactarnos:
+              Última actualización: 08/02/2025
             </p>
-            <ul class="list-disc list-inside text-white/80 mt-2">
-              <li>Por email: privacy@yuppie.com</li>
-              <li>Por teléfono: +54 (11) 1234-5678</li>
-            </ul>
           </div>
-        </Card>
-      </div>
+        </div>
+      </section>
+
+      <section class="py-12 bg-gray-50">
+        <div class="container mx-auto px-4">
+          <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-sm">
+            <div class="p-8 space-y-8 prose prose-lg max-w-none">
+              <p class="text-gray-600 leading-relaxed">
+                Esta Política de Privacidad describe cómo Yuppie (en adelante "Yuppie", "nosotros" o "la Plataforma") recopila, utiliza y protege la información personal que obtenemos de los usuarios (dueños, gerentes de locales comerciales y clientes finales que dejan reseñas).
+              </p>
+
+              <div class="space-y-6">
+                <h2 class="text-2xl font-bold text-primary">1. Identidad y Datos de Contacto</h2>
+                <ul class="list-disc pl-6 text-gray-600">
+                  <li>Responsable del Tratamiento de Datos: Yuppie (nombre comercial).</li>
+                  <li>Correo de Contacto para Protección de Datos: privacidad@yuppie.com.ar</li>
+                  <li>Correo de Contacto General: info@yuppie.com.ar</li>
+                </ul>
+
+                <h2 class="text-2xl font-bold text-primary">2. Datos Personales que Recopilamos</h2>
+                <ul class="list-disc pl-6 text-gray-600">
+                  <li>Datos de Identificación: Nombre y correo electrónico.</li>
+                  <li>Datos de Interacción: Reseñas dejadas por clientes finales (incluye la calificación y el comentario).</li>
+                  <li>Otros Datos Proporcionados Voluntariamente: Al responder encuestas NFC en locales, el usuario puede dejar comentarios, sugerencias u otro tipo de información.</li>
+                </ul>
+                <p class="text-gray-600">No recopilamos números de teléfono ni ubicación de forma directa o automática.</p>
+
+                <h2 class="text-2xl font-bold text-primary">3. Cómo Recopilamos los Datos</h2>
+                <ol class="list-decimal pl-6 text-gray-600">
+                  <li>Encuestas NFC y Reseñas: Cuando el cliente final escanea el chip NFC y deja una reseña rápida.</li>
+                  <li>Registro de Locales: Cuando el dueño o gerente contrata el servicio y nos facilita su nombre y correo.</li>
+                  <li>No Recopilación Automática: No utilizamos cookies de seguimiento ni realizamos tracking automático para recabar datos personales.</li>
+                </ol>
+
+                <h2 class="text-2xl font-bold text-primary">4. Finalidad del Tratamiento</h2>
+                <p class="text-gray-600">Utilizamos los datos personales para:</p>
+                <ol class="list-decimal pl-6 text-gray-600">
+                  <li>Proveer el Servicio: Gestionar reseñas y valoraciones en la plataforma.</li>
+                  <li>Mejorar el Servicio: Analizar de forma interna la satisfacción y el rendimiento de las funcionalidades.</li>
+                  <li>Enviar Notificaciones: Alertar sobre reseñas negativas o cualquier incidencia que requiera atención inmediata.</li>
+                  <li>Analíticas Internas: Medir la eficacia de la plataforma y generar estadísticas anónimas.</li>
+                </ol>
+
+                <h2 class="text-2xl font-bold text-primary">5. Base Legal para el Tratamiento</h2>
+                <ul class="list-disc pl-6 text-gray-600">
+                  <li>Consentimiento: Al utilizar la funcionalidad de reseñas o facilitar datos para el registro, los usuarios dan su consentimiento para el tratamiento de sus datos.</li>
+                  <li>Ejecución Contractual: Para proveer el servicio a locales comerciales y cumplir con las funciones inherentes al contrato.</li>
+                </ul>
+
+                <h2 class="text-2xl font-bold text-primary">6. Colaboración con Proveedores Externos</h2>
+                <ul class="list-disc pl-6 text-gray-600">
+                  <li>Servicios de Hosting y Plataforma: Vercel (alojamiento web), Railway (base de datos PostgreSQL), EmailJS (envío de correos).</li>
+                  <li>Tratamiento Interno: Los datos se almacenan y procesan en estas plataformas para permitir el funcionamiento y la mejora del servicio.</li>
+                  <li>No Compartimos con Terceros No Involucrados: No proporcionamos datos a Google, Meta u otros aliados comerciales, salvo requerimiento legal.</li>
+                </ul>
+
+                <h2 class="text-2xl font-bold text-primary">7. Transferencia Internacional de Datos</h2>
+                <p class="text-gray-600">Los datos pueden alojarse en servidores ubicados fuera del país de origen (por ejemplo, EE.UU. o Europa) a través de Vercel, Railway u otros proveedores que utilicemos. Garantizamos que estos proveedores cumplen con estándares de seguridad adecuados.</p>
+
+                <h2 class="text-2xl font-bold text-primary">8. Conservación de los Datos</h2>
+                <p class="text-gray-600">Conservamos los datos indefinidamente mientras se mantenga la relación con Yuppie o hasta que el usuario solicite su eliminación.</p>
+
+                <h2 class="text-2xl font-bold text-primary">9. Medidas de Seguridad</h2>
+                <p class="text-gray-600">Implementamos medidas técnicas y organizativas para la protección de los datos, tales como:</p>
+                <ul class="list-disc pl-6 text-gray-600">
+                  <li>Cifrado de la información en tránsito,</li>
+                  <li>Firewalls y controles de acceso,</li>
+                  <li>Protocolos de seguridad propios de Vercel, Railway y EmailJS.</li>
+                </ul>
+
+                <h2 class="text-2xl font-bold text-primary">10. Derechos de los Usuarios</h2>
+                <p class="text-gray-600">Los usuarios pueden ejercer sus derechos enviando una solicitud a privacidad@yuppie.com.ar:</p>
+                <ul class="list-disc pl-6 text-gray-600">
+                  <li>Acceso: Solicitar información sobre los datos que guardamos.</li>
+                  <li>Rectificación: Corregir o actualizar información inexacta.</li>
+                  <li>Supresión (o "Derecho al Olvido"): Solicitar la eliminación de datos personales cuando sea posible.</li>
+                  <li>Oposición: Oponerse al tratamiento de sus datos por motivos legítimos.</li>
+                </ul>
+
+                <h2 class="text-2xl font-bold text-primary">11. Menores de Edad</h2>
+                <p class="text-gray-600">La plataforma no está dirigida específicamente a menores de edad. Sin embargo, podrían llegar a usarla al dejar una reseña en un local comercial. No implementamos mecanismos de verificación de edad ni requerimos consentimiento paterno actualmente.</p>
+
+                <h2 class="text-2xl font-bold text-primary">12. Cambios en la Política de Privacidad</h2>
+                <p class="text-gray-600">Podemos modificar esta Política de Privacidad en cualquier momento. Notificaremos a los usuarios a través de correo electrónico y publicaremos la versión actualizada en www.yuppiecx.com.ar/privacy. El uso continuado de la Plataforma tras la notificación implicará la aceptación de los cambios.</p>
+
+                <h2 class="text-2xl font-bold text-primary">13. Contacto</h2>
+                <p class="text-gray-600">Para cualquier duda, consulta o ejercicio de derechos en materia de protección de datos, puedes contactarnos a:</p>
+                <ul class="list-disc pl-6 text-gray-600">
+                  <li>info@yuppie.com.ar</li>
+                  <li>privacidad@yuppie.com.ar</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
-    <footer class="w-full py-6 bg-gray-900 mt-12">
+    <footer class="bg-primary py-12">
       <div class="container mx-auto px-4">
-        <div class="text-center text-gray-400">
+        <div class="text-center text-white/80">
           <p>© 2024 Yuppie. Todos los derechos reservados.</p>
         </div>
       </div>
@@ -148,8 +143,36 @@ const sections = [
   .container {
     max-width: 1200px;
   }
-  
-  .bg-gradient {
-    background-image: linear-gradient(to bottom, var(--tw-gradient-stops));
+
+  .prose h2 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    color: theme('colors.primary.DEFAULT');
+  }
+
+  .prose p {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    line-height: 1.75;
+  }
+
+  .prose ul, .prose ol {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .prose li {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .prose {
+      font-size: 1rem;
+    }
+    
+    .prose h2 {
+      font-size: 1.5rem;
+    }
   }
 </style>
