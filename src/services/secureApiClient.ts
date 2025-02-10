@@ -77,10 +77,15 @@ class SecureApiClient {
     }
 
     const user = auth.currentUser;
-    if (user) {
-      const token = await user.getIdToken();
-      headers.set('Authorization', `Bearer ${token}`);
+    if (!user) {
+      // Si no hay usuario, se lanza error y se evita hacer la petición sin token.
+      throw new ApiError(401, 'No hay usuario autenticado');
     }
+
+    // Forzar la obtención de un token actualizado
+    const token = await user.getIdToken(true);
+    console.log('Token enviado en getHeaders:', token); // Esto te ayudará a verificar que se obtiene el token
+    headers.set('Authorization', `Bearer ${token}`);
 
     return headers;
   }
