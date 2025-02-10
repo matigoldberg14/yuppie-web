@@ -2,7 +2,6 @@
 import { defineMiddleware } from 'astro/middleware';
 import { auth } from '../lib/firebase';
 import type { Auth } from 'firebase/auth';
-import { getAuth } from 'firebase-admin/auth';
 
 const PROTECTED_ROUTES = [
   '/dashboard',
@@ -11,65 +10,53 @@ const PROTECTED_ROUTES = [
   '/api/metrics',
 ];
 
-const isProtectedRoute = (url: string) =>
-  PROTECTED_ROUTES.some((route) => url.includes(route));
-
+// Rate limiting para intentos de login
 const loginAttempts = new Map<
   string,
   {
-    attempts: number;
-    lastAttempt: number;
+    count: number;
+    timestamp: number;
   }
 >();
 
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutos
+const isProtectedRoute = (pathname: string) =>
+  PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
 
-export const authMiddleware = defineMiddleware(async (context, next) => {
+export default defineMiddleware(async (context, next) => {
   const url = new URL(context.request.url);
 
+  // Si no es ruta protegida, continuar
   if (!isProtectedRoute(url.pathname)) {
     return next();
   }
 
   try {
-    const clientIP =
-      context.request.headers.get('x-forwarded-for') || 'unknown';
-    const attemptInfo = loginAttempts.get(clientIP);
-
-    if (attemptInfo) {
-      const timeSinceLastAttempt = Date.now() - attemptInfo.lastAttempt;
-      if (
-        attemptInfo.attempts >= MAX_LOGIN_ATTEMPTS &&
-        timeSinceLastAttempt < LOCKOUT_DURATION
-      ) {
-        context.cookies.set(
-          'error',
-          'Demasiados intentos fallidos. Por favor, espere unos minutos.'
-        );
-        return context.redirect('/login');
-      }
-      if (timeSinceLastAttempt >= LOCKOUT_DURATION) {
-        loginAttempts.delete(clientIP);
-      }
-    }
-
+    // Verificar autenticación
     const currentUser = (auth as Auth).currentUser;
     if (!currentUser) {
-      throw new Error('Usuario no autenticado');
+      const returnPath = encodeURIComponent(url.pathname);
+      return Response.redirect(
+        `${url.origin}/login?returnTo=${returnPath}`,
+        302
+      );
     }
 
+    // Verificar token
     const token = await currentUser.getIdToken();
-    const decodedToken = await getAuth().verifyIdToken(token);
-
-    if (Date.now() >= decodedToken.exp * 1000) {
-      throw new Error('Sesión expirada');
+    if (!token) {
+      throw new Error('Token no disponible');
     }
 
-    // Limpiar intentos fallidos si la autenticación es exitosa
-    loginAttempts.delete(clientIP);
+    // Verificar si el token está próximo a expirar (5 minutos)
+    const decodedToken = JSON.parse(atob(token.split('.')[1]));
+    const expirationTime = decodedToken.exp * 1000;
 
-    // Modificar el request con la información del usuario
+    if (Date.now() + 5 * 60 * 1000 >= expirationTime) {
+      // Token próximo a expirar, forzar refresh
+      await currentUser.getIdToken(true);
+    }
+
+    // Almacenar información del usuario en context.locals
     context.locals.user = {
       uid: currentUser.uid,
       email: currentUser.email,
@@ -79,17 +66,35 @@ export const authMiddleware = defineMiddleware(async (context, next) => {
   } catch (error) {
     console.error('Error de autenticación:', error);
 
+    // Registrar intento fallido
     const clientIP =
       context.request.headers.get('x-forwarded-for') || 'unknown';
-    const currentAttempts = loginAttempts.get(clientIP);
+    const attempt = loginAttempts.get(clientIP) || {
+      count: 0,
+      timestamp: Date.now(),
+    };
 
-    loginAttempts.set(clientIP, {
-      attempts: (currentAttempts?.attempts || 0) + 1,
-      lastAttempt: Date.now(),
-    });
+    // Si han pasado más de 15 minutos, resetear contador
+    if (Date.now() - attempt.timestamp > 15 * 60 * 1000) {
+      attempt.count = 1;
+      attempt.timestamp = Date.now();
+    } else {
+      attempt.count++;
+    }
 
-    // Guardar la URL actual para redireccionar después del login
+    loginAttempts.set(clientIP, attempt);
+
+    // Si excede intentos, bloquear temporalmente
+    if (attempt.count >= 5) {
+      context.cookies.set(
+        'auth_error',
+        'Demasiados intentos. Por favor, espere 15 minutos.'
+      );
+      return Response.redirect(`${url.origin}/login`, 302);
+    }
+
+    // Redirección normal por fallo de autenticación
     const returnPath = encodeURIComponent(url.pathname);
-    return context.redirect(`/login?returnTo=${returnPath}`);
+    return Response.redirect(`${url.origin}/login?returnTo=${returnPath}`, 302);
   }
 });
