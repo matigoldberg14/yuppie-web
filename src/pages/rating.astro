@@ -3,6 +3,8 @@
 import Layout from '../layouts/Layout.astro';
 import { RatingForm } from '../components/feedback/Rating';
 import { getRestaurant, incrementTaps } from '../services/api';
+import { RatingSkeleton } from '../components/skeletons/FeedbackSkeleton';
+import { preloadData } from '../utils/performance';
 
 const documentId = Astro.url.searchParams.get('local');
 if (!documentId) {
@@ -33,16 +35,39 @@ try {
       
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">Califica tu experiencia</h2>
-        <RatingForm 
-          client:load 
-          restaurantId={documentId}
-          nextUrl={`/improvement?local=${documentId}`}
-          linkMaps={restaurant.linkMaps}
-        />
+        <div id="rating-container" class="hidden">
+          <RatingForm 
+            client:load 
+            restaurantId={documentId}
+            nextUrl={`/improvement?local=${documentId}`}
+            linkMaps={restaurant.linkMaps}
+          />
+        </div>
+        <div id="skeleton-container">
+          <RatingSkeleton />
+        </div>
       </div>
     </div>
   </div>
 </Layout>
+
+<script>
+  // Mostrar el componente real y ocultar el skeleton
+  const showRating = () => {
+    const container = document.getElementById('rating-container');
+    const skeleton = document.getElementById('skeleton-container');
+    
+    if (container && skeleton) {
+      container.classList.remove('hidden');
+      skeleton.classList.add('hidden');
+    }
+  };
+
+  // Esperar a que los componentes estén listos
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(showRating, 100);
+  });
+</script>
 
 <style>
   .card {
@@ -50,5 +75,19 @@ try {
   }
   .card:hover {
     transform: translateY(-5px);
+  }
+  
+  /* Optimizaciones de CSS */
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .card {
+      transition: none;
+    }
+    .card:hover {
+      transform: none;
+    }
   }
 </style>

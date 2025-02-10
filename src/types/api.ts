@@ -98,6 +98,16 @@ export const ReviewSchema = z.object({
   couponUsed: z.boolean().optional(),
 });
 
+export interface CreateReviewInput {
+  restaurantId: number;
+  calification: number;
+  typeImprovement: 'Atención' | 'Comidas' | 'Bebidas' | 'Ambiente' | 'Otra';
+  email: string;
+  comment: string;
+  googleSent: boolean;
+  date: string;
+}
+
 export type Restaurant = z.infer<typeof RestaurantSchema>;
 export type Schedule = z.infer<typeof ScheduleSchema>;
 export type Employee = z.infer<typeof EmployeeSchema>;

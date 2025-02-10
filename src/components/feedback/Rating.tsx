@@ -1,6 +1,5 @@
 // src/components/feedback/Rating.tsx
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 
@@ -23,11 +22,29 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleRatingHover = (rating: number) => {
-    if (!isSubmitting) {
-      setSelectedRating(rating);
+  useEffect(() => {
+    // Verificar si ya se hizo una review
+    const lastReviewTime = localStorage.getItem(`last_review_${restaurantId}`);
+    if (lastReviewTime) {
+      const timeDiff = Date.now() - new Date(lastReviewTime).getTime();
+      const hoursLeft = Math.ceil(
+        (24 * 60 * 60 * 1000 - timeDiff) / (1000 * 60 * 60)
+      );
+
+      if (timeDiff < 24 * 60 * 60 * 1000) {
+        toast({
+          variant: 'destructive',
+          title: 'Espera 24 horas',
+          description: `Podrás enviar otra review en ${hoursLeft} horas.`,
+        });
+
+        // Redirigir después de mostrar el mensaje
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 3000);
+      }
     }
-  };
+  }, [restaurantId, toast]);
 
   const handleRatingSelect = async (rating: number) => {
     if (isSubmitting) return;
@@ -35,27 +52,27 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
     try {
       setIsSubmitting(true);
 
-      // Solo guardamos en localStorage y navegamos
       localStorage.setItem('yuppie_rating', rating.toString());
       localStorage.setItem('yuppie_restaurant', restaurantId);
+      localStorage.setItem(
+        `last_review_${restaurantId}`,
+        new Date().toISOString()
+      );
 
-      // Si es 5 estrellas, va a Google Maps
-      if (rating === 5) {
+      if (rating === 5 && linkMaps) {
         window.location.href = linkMaps;
       } else {
-        // Si no, va al siguiente paso
         window.location.href = nextUrl;
       }
     } catch (error) {
       console.error('Error procesando calificación:', error);
-      setIsSubmitting(false);
-
       toast({
         variant: 'destructive',
         title: 'Error',
         description:
-          error instanceof Error ? error.message : 'Error desconocido',
+          error instanceof Error ? error.message : 'Error inesperado',
       });
+      setIsSubmitting(false);
     }
   };
 
@@ -71,48 +88,37 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
 
       <div className="flex justify-between w-full px-4 relative">
         <AnimatePresence>
-          {ratingOptions.map(({ rating, emoji, label, color }) => (
+          {ratingOptions.map((option) => (
             <motion.button
-              key={rating}
+              key={option.rating}
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300 }}
-              onClick={() => handleRatingSelect(rating)}
-              onMouseEnter={() => handleRatingHover(rating)}
-              onFocus={() => handleRatingHover(rating)}
+              onClick={() => handleRatingSelect(option.rating)}
               disabled={isSubmitting}
               className={`relative group flex flex-col items-center ${
                 isSubmitting
                   ? 'opacity-50 cursor-not-allowed'
                   : 'cursor-pointer'
               }`}
-              aria-label={label}
+              aria-label={option.label}
             >
               <span className="text-4xl transform transition-transform duration-200 group-hover:scale-110">
-                {emoji}
+                {option.emoji}
               </span>
 
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{
-                  opacity: selectedRating === rating ? 1 : 0,
-                  y: selectedRating === rating ? 0 : 10,
+                  opacity: selectedRating === option.rating ? 1 : 0,
+                  y: selectedRating === option.rating ? 0 : 10,
                 }}
-                className={`absolute -bottom-12 px-3 py-1 rounded-full text-sm text-white ${color}`}
+                className={`absolute -bottom-12 px-3 py-1 rounded-full text-sm text-white ${option.color}`}
               >
-                {label}
+                {option.label}
               </motion.div>
-
-              <motion.div
-                initial={false}
-                animate={{
-                  scale: selectedRating === rating ? 1 : 0,
-                  opacity: selectedRating === rating ? 1 : 0,
-                }}
-                className={`absolute -bottom-2 w-2 h-2 rounded-full ${color}`}
-              />
             </motion.button>
           ))}
         </AnimatePresence>

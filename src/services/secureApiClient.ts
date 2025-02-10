@@ -1,6 +1,11 @@
 // src/services/secureApiClient.ts
 import { auth } from '../lib/firebase';
-import type { Restaurant, Review, ApiResponse } from '../types/api';
+import type {
+  Restaurant,
+  Review,
+  ApiResponse,
+  CreateReviewInput,
+} from '../types/api';
 import { RestaurantSchema, ReviewSchema } from '../types/api';
 import { z } from 'zod';
 
@@ -30,6 +35,38 @@ class SecureApiClient {
     return SecureApiClient.instance;
   }
 
+  async canSubmitReview(
+    restaurantId: string
+  ): Promise<{ canSubmit: boolean; waitTime?: number }> {
+    try {
+      // Verificar en el caché local
+      const cacheKey = `last_review_${restaurantId}`;
+      const lastReview = localStorage.getItem(cacheKey);
+
+      if (lastReview) {
+        const lastReviewDate = new Date(lastReview);
+        const now = new Date();
+        const timeDiff = now.getTime() - lastReviewDate.getTime();
+        const dayInMs = 24 * 60 * 60 * 1000;
+
+        if (timeDiff < dayInMs) {
+          // Calcular tiempo restante
+          const waitTime = dayInMs - timeDiff;
+          return { canSubmit: false, waitTime };
+        }
+      }
+
+      // También verificamos en la base de datos a través de la API
+      const response = await this.fetch<{ canSubmit: boolean }>(
+        `/reviews/check-limit?restaurantId=${restaurantId}`
+      );
+
+      return { canSubmit: response.canSubmit };
+    } catch (error) {
+      console.error('Error checking review limit:', error);
+      return { canSubmit: false };
+    }
+  }
   private async getHeaders(): Promise<Headers> {
     const headers = new Headers({
       'Content-Type': 'application/json',
@@ -112,6 +149,28 @@ class SecureApiClient {
       }
     );
     return ReviewSchema.parse(response);
+  }
+  async createReview(data: CreateReviewInput): Promise<Review> {
+    const canSubmit = await this.canSubmitReview(data.restaurantId.toString());
+
+    if (!canSubmit.canSubmit) {
+      const hoursLeft = Math.ceil((canSubmit.waitTime || 0) / (1000 * 60 * 60));
+      throw new ApiError(
+        429,
+        `Por favor espera ${hoursLeft} horas antes de enviar otra review.`
+      );
+    }
+
+    const response = await this.fetch<ApiResponse<Review>>('/reviews', {
+      method: 'POST',
+      body: JSON.stringify({ data }),
+    });
+
+    // Guardar timestamp en localStorage
+    const cacheKey = `last_review_${data.restaurantId}`;
+    localStorage.setItem(cacheKey, new Date().toISOString());
+
+    return ReviewSchema.parse(response.data);
   }
 }
 
