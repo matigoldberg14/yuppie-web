@@ -297,7 +297,7 @@ export async function getRestaurantReviews(restaurantId: string) {
     const response = await fetch(
       `${
         import.meta.env.PUBLIC_API_URL
-      }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*&sort[0]=createdAt:desc&pagination[limit]=999&pagination[page]=1`
+      }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*&sort[0]=createdAt:desc`
     );
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -313,8 +313,8 @@ export async function getRestaurantReviews(restaurantId: string) {
       googleSent: review.googleSent,
       date: review.date,
       createdAt: review.createdAt,
-      couponCode: review.couponCode,
-      couponUsed: review.couponUsed,
+      couponCode: review.couponCode, // Nuevo campo
+      couponUsed: review.couponUsed, // Nuevo campo
     }));
   } catch (error) {
     console.error('Error fetching reviews:', error);
