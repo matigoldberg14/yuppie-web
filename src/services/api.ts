@@ -66,7 +66,7 @@ interface ApiResponse<T> {
 }
 
 export const API_CONFIG = {
-  baseUrl: import.meta.env.PUBLIC_API_URL,
+  baseUrl: 'https://yuppieb-production.up.railway.app/api', // Valor por defecto
   timeout: 10000,
   retryAttempts: 3,
   retryDelay: 1000,
@@ -253,40 +253,37 @@ interface Restaurant {
 
 export async function getRestaurantByFirebaseUID(firebaseUID: string) {
   try {
+    // Validar si tenemos la URL base
+    const baseUrl =
+      API_CONFIG.baseUrl || 'https://yuppieb-production.up.railway.app/api';
+
+    // Asegurarnos que tenemos un firebaseUID
     if (!firebaseUID) {
       console.error('No firebaseUID provided');
       return null;
     }
 
-    const response = await fetch(
-      `${API_CONFIG.baseUrl}/restaurants?filters[firebaseUID][$eq]=${firebaseUID}&populate=owner`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    // Imprimir la URL completa para debug
+    const url = `${baseUrl}/restaurants?filters[firebaseUID][$eq]=${firebaseUID}&populate=owner`;
+    console.log('Requesting URL:', url);
 
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-
     const result = await response.json();
-
     if (!result.data || result.data.length === 0) {
       throw new Error('No restaurant found');
     }
-
     const restaurantData = result.data[0];
-
     return {
       id: restaurantData.id,
       documentId: restaurantData.documentId,
       name: restaurantData.name,
       taps: restaurantData.taps || '0',
       owner: {
-        firstName: restaurantData.owner?.name || '',
-        lastName: restaurantData.owner?.lastName || '',
+        firstName: restaurantData.owner.name || '',
+        lastName: restaurantData.owner.lastName || '',
       },
     };
   } catch (error) {
