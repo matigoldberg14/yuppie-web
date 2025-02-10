@@ -7,14 +7,11 @@ import {
   getRestaurantReviews,
   updateReview,
 } from '../../services/api';
-import { generateCoupon } from '../../services/coupons';
 import { Star, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/Button';
-import { useToast } from '../ui/use-toast';
 import emailjs from '@emailjs/browser';
 import * as XLSX from 'xlsx';
-import { sendCouponEmail } from '../../services/email';
 
 interface Review {
   id: number;
@@ -37,8 +34,6 @@ export function ReviewsContent() {
   const [sentCoupons, setSentCoupons] = useState<{ [key: number]: string }>({});
   // Almacenar el nombre del restaurante (para enviar en el email)
   const [restaurantName, setRestaurantName] = useState('');
-  const [restaurantId, setRestaurantId] = useState<string>('');
-  const { toast } = useToast();
 
   // Función para exportar a Excel
   const handleExportToExcel = () => {
@@ -97,96 +92,90 @@ export function ReviewsContent() {
           throw new Error('No se encontró el restaurante');
         }
         setRestaurantName(restaurantData.name || 'Yuppie');
-        setRestaurantId(restaurantData.documentId);
         const reviewsData = await getRestaurantReviews(
           restaurantData.documentId
         );
         setReviews(reviewsData);
       } catch (error) {
         console.error('Error fetching reviews:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Error cargando las reseñas',
-        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchReviews();
-  }, [toast]);
+  }, []);
 
-  const handleSendCoupon = async (review: Review) => {
-    if (!auth?.currentUser) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Debe estar autenticado para enviar cupones',
-      });
-      return;
+  // Función para generar un cupón aleatorio de 10 caracteres alfanuméricos
+  const generateCouponCode = (length: number): string => {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    for (let i = 0; i < length; i++) {
+      result += characters.charAt(
+        Math.floor(Math.random() * characters.length)
+      );
     }
+    return result;
+  };
 
+  // Función para enviar el cupón y actualizar Strapi
+  const handleSendCoupon = (review: Review) => {
     const discountStr = window.prompt(
       'Ingrese el porcentaje de descuento (entre 10 y 100):'
     );
     if (!discountStr) return;
-
     const discount = parseInt(discountStr, 10);
     if (isNaN(discount) || discount < 10 || discount > 100) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'El valor debe ser un número entre 10 y 100',
-      });
+      alert('El valor debe ser un número entre 10 y 100.');
       return;
     }
 
-    try {
-      // Generar cupón seguro
-      const coupon = await generateCoupon(
-        review.documentId,
-        restaurantId,
-        discount
+    const couponCode = generateCouponCode(10);
+
+    const templateParams = {
+      to_email: review.email,
+      discount_percentage: discount,
+      coupon_code: couponCode,
+      restaurant: restaurantName,
+      reply_to: 'contacto@tuempresa.com',
+    };
+
+    emailjs
+      .send(
+        'service_kovjo5m',
+        'template_em90fox',
+        templateParams,
+        '3wONTqDb8Fwtqf1P0'
+      )
+      .then(
+        async (result) => {
+          console.log('Email enviado correctamente', result.text);
+          alert('Cupón enviado exitosamente.');
+          try {
+            // Actualizamos la review usando review.id (número)
+            await updateReview(review.documentId, {
+              couponCode: couponCode,
+              couponUsed: false,
+            });
+            // Actualizamos el estado local
+            setSentCoupons((prev) => ({ ...prev, [review.id]: couponCode }));
+            setReviews((prevReviews) =>
+              prevReviews.map((r) =>
+                r.id === review.id ? { ...r, couponCode, couponUsed: false } : r
+              )
+            );
+          } catch (updateError) {
+            console.error(
+              'Error actualizando la review con el cupón:',
+              updateError
+            );
+          }
+        },
+        (error) => {
+          console.error('Error enviando cupón', error);
+          alert('Error enviando el cupón.');
+        }
       );
-
-      if (!coupon) throw new Error('Error generando cupón');
-
-      // Enviar email usando el servicio seguro
-      await sendCouponEmail({
-        email: review.email,
-        discount,
-        couponCode: coupon.code,
-        restaurantName,
-      });
-
-      // Actualizar review con el cupón
-      await updateReview(review.documentId, {
-        couponCode: coupon.code,
-        couponUsed: false,
-      });
-
-      // Actualizar estado local
-      setReviews((prevReviews) =>
-        prevReviews.map((r) =>
-          r.id === review.id
-            ? { ...r, couponCode: coupon.code, couponUsed: false }
-            : r
-        )
-      );
-
-      toast({
-        title: 'Éxito',
-        description: 'Cupón enviado correctamente',
-      });
-    } catch (error) {
-      console.error('Error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo enviar el cupón',
-      });
-    }
   };
 
   // Función para marcar el cupón como usado

@@ -5,6 +5,7 @@ import type { Auth } from 'firebase/auth';
 
 let auth: Auth | undefined;
 
+// Solo inicializar Firebase en el cliente
 if (typeof window !== 'undefined') {
   try {
     const firebaseConfig = {
