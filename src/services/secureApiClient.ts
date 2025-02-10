@@ -1,9 +1,10 @@
 // src/services/secureApiClient.ts
+import { auth } from '../lib/firebase';
+import type { Restaurant, Review, ApiResponse } from '../types/api';
+import { RestaurantSchema, ReviewSchema } from '../types/api';
+import { z } from 'zod';
 
-import { secureConfig } from '../config/env.config';
-import { getAuth } from 'firebase/auth';
-
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
     this.name = 'ApiError';
@@ -12,10 +13,15 @@ class ApiError extends Error {
 
 class SecureApiClient {
   private static instance: SecureApiClient;
-  private token: string | null = null;
-  private tokenExpiryTime: number = 0;
+  private baseUrl: string;
+  private abortControllers: Map<string, AbortController>;
 
-  private constructor() {}
+  private constructor() {
+    this.baseUrl =
+      import.meta.env.PUBLIC_API_URL ||
+      'https://yuppieb-production.up.railway.app/api';
+    this.abortControllers = new Map();
+  }
 
   static getInstance(): SecureApiClient {
     if (!SecureApiClient.instance) {
@@ -24,88 +30,88 @@ class SecureApiClient {
     return SecureApiClient.instance;
   }
 
-  private async getAuthToken(): Promise<string> {
-    const auth = getAuth();
+  private async getHeaders(): Promise<Headers> {
+    const headers = new Headers({
+      'Content-Type': 'application/json',
+    });
+
+    if (!auth) {
+      throw new ApiError(401, 'Firebase auth no está inicializado');
+    }
+
     const user = auth.currentUser;
-
-    if (!user) {
-      throw new ApiError(401, 'No authenticated user');
+    if (user) {
+      const token = await user.getIdToken();
+      headers.set('Authorization', `Bearer ${token}`);
     }
 
-    if (this.token && Date.now() < this.tokenExpiryTime) {
-      return this.token;
-    }
+    return headers;
+  }
 
-    try {
-      const token = await user.getIdToken(true);
-      this.token = token;
-      this.tokenExpiryTime = Date.now() + 55 * 60 * 1000; // 55 minutes
-      return token;
-    } catch (error) {
-      throw new ApiError(401, 'Failed to get auth token');
+  private createAbortController(endpoint: string): AbortController {
+    if (this.abortControllers.has(endpoint)) {
+      this.abortControllers.get(endpoint)?.abort();
     }
+    const controller = new AbortController();
+    this.abortControllers.set(endpoint, controller);
+    return controller;
   }
 
   async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(
-      () => controller.abort(),
-      secureConfig.api.timeout
-    );
+    const controller = this.createAbortController(endpoint);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const token = await this.getAuthToken();
-      const response = await fetch(`${secureConfig.api.baseUrl}${endpoint}`, {
+      const headers = await this.getHeaders();
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...options,
+        headers: { ...Object.fromEntries(headers), ...options.headers },
         signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-          ...options.headers,
-        },
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new ApiError(
-          response.status,
-          error.message || 'API request failed'
-        );
+        throw new ApiError(response.status, await response.text());
       }
 
-      return await response.json();
+      const data = await response.json();
+      return data.data as T;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(500, 'Error de conexión');
     } finally {
       clearTimeout(timeoutId);
+      this.abortControllers.delete(endpoint);
     }
   }
 
-  // Secure methods for specific operations
-  async verifyCoupon(
-    couponCode: string,
-    restaurantId: string
-  ): Promise<boolean> {
-    try {
-      const response = await this.fetch<{ valid: boolean }>('/coupons/verify', {
-        method: 'POST',
-        body: JSON.stringify({ code: couponCode, restaurantId }),
-      });
-      return response.valid;
-    } catch (error) {
-      console.error('Error verifying coupon:', error);
-      return false;
-    }
+  async getRestaurantByFirebaseUID(uid: string): Promise<Restaurant> {
+    const data = await this.fetch<ApiResponse<Restaurant>>(
+      `/restaurants?filters[firebaseUID][$eq]=${uid}&populate=owner`
+    );
+    return RestaurantSchema.parse(data);
   }
 
-  async createCoupon(restaurantId: string, discount: number): Promise<string> {
-    const response = await this.fetch<{ code: string }>('/coupons/create', {
-      method: 'POST',
-      body: JSON.stringify({
-        restaurantId,
-        discount,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-      }),
-    });
-    return response.code;
+  async getRestaurantReviews(documentId: string): Promise<Review[]> {
+    const data = await this.fetch<ApiResponse<Review[]>>(
+      `/reviews?filters[restaurant][documentId][$eq]=${documentId}&populate=*&sort[0]=createdAt:desc`
+    );
+    return z.array(ReviewSchema).parse(data);
+  }
+
+  async updateReview(
+    documentId: string,
+    data: Partial<Review>
+  ): Promise<Review> {
+    const response = await this.fetch<ApiResponse<Review>>(
+      `/reviews/${documentId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ data }),
+      }
+    );
+    return ReviewSchema.parse(response);
   }
 }
 
