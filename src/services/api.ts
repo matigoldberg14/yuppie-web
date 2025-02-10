@@ -297,7 +297,7 @@ export async function getRestaurantReviews(restaurantId: string) {
     const response = await fetch(
       `${
         import.meta.env.PUBLIC_API_URL
-      }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*&sort[0]=createdAt:desc`
+      }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*&sort[0]=createdAt:desc&pagination[limit]=-1`
     );
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
