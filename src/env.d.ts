@@ -18,12 +18,6 @@ interface ImportMeta {
 }
 
 declare namespace App {
-  interface Locals {
-    user?: {
-      uid: string;
-      email: string | null;
-    };
-  }
   interface Env {
     PUBLIC_API_URL: string;
     PUBLIC_SITE_URL: string;

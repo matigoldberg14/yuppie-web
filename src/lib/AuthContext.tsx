@@ -6,38 +6,27 @@ import { auth } from './firebase';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  token: string | null;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  token: null,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthContextType>({
     user: null,
     loading: true,
-    token: null,
   });
 
   useEffect(() => {
-    const unsubscribe = auth?.onAuthStateChanged(async (user) => {
-      if (user) {
-        const token = await user.getIdToken();
-        setState({
-          user,
-          loading: false,
-          token,
-        });
-      } else {
-        setState({
-          user: null,
-          loading: false,
-          token: null,
-        });
-      }
+    // Suscribirse a los cambios de autenticación
+    const unsubscribe = auth?.onAuthStateChanged((user) => {
+      console.log('Estado de auth actualizado:', user?.email);
+      setState({
+        user,
+        loading: false,
+      });
     });
 
     return () => unsubscribe?.();
