@@ -18,7 +18,7 @@ if (typeof window !== 'undefined') {
 
     const app = initializeApp(firebaseConfig);
     auth = getAuth(app);
-    console.log('Firebase inicializado en el cliente!');
+    console.log('Firebase inicializado en el cliente');
   } catch (error) {
     console.error('Error inicializando Firebase:', error);
   }
