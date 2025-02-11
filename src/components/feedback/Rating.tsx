@@ -56,7 +56,7 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
           calification: 5,
           typeImprovement: 'Otra',
           email: 'prefirio-no-dar-su-email@nodiosuemail.com',
-          comment: 'Google Review: 5 estrellas. Review enviada a Google',
+          comment: 'Google Review: 5 estrellas. Review enviada a Google!',
           googleSent: true,
         };
 
