@@ -1,11 +1,12 @@
 // src/components/feedback/Rating.tsx
-
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 import { createReview } from '../../services/api';
 
 interface Props {
+  // Asegúrate de que este restaurantId sea un string que contenga un número válido
+  // o pásalo directamente como number si así lo deseas
   restaurantId: string;
   nextUrl: string;
   linkMaps: string;
@@ -20,6 +21,15 @@ const ratingOptions = [
 ] as const;
 
 export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
+  // Convierto restaurantId a número una sola vez
+  const numericRestaurantId = parseInt(restaurantId, 10);
+
+  // (Opcional) Verificación básica:
+  if (isNaN(numericRestaurantId)) {
+    console.error(`restaurantId ("${restaurantId}") no es un número válido. 
+      Asegúrate de pasar un ID numérico proveniente de Strapi.`);
+  }
+
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -36,23 +46,23 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
     try {
       setIsSubmitting(true);
 
+      // Guardo la calificación y el "ID" en localStorage
       localStorage.setItem('yuppie_rating', rating.toString());
       localStorage.setItem('yuppie_restaurant', restaurantId);
 
+      // Si es 5, creamos la review con calificación 5 y googleSent = true
       if (rating === 5) {
-        // Guardar el tipo de mejora predeterminado para la review de Google
         localStorage.setItem('yuppie_improvement', 'Otra');
 
         toast({
           title: '¡Gracias!',
-          description:
-            'Se ha creado tu review de 5 estrellas y será enviada a Google.',
+          description: '¿Nos dejarías un comentario en Google?',
           duration: 2000,
         });
 
-        // Crear la review en Strapi con el prefijo en el comentario
+        // Llamamos a createReview con los datos adecuados
         const reviewData = {
-          restaurantId: parseInt(restaurantId, 10),
+          restaurantId: numericRestaurantId, // <-- aquí ya es número
           calification: 5,
           typeImprovement: 'Otra',
           email: 'prefirio-no-dar-su-email@nodiosuemail.com',
@@ -62,10 +72,12 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
 
         await createReview(reviewData);
 
+        // Redirigimos a Google Maps (o la URL que quieras)
         setTimeout(() => {
           window.location.href = linkMaps;
         }, 2000);
       } else {
+        // Si no es 5, pasamos a la siguiente pantalla (improvement)
         window.location.href = nextUrl;
       }
     } catch (error) {
@@ -115,6 +127,7 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
                 {emoji}
               </span>
 
+              {/* Etiqueta con la descripción (Muy insatisfecho, Satisfecho, etc.) */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{
@@ -126,6 +139,7 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
                 {label}
               </motion.div>
 
+              {/* Pequeño punto de color bajo el emoji seleccionado */}
               <motion.div
                 initial={false}
                 animate={{
