@@ -1,119 +1,78 @@
 // src/types/api.ts
-import { z } from 'zod';
-
-export const WeekDayEnum = {
-  MONDAY: 'monday',
-  TUESDAY: 'tuesday',
-  WEDNESDAY: 'wednesday',
-  THURSDAY: 'thursday',
-  FRIDAY: 'friday',
-  SATURDAY: 'saturday',
-  SUNDAY: 'sunday',
-} as const;
-
-export type WeekDay = (typeof WeekDayEnum)[keyof typeof WeekDayEnum];
-
-export const RestaurantSchema = z.object({
-  id: z.number(),
-  documentId: z.string(),
-  name: z.string(),
-  taps: z.string().optional(),
-  linkMaps: z.string(),
-  owner: z.object({
-    firstName: z.string(),
-    lastName: z.string(),
-    email: z.string().optional(),
-  }),
-  cover: z
-    .object({
-      id: z.number(),
-      name: z.string(),
-      url: z.string(),
-      formats: z.object({
-        small: z.object({
-          url: z.string(),
-        }),
-        thumbnail: z.object({
-          url: z.string(),
-        }),
-      }),
-    })
-    .optional(),
-});
-
-export const ScheduleSchema = z.object({
-  id: z.number(),
-  day: z.enum([
-    'monday',
-    'tuesday',
-    'wednesday',
-    'thursday',
-    'friday',
-    'saturday',
-    'sunday',
-  ]),
-  startTime: z.string(),
-  endTime: z.string(),
-});
-
-export const EmployeeSchema = z.object({
-  id: z.number(),
-  firstName: z.string(),
-  lastName: z.string(),
-  position: z.string(),
-  active: z.boolean(),
-  photo: z
-    .object({
-      id: z.number(),
-      url: z.string(),
-      formats: z.object({
-        thumbnail: z.object({
-          url: z.string(),
-        }),
-      }),
-    })
-    .optional(),
-  schedules: z.array(ScheduleSchema),
-});
-
-export const ReviewSchema = z.object({
-  id: z.number(),
-  documentId: z.string(),
-  calification: z.number().min(1).max(5),
-  typeImprovement: z.enum([
-    'Atención',
-    'Comidas',
-    'Bebidas',
-    'Ambiente',
-    'Otra',
-  ]),
-  comment: z.string(),
-  email: z.string().email(),
-  googleSent: z.boolean(),
-  date: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string().optional(),
-  publishedAt: z.string().optional(),
-  couponCode: z.string().optional(),
-  couponUsed: z.boolean().optional(),
-});
-
-export interface CreateReviewInput {
-  restaurantId: number;
-  calification: number;
-  typeImprovement: 'Atención' | 'Comidas' | 'Bebidas' | 'Ambiente' | 'Otra';
-  email: string;
-  comment: string;
-  googleSent: boolean;
-  date: string;
+export interface Restaurant {
+  id: number;
+  documentId: string;
+  name: string;
+  taps: string;
+  linkMaps: string;
+  cover?: {
+    id: number;
+    name: string;
+    url: string;
+    formats: {
+      small: {
+        url: string;
+      };
+      thumbnail: {
+        url: string;
+      };
+    };
+  };
+  employees?: Employee[];
+  reviews?: Review[];
 }
 
-export type Restaurant = z.infer<typeof RestaurantSchema>;
-export type Schedule = z.infer<typeof ScheduleSchema>;
-export type Employee = z.infer<typeof EmployeeSchema>;
-export type Review = z.infer<typeof ReviewSchema>;
+export interface Employee {
+  id: number;
+  firstName: string;
+  lastName: string;
+  position: string;
+  active: boolean;
+  photo?: {
+    id: number;
+    url: string;
+    formats: {
+      thumbnail: {
+        url: string;
+      };
+    };
+  };
+  restaurant: Restaurant;
+  schedules: Schedule[];
+}
 
-export type ApiResponse<T> = {
+export type WeekDay =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+
+export interface Schedule {
+  id: number;
+  day: WeekDay;
+  startTime: string; // formato "HH:mm:ss.SSS"
+  endTime: string;
+  employee: Employee;
+}
+
+export interface Review {
+  id: number;
+  documentId: string;
+  googleSent: boolean;
+  typeImprovement: 'Atención' | 'Comidas' | 'Bebidas' | 'Ambiente' | 'Otra';
+  email: string;
+  date: string;
+  comment: string;
+  calification: number;
+  restaurant: Restaurant;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string;
+}
+export interface ApiResponse<T> {
   data: T;
   meta?: {
     pagination?: {
@@ -123,4 +82,4 @@ export type ApiResponse<T> = {
       total: number;
     };
   };
-};
+}
