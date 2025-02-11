@@ -160,12 +160,12 @@ export function Sidebar() {
               },
               {
                 icon: <Target className="h-4 w-4" />,
-                text: 'Objetivos (en desarrollo)',
+                text: 'Objetivos (proximamente)',
                 href: '/dashboard/objectives',
               },
               {
                 icon: <Lightbulb className="h-4 w-4" />,
-                text: 'Mejoras (en desarrollo)',
+                text: 'Mejoras (proximamente)',
                 href: '/dashboard/improvements',
               },
             ].map((item) => (
