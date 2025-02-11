@@ -569,7 +569,7 @@ export async function getRestaurantNumericId(
     }
     const data = await response.json();
     if (data.data && data.data.length > 0) {
-      return data.data[0].id; // Aquí se obtiene el ID numérico interno
+      return data.data[0].id; // ID numérico interno
     }
     return null;
   } catch (error) {

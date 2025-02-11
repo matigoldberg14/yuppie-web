@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createReview } from '../../services/api';
+import { createReview, getRestaurantNumericId } from '../../services/api';
 import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
 import emailjs from '@emailjs/browser';
@@ -211,23 +211,23 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      const restaurantIdNumber = parseInt(restaurantId, 10);
-      if (isNaN(restaurantIdNumber)) {
-        throw new Error('ID de restaurante inválido');
+      // Obtenemos el ID numérico a partir del documentId
+      const numericRestaurantId = await getRestaurantNumericId(restaurantId);
+      if (numericRestaurantId === null) {
+        throw new Error('No se encontró el restaurante con ese documentId');
       }
 
       const emailToSend =
         formData.email.trim() || 'prefirio-no-dar-su-email@nodiosuemail.com';
 
       await createReview({
-        restaurantId: restaurantIdNumber,
+        restaurantId: numericRestaurantId, // Usamos el ID numérico correcto
         calification: rating,
         typeImprovement: improvementType || 'Otra',
         email: emailToSend,
         comment: finalComment.trim(),
         googleSent: rating === 5,
       });
-
       // Solo intentamos enviar el email si hay uno proporcionado
       if (rating <= 2 && formData.email) {
         try {
