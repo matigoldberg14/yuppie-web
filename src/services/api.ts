@@ -558,6 +558,7 @@ export async function updateReview(
 }
 
 // Función para obtener el ID numérico de Strapi usando el documentId
+// Función para obtener el ID numérico a partir del documentId
 export async function getRestaurantNumericId(
   documentId: string
 ): Promise<number | null> {
@@ -565,15 +566,16 @@ export async function getRestaurantNumericId(
     const url = `${API_CONFIG.baseUrl}/restaurants?filters[documentId][$eq]=${documentId}`;
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Error fetching restaurant numeric id');
+      throw new Error('Error al obtener el ID numérico del restaurante');
     }
     const data = await response.json();
     if (data.data && data.data.length > 0) {
-      return data.data[0].id; // Este debe ser el ID numérico interno del restaurante
+      // Retornamos el ID numérico interno del restaurante
+      return data.data[0].id;
     }
     return null;
   } catch (error) {
-    console.error('Error in getRestaurantNumericId:', error);
+    console.error('Error en getRestaurantNumericId:', error);
     return null;
   }
 }

@@ -211,7 +211,7 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
-      // Obtenemos el ID numérico a partir del documentId
+      // Usamos getRestaurantNumericId para obtener el ID numérico a partir del documentId
       const numericRestaurantId = await getRestaurantNumericId(restaurantId);
       if (numericRestaurantId === null) {
         throw new Error('No se encontró el restaurante con ese documentId');
@@ -220,43 +220,19 @@ export function CommentForm({ restaurantId }: Props) {
       const emailToSend =
         formData.email.trim() || 'prefirio-no-dar-su-email@nodiosuemail.com';
 
-      await createReview({
-        restaurantId: numericRestaurantId, // Usamos el ID numérico correcto
+      const reviewData = {
+        restaurantId: numericRestaurantId, // ID numérico obtenido
         calification: rating,
         typeImprovement: improvementType || 'Otra',
         email: emailToSend,
         comment: finalComment.trim(),
         googleSent: rating === 5,
-      });
-      // Solo intentamos enviar el email si hay uno proporcionado
-      if (rating <= 2 && formData.email) {
-        try {
-          const fetchUrl = `${
-            import.meta.env.PUBLIC_API_URL
-          }/restaurants?populate=owner&filters[id][$eq]=${restaurantId}`;
-          const response = await fetch(fetchUrl);
-          const data = await response.json();
-          const ownerEmail = data.data[0]?.owner?.email;
+      };
 
-          if (ownerEmail) {
-            await emailjs.send(
-              'service_kovjo5m',
-              'template_v2s559p',
-              {
-                to_email: ownerEmail,
-                comment: finalComment.trim(),
-                rating: rating,
-                improvement_type: improvementType || 'Otra',
-                customer_email: formData.email,
-              },
-              '3wONTqDb8Fwtqf1P0'
-            );
-          }
-        } catch (emailError) {
-          console.error('Error al enviar email:', emailError);
-        }
-      }
+      console.log('Iniciando createReview con datos:', reviewData);
+      await createReview(reviewData);
 
+      // Limpiar localStorage si es necesario
       localStorage.removeItem('yuppie_improvement');
       localStorage.removeItem('yuppie_rating');
       localStorage.removeItem('yuppie_restaurant');
@@ -272,18 +248,14 @@ export function CommentForm({ restaurantId }: Props) {
       }, 1500);
     } catch (error) {
       let errorMessage = 'Error desconocido';
-      if (error instanceof z.ZodError) {
-        errorMessage = error.errors.map((e) => e.message).join('\n');
-      } else if (error instanceof Error) {
+      if (error instanceof Error) {
         errorMessage = error.message;
       }
-
       toast({
         variant: 'destructive',
         title: 'Error',
         description: errorMessage,
       });
-
       setIsSubmitting(false);
     }
   };
