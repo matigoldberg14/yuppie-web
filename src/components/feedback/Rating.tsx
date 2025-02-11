@@ -40,39 +40,30 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
       localStorage.setItem('yuppie_restaurant', restaurantId);
 
       if (rating === 5) {
-        try {
-          // Primero obtenemos los datos del restaurante para tener el ID numérico
-          const restaurant = await getRestaurant(restaurantId);
-          if (!restaurant) throw new Error('No se encontró el restaurante');
+        // Guardar el tipo de mejora y el comentario predeterminado
+        localStorage.setItem('yuppie_improvement', 'Otra');
 
-          const reviewData = {
-            restaurantId: restaurant.id, // Aquí usamos el ID numérico
-            calification: 5,
-            typeImprovement: 'Otra',
-            email: 'prefirio-no-dar-su-email@nodiosuemail.com',
-            comment: 'Review enviado a Google',
-            googleSent: true,
-          };
+        toast({
+          title: '¡Gracias!',
+          description: '¿Nos dejarías un comentario en Google?',
+          duration: 2000,
+        });
 
-          console.log('Creando review con datos:', reviewData);
-          const result = await createReview(reviewData);
-          console.log('Review creada exitosamente:', result);
+        // Crear la review como se hace normalmente
+        const reviewData = {
+          restaurantId: parseInt(restaurantId),
+          calification: 5,
+          typeImprovement: 'Otra',
+          email: 'prefirio-no-dar-su-email@nodiosuemail.com',
+          comment: 'Review enviado a Google',
+          googleSent: true,
+        };
 
-          toast({
-            title: '¡Gracias!',
-            description: '¿Nos dejarías un comentario en Google?',
-            duration: 2000,
-          });
+        await createReview(reviewData);
 
-          // Esperamos un momento antes de redirigir
-          setTimeout(() => {
-            window.location.href = linkMaps;
-          }, 2000);
-        } catch (reviewError) {
-          console.error('Error creando review:', reviewError);
-          // Si falla, aún redirigimos a Google Maps
+        setTimeout(() => {
           window.location.href = linkMaps;
-        }
+        }, 2000);
       } else {
         window.location.href = nextUrl;
       }
