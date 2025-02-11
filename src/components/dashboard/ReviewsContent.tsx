@@ -1,203 +1,194 @@
 // src/components/dashboard/ReviewsContent.tsx
-
+import type { Review } from '../../types/api';
 import React, { useState, useEffect } from 'react';
 import { auth } from '../../lib/firebase';
-import {
-  getRestaurantByFirebaseUID,
-  getRestaurantReviews,
-  updateReview,
-} from '../../services/api';
+import { secureApiClient } from '../../services/secureApiClient';
 import { Star, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/Button';
 import emailjs from '@emailjs/browser';
 import * as XLSX from 'xlsx';
-
-interface Review {
-  id: number;
-  documentId: string;
-  calification: number;
-  typeImprovement: string;
-  comment: string;
-  email: string;
-  googleSent: boolean;
-  date: string;
-  createdAt: string;
-  couponCode?: string;
-  couponUsed?: boolean;
-}
+import { useToast } from '../ui/use-toast';
 
 export function ReviewsContent() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-  // Estado para guardar cupones enviados (aunque la info viene de Strapi)
-  const [sentCoupons, setSentCoupons] = useState<{ [key: number]: string }>({});
-  // Almacenar el nombre del restaurante (para enviar en el email)
   const [restaurantName, setRestaurantName] = useState('');
-
-  // Función para exportar a Excel
-  const handleExportToExcel = () => {
-    // Preparar los datos para el Excel
-    const exportData = reviews.map((review) => ({
-      Fecha: new Date(review.createdAt).toLocaleDateString(),
-      Email: review.email,
-      Calificación: review.calification,
-      'Tipo de Mejora': review.typeImprovement,
-      Comentario: review.comment,
-      'Enviado a Google': review.googleSent ? 'Sí' : 'No',
-      'Código de Cupón': review.couponCode || 'No enviado',
-      'Cupón Usado': review.couponUsed ? 'Sí' : 'No',
-      'ID de Review': review.documentId,
-    }));
-
-    // Crear el libro de Excel
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-
-    // Ajustar el ancho de las columnas
-    const columnWidths = [
-      { wch: 12 }, // Fecha
-      { wch: 30 }, // Email
-      { wch: 12 }, // Calificación
-      { wch: 15 }, // Tipo de Mejora
-      { wch: 50 }, // Comentario
-      { wch: 15 }, // Enviado a Google
-      { wch: 15 }, // Código de Cupón
-      { wch: 12 }, // Cupón Usado
-      { wch: 20 }, // ID de Review
-    ];
-    ws['!cols'] = columnWidths;
-
-    // Agregar la hoja al libro
-    XLSX.utils.book_append_sheet(wb, ws, 'Reseñas');
-
-    // Generar el archivo y descargarlo
-    const fileName = `reseñas_${restaurantName}_${
-      new Date().toISOString().split('T')[0]
-    }.xlsx`;
-    XLSX.writeFile(wb, fileName);
-  };
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchReviews = async () => {
       try {
         if (!auth?.currentUser?.uid) {
-          console.log('No hay usuario autenticado');
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'No hay usuario autenticado',
+          });
           return;
         }
-        const restaurantData = await getRestaurantByFirebaseUID(
+
+        const restaurantData = await secureApiClient.getRestaurantByFirebaseUID(
           auth.currentUser.uid
         );
-        if (!restaurantData) {
-          throw new Error('No se encontró el restaurante');
-        }
-        setRestaurantName(restaurantData.name || 'Yuppie');
-        const reviewsData = await getRestaurantReviews(
+
+        setRestaurantName(restaurantData.name);
+        const reviewsData = await secureApiClient.getRestaurantReviews(
           restaurantData.documentId
         );
         setReviews(reviewsData);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error fetching reviews:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description:
+            error instanceof Error ? error.message : 'Error desconocido',
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchReviews();
-  }, []);
+  }, [toast]);
 
-  // Función para generar un cupón aleatorio de 10 caracteres alfanuméricos
   const generateCouponCode = (length: number): string => {
-    let result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    for (let i = 0; i < length; i++) {
-      result += characters.charAt(
-        Math.floor(Math.random() * characters.length)
-      );
-    }
-    return result;
+    return Array.from({ length }, () =>
+      characters.charAt(Math.floor(Math.random() * characters.length))
+    ).join('');
   };
 
-  // Función para enviar el cupón y actualizar Strapi
-  const handleSendCoupon = (review: Review) => {
-    const discountStr = window.prompt(
-      'Ingrese el porcentaje de descuento (entre 10 y 100):'
-    );
-    if (!discountStr) return;
-    const discount = parseInt(discountStr, 10);
-    if (isNaN(discount) || discount < 10 || discount > 100) {
-      alert('El valor debe ser un número entre 10 y 100.');
-      return;
-    }
+  const handleSendCoupon = async (review: Review) => {
+    try {
+      const discountStr = window.prompt(
+        'Ingrese el porcentaje de descuento (entre 10 y 100):'
+      );
+      if (!discountStr) return;
 
-    const couponCode = generateCouponCode(10);
+      const discount = parseInt(discountStr, 10);
+      if (isNaN(discount) || discount < 10 || discount > 100) {
+        throw new Error('El valor debe ser un número entre 10 y 100.');
+      }
 
-    const templateParams = {
-      to_email: review.email,
-      discount_percentage: discount,
-      coupon_code: couponCode,
-      restaurant: restaurantName,
-      reply_to: 'contacto@tuempresa.com',
-    };
+      const couponCode = generateCouponCode(10);
 
-    emailjs
-      .send(
+      await emailjs.send(
         'service_kovjo5m',
         'template_em90fox',
-        templateParams,
-        '3wONTqDb8Fwtqf1P0'
-      )
-      .then(
-        async (result) => {
-          console.log('Email enviado correctamente', result.text);
-          alert('Cupón enviado exitosamente.');
-          try {
-            // Actualizamos la review usando review.id (número)
-            await updateReview(review.documentId, {
-              couponCode: couponCode,
-              couponUsed: false,
-            });
-            // Actualizamos el estado local
-            setSentCoupons((prev) => ({ ...prev, [review.id]: couponCode }));
-            setReviews((prevReviews) =>
-              prevReviews.map((r) =>
-                r.id === review.id ? { ...r, couponCode, couponUsed: false } : r
-              )
-            );
-          } catch (updateError) {
-            console.error(
-              'Error actualizando la review con el cupón:',
-              updateError
-            );
-          }
+        {
+          to_email: review.email,
+          discount_percentage: discount,
+          coupon_code: couponCode,
+          restaurant: restaurantName,
+          reply_to: 'contacto@tuempresa.com',
         },
-        (error) => {
-          console.error('Error enviando cupón', error);
-          alert('Error enviando el cupón.');
+        '3wONTqDb8Fwtqf1P0'
+      );
+
+      const updatedReview = await secureApiClient.updateReview(
+        review.documentId,
+        {
+          couponCode,
+          couponUsed: false,
         }
       );
+
+      setReviews((prevReviews) =>
+        prevReviews.map((r) => (r.id === review.id ? updatedReview : r))
+      );
+
+      toast({
+        title: 'Éxito',
+        description: 'Cupón enviado correctamente',
+      });
+    } catch (error: unknown) {
+      console.error('Error enviando cupón:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Error enviando cupón',
+      });
+    }
   };
 
-  // Función para marcar el cupón como usado
-  const handleMarkCouponUsed = (review: Review) => {
-    const confirmation = window.confirm(
-      '¿Está seguro de que desea marcar este cupón como usado? Esta acción no se puede revertir.'
-    );
-    if (!confirmation) return;
+  const handleMarkCouponUsed = async (review: Review) => {
+    try {
+      const confirmation = window.confirm(
+        '¿Está seguro de que desea marcar este cupón como usado? Esta acción no se puede revertir.'
+      );
+      if (!confirmation) return;
 
-    updateReview(review.documentId, { couponUsed: true })
-      .then(() => {
-        alert('El cupón se ha marcado como usado.');
-        setReviews((prevReviews) =>
-          prevReviews.map((r) =>
-            r.id === review.id ? { ...r, couponUsed: true } : r
-          )
-        );
-      })
-      .catch((error) => {
-        console.error('Error marcando el cupón como usado:', error);
-        alert('Error al actualizar el estado del cupón.');
+      const updatedReview = await secureApiClient.updateReview(
+        review.documentId,
+        {
+          couponUsed: true,
+        }
+      );
+
+      setReviews((prevReviews) =>
+        prevReviews.map((r) => (r.id === review.id ? updatedReview : r))
+      );
+
+      toast({
+        title: 'Éxito',
+        description: 'Cupón marcado como usado',
       });
+    } catch (error: unknown) {
+      console.error('Error marcando cupón como usado:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo marcar el cupón como usado',
+      });
+    }
+  };
+
+  const handleExportToExcel = () => {
+    try {
+      const exportData = reviews.map((review) => ({
+        Fecha: new Date(review.createdAt).toLocaleDateString(),
+        Email: review.email,
+        Calificación: review.calification,
+        'Tipo de Mejora': review.typeImprovement,
+        Comentario: review.comment,
+        'Enviado a Google': review.googleSent ? 'Sí' : 'No',
+        'Código de Cupón': review.couponCode || 'No enviado',
+        'Cupón Usado': review.couponUsed ? 'Sí' : 'No',
+        'ID de Review': review.documentId,
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      ws['!cols'] = [
+        { wch: 12 },
+        { wch: 30 },
+        { wch: 12 },
+        { wch: 15 },
+        { wch: 50 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 12 },
+        { wch: 20 },
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Reseñas');
+
+      const fileName = `reseñas_${restaurantName}_${
+        new Date().toISOString().split('T')[0]
+      }.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    } catch (error) {
+      console.error('Error exportando a Excel:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo exportar el archivo',
+      });
+    }
   };
 
   if (loading) {

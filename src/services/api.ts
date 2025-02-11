@@ -66,7 +66,9 @@ interface ApiResponse<T> {
 }
 
 export const API_CONFIG = {
-  baseUrl: 'https://yuppieb-production.up.railway.app/api', // Valor por defecto
+  baseUrl:
+    import.meta.env.PUBLIC_API_URL ||
+    'https://yuppieb-production.up.railway.app/api',
   timeout: 10000,
   retryAttempts: 3,
   retryDelay: 1000,
