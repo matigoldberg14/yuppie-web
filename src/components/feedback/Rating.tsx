@@ -36,26 +36,39 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
     try {
       setIsSubmitting(true);
 
-      // Guardamos en localStorage como siempre
       localStorage.setItem('yuppie_rating', rating.toString());
       localStorage.setItem('yuppie_restaurant', restaurantId);
 
       if (rating === 5) {
-        // COMENTARIO: Como esta es una review automática cuando el usuario da 5 estrellas,
-        // la marcamos con googleSent = true y usamos un email genérico
-        await createReview({
-          restaurantId: parseInt(restaurantId, 10),
-          calification: 5,
-          typeImprovement: 'Otra',
-          email: 'prefirio-no-dar-su-email@nodiosuemail.com',
-          comment: 'Review enviado a Google',
-          googleSent: true,
-        });
+        // PRIMERO creamos la review y ESPERAMOS que termine
+        try {
+          const reviewData = {
+            restaurantId: parseInt(restaurantId, 10),
+            calification: 5,
+            typeImprovement: 'Otra',
+            email: 'prefirio-no-dar-su-email@nodiosuemail.com',
+            comment: 'Review enviado a Google',
+            googleSent: true,
+          };
 
-        // Después de crear la review, redirigimos a Google Maps
-        window.location.href = linkMaps;
+          console.log('Creando review con datos:', reviewData);
+          const result = await createReview(reviewData);
+          console.log('Review creada exitosamente:', result);
+
+          // SOLO DESPUÉS de confirmar que se creó, redirigimos
+          window.location.href = linkMaps;
+        } catch (reviewError) {
+          console.error('Error creando review:', reviewError);
+          // Si falla la creación de la review, mostramos el error pero igual redirigimos
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description:
+              'Error al guardar la review, pero continuando a Google Maps',
+          });
+          window.location.href = linkMaps;
+        }
       } else {
-        // Si no es 5 estrellas, seguimos el flujo normal
         window.location.href = nextUrl;
       }
     } catch (error) {
