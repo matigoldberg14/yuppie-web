@@ -1,13 +1,6 @@
 // src/services/secureApiClient.ts
 import { auth } from '../lib/firebase';
-import type {
-  Restaurant,
-  Review,
-  ApiResponse,
-  CreateReviewInput,
-} from '../types/api';
-import { RestaurantSchema, ReviewSchema } from '../types/api';
-import { z } from 'zod';
+import type { Auth } from 'firebase/auth';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -19,13 +12,11 @@ export class ApiError extends Error {
 class SecureApiClient {
   private static instance: SecureApiClient;
   private baseUrl: string;
-  private abortControllers: Map<string, AbortController>;
 
   private constructor() {
     this.baseUrl =
       import.meta.env.PUBLIC_API_URL ||
       'https://yuppieb-production.up.railway.app/api';
-    this.abortControllers = new Map();
   }
 
   static getInstance(): SecureApiClient {
@@ -35,147 +26,74 @@ class SecureApiClient {
     return SecureApiClient.instance;
   }
 
-  async canSubmitReview(
-    restaurantId: string
-  ): Promise<{ canSubmit: boolean; waitTime?: number }> {
-    try {
-      // Verificar en el caché local
-      const cacheKey = `last_review_${restaurantId}`;
-      const lastReview = localStorage.getItem(cacheKey);
-
-      if (lastReview) {
-        const lastReviewDate = new Date(lastReview);
-        const now = new Date();
-        const timeDiff = now.getTime() - lastReviewDate.getTime();
-        const dayInMs = 24 * 60 * 60 * 1000;
-
-        if (timeDiff < dayInMs) {
-          // Calcular tiempo restante
-          const waitTime = dayInMs - timeDiff;
-          return { canSubmit: false, waitTime };
-        }
-      }
-
-      // También verificamos en la base de datos a través de la API
-      const response = await this.fetch<{ canSubmit: boolean }>(
-        `/reviews/check-limit?restaurantId=${restaurantId}`
-      );
-
-      return { canSubmit: response.canSubmit };
-    } catch (error) {
-      console.error('Error checking review limit:', error);
-      return { canSubmit: false };
-    }
-  }
-  private async getHeaders(): Promise<Headers> {
-    const headers = new Headers({
-      'Content-Type': 'application/json',
-    });
-
+  private async getToken(): Promise<string> {
     if (!auth) {
-      throw new ApiError(401, 'Firebase auth no está inicializado');
+      throw new ApiError(401, 'Firebase no está inicializado');
     }
 
-    const user = auth.currentUser;
-    if (!user) {
-      // Si no hay usuario, se lanza error y se evita hacer la petición sin token.
-      throw new ApiError(401, 'No hay usuario autenticado');
+    const currentUser = (auth as Auth).currentUser;
+    if (!currentUser) {
+      throw new ApiError(401, 'No autenticado');
     }
 
-    // Forzar la obtención de un token actualizado
-    const token = await user.getIdToken(true);
-    console.log('Token enviado en getHeaders:', token); // Esto te ayudará a verificar que se obtiene el token
-    headers.set('Authorization', `Bearer ${token}`);
-
-    return headers;
-  }
-
-  private createAbortController(endpoint: string): AbortController {
-    if (this.abortControllers.has(endpoint)) {
-      this.abortControllers.get(endpoint)?.abort();
+    try {
+      return await currentUser.getIdToken(true);
+    } catch (error) {
+      console.error('Error getting token:', error);
+      throw new ApiError(401, 'Error obteniendo token');
     }
-    const controller = new AbortController();
-    this.abortControllers.set(endpoint, controller);
-    return controller;
   }
 
   async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const controller = this.createAbortController(endpoint);
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
     try {
-      const headers = await this.getHeaders();
+      const token = await this.getToken();
+
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...options,
-        headers: { ...Object.fromEntries(headers), ...options.headers },
-        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...options.headers,
+        },
       });
 
       if (!response.ok) {
-        throw new ApiError(response.status, await response.text());
+        const error = await response.json();
+        throw new ApiError(
+          response.status,
+          error.error?.message || 'Error en la petición'
+        );
       }
 
       const data = await response.json();
-      return data.data as T;
+      return data.data;
     } catch (error) {
+      console.error('API Error:', error);
       if (error instanceof ApiError) {
         throw error;
       }
       throw new ApiError(500, 'Error de conexión');
-    } finally {
-      clearTimeout(timeoutId);
-      this.abortControllers.delete(endpoint);
     }
   }
 
-  async getRestaurantByFirebaseUID(uid: string): Promise<Restaurant> {
-    const data = await this.fetch<ApiResponse<Restaurant>>(
+  // Métodos específicos
+  async getRestaurantByFirebaseUID(uid: string) {
+    return this.fetch(
       `/restaurants?filters[firebaseUID][$eq]=${uid}&populate=owner`
     );
-    return RestaurantSchema.parse(data);
   }
 
-  async getRestaurantReviews(documentId: string): Promise<Review[]> {
-    const data = await this.fetch<ApiResponse<Review[]>>(
+  async getRestaurantReviews(documentId: string) {
+    return this.fetch(
       `/reviews?filters[restaurant][documentId][$eq]=${documentId}&populate=*&sort[0]=createdAt:desc`
     );
-    return z.array(ReviewSchema).parse(data);
   }
 
-  async updateReview(
-    documentId: string,
-    data: Partial<Review>
-  ): Promise<Review> {
-    const response = await this.fetch<ApiResponse<Review>>(
-      `/reviews/${documentId}`,
-      {
-        method: 'PUT',
-        body: JSON.stringify({ data }),
-      }
-    );
-    return ReviewSchema.parse(response);
-  }
-  async createReview(data: CreateReviewInput): Promise<Review> {
-    const canSubmit = await this.canSubmitReview(data.restaurantId.toString());
-
-    if (!canSubmit.canSubmit) {
-      const hoursLeft = Math.ceil((canSubmit.waitTime || 0) / (1000 * 60 * 60));
-      throw new ApiError(
-        429,
-        `Por favor espera ${hoursLeft} horas antes de enviar otra review.`
-      );
-    }
-
-    const response = await this.fetch<ApiResponse<Review>>('/reviews', {
-      method: 'POST',
+  async updateReview(documentId: string, data: any) {
+    return this.fetch(`/reviews/${documentId}`, {
+      method: 'PUT',
       body: JSON.stringify({ data }),
     });
-
-    // Guardar timestamp en localStorage
-    const cacheKey = `last_review_${data.restaurantId}`;
-    localStorage.setItem(cacheKey, new Date().toISOString());
-
-    return ReviewSchema.parse(response.data);
   }
 }
 
