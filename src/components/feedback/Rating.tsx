@@ -40,22 +40,23 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
       localStorage.setItem('yuppie_restaurant', restaurantId);
 
       if (rating === 5) {
-        // Guardar el tipo de mejora y el comentario predeterminado
+        // Guardar el tipo de mejora predeterminado para la review de Google
         localStorage.setItem('yuppie_improvement', 'Otra');
 
         toast({
           title: '¡Gracias!',
-          description: '¿Nos dejarías un comentario en Google?',
+          description:
+            'Se ha creado tu review de 5 estrellas y será enviada a Google.',
           duration: 2000,
         });
 
-        // Crear la review como se hace normalmente
+        // Crear la review en Strapi con el prefijo en el comentario
         const reviewData = {
-          restaurantId: parseInt(restaurantId),
+          restaurantId: parseInt(restaurantId, 10),
           calification: 5,
           typeImprovement: 'Otra',
           email: 'prefirio-no-dar-su-email@nodiosuemail.com',
-          comment: 'Review enviado a Google',
+          comment: 'Google Review: 5 estrellas. Review enviada a Google',
           googleSent: true,
         };
 
