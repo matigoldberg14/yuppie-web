@@ -397,7 +397,7 @@ export function CommentForm({ restaurantId }: Props) {
           value={formData.email}
           onChange={handleChange}
           onFocus={() => setHasInteractedWithEmail(true)}
-          placeholder="Tu email"
+          placeholder="Tu email (opcional)*"
           className={`w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 transition-all duration-200 ${
             errors.email ? 'border-2 border-red-500' : 'border border-white/10'
           } focus:ring-2 focus:ring-white/20 focus:outline-none`}
