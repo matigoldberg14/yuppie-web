@@ -41,8 +41,12 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
 
       if (rating === 5) {
         try {
+          // Primero obtenemos los datos del restaurante para tener el ID numérico
+          const restaurant = await getRestaurant(restaurantId);
+          if (!restaurant) throw new Error('No se encontró el restaurante');
+
           const reviewData = {
-            restaurantId: parseInt(restaurantId, 10),
+            restaurantId: restaurant.id, // Aquí usamos el ID numérico
             calification: 5,
             typeImprovement: 'Otra',
             email: 'prefirio-no-dar-su-email@nodiosuemail.com',
@@ -50,28 +54,23 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
             googleSent: true,
           };
 
+          console.log('Creando review con datos:', reviewData);
           const result = await createReview(reviewData);
           console.log('Review creada exitosamente:', result);
 
-          // Solo cuando la review se creó, mostramos el mensaje personalizado
           toast({
             title: '¡Gracias!',
             description: '¿Nos dejarías un comentario en Google?',
             duration: 2000,
           });
 
-          // Esperamos un momento para que el usuario vea el mensaje
+          // Esperamos un momento antes de redirigir
           setTimeout(() => {
             window.location.href = linkMaps;
           }, 2000);
         } catch (reviewError) {
           console.error('Error creando review:', reviewError);
-          toast({
-            variant: 'destructive',
-            title: 'Error',
-            description:
-              'Error al guardar la review, pero continuando a Google Maps',
-          });
+          // Si falla, aún redirigimos a Google Maps
           window.location.href = linkMaps;
         }
       } else {
