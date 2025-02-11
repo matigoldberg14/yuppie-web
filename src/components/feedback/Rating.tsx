@@ -40,7 +40,6 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
       localStorage.setItem('yuppie_restaurant', restaurantId);
 
       if (rating === 5) {
-        // PRIMERO creamos la review y ESPERAMOS que termine
         try {
           const reviewData = {
             restaurantId: parseInt(restaurantId, 10),
@@ -51,15 +50,22 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
             googleSent: true,
           };
 
-          console.log('Creando review con datos:', reviewData);
           const result = await createReview(reviewData);
           console.log('Review creada exitosamente:', result);
 
-          // SOLO DESPUÉS de confirmar que se creó, redirigimos
-          window.location.href = linkMaps;
+          // Solo cuando la review se creó, mostramos el mensaje personalizado
+          toast({
+            title: '¡Gracias!',
+            description: '¿Nos dejarías un comentario en Google?',
+            duration: 2000,
+          });
+
+          // Esperamos un momento para que el usuario vea el mensaje
+          setTimeout(() => {
+            window.location.href = linkMaps;
+          }, 2000);
         } catch (reviewError) {
           console.error('Error creando review:', reviewError);
-          // Si falla la creación de la review, mostramos el error pero igual redirigimos
           toast({
             variant: 'destructive',
             title: 'Error',
