@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
-import { createReview } from '../../services/api';
+import { createReview, getRestaurantNumericId } from '../../services/api';
 
 interface Props {
   // Asegúrate de que este restaurantId sea un string que contenga un número válido
@@ -46,11 +46,10 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
     try {
       setIsSubmitting(true);
 
-      // Guardo la calificación y el "ID" en localStorage
+      // Guarda la calificación y el documentId en localStorage
       localStorage.setItem('yuppie_rating', rating.toString());
       localStorage.setItem('yuppie_restaurant', restaurantId);
 
-      // Si es 5, creamos la review con calificación 5 y googleSent = true
       if (rating === 5) {
         localStorage.setItem('yuppie_improvement', 'Otra');
 
@@ -60,9 +59,15 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
           duration: 2000,
         });
 
-        // Llamamos a createReview con los datos adecuados
+        // Obtenemos el ID numérico a partir del documentId
+        const numericRestaurantId = await getRestaurantNumericId(restaurantId);
+        if (numericRestaurantId === null) {
+          throw new Error('No se encontró el restaurante con ese documentId');
+        }
+
+        // Preparamos los datos de la review
         const reviewData = {
-          restaurantId: numericRestaurantId, // <-- aquí ya es número
+          restaurantId: numericRestaurantId, // Ahora es el ID numérico correcto
           calification: 5,
           typeImprovement: 'Otra',
           email: 'prefirio-no-dar-su-email@nodiosuemail.com',
@@ -70,14 +75,13 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
           googleSent: true,
         };
 
+        console.log('Iniciando createReview con datos:', reviewData);
         await createReview(reviewData);
 
-        // Redirigimos a Google Maps (o la URL que quieras)
         setTimeout(() => {
           window.location.href = linkMaps;
         }, 2000);
       } else {
-        // Si no es 5, pasamos a la siguiente pantalla (improvement)
         window.location.href = nextUrl;
       }
     } catch (error) {
