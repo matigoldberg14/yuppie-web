@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/Button';
 import emailjs from '@emailjs/browser';
 import * as XLSX from 'xlsx';
+import { formatDateBuenosAires } from '../../utils/formatDate';
 
 interface Review {
   id: number;
@@ -39,7 +40,7 @@ export function ReviewsContent() {
   const handleExportToExcel = () => {
     // Preparar los datos para el Excel
     const exportData = reviews.map((review) => ({
-      Fecha: new Date(review.createdAt).toLocaleDateString(),
+      Fecha: formatDateBuenosAires(review.createdAt),
       Email: review.email,
       Calificación: review.calification,
       'Tipo de Mejora': review.typeImprovement,
