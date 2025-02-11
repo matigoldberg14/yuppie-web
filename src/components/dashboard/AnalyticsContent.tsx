@@ -58,7 +58,16 @@ export function AnalyticsContent() {
           getMetricsHistory(restaurantData.documentId, timeFilter),
         ]);
 
-        setMetrics(metricsData);
+        // Calcular el índice de respuestas (reviews/taps)
+        const responseRate =
+          restaurantData.taps > 0
+            ? (metricsData.totalReviews / parseInt(restaurantData.taps)) * 100
+            : 0;
+
+        setMetrics({
+          ...metricsData,
+          responseRate, // Sobreescribimos responseRate con nuestro cálculo basado en taps
+        });
         setHistory(historyData);
       } catch (error) {
         console.error('Error fetching metrics:', error);

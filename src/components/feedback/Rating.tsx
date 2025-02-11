@@ -40,17 +40,18 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
       localStorage.setItem('yuppie_restaurant', restaurantId);
 
       if (rating === 5) {
-        // Crear review automática antes de redirigir
-        await createReview({
-          restaurantId: parseInt(restaurantId, 10),
-          calification: 5,
-          typeImprovement: 'Otra',
-          email: 'prefirio-no-dar-su-email@nodiosuemail.com',
-          comment: 'Review enviado a Google',
-          googleSent: true,
-        });
-
-        // Redirigir a Google Maps
+        try {
+          await createReview({
+            restaurantId: parseInt(restaurantId, 10),
+            calification: 5,
+            typeImprovement: 'Otra',
+            email: 'prefirio-no-dar-su-email@nodiosuemail.com',
+            comment: 'Review enviado a Google',
+            googleSent: true,
+          });
+        } catch (reviewError) {
+          console.error('Error creando review:', reviewError);
+        }
         window.location.href = linkMaps;
       } else {
         window.location.href = nextUrl;

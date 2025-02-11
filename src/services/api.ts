@@ -185,10 +185,14 @@ export async function incrementTaps(documentId: string) {
 }
 
 // src/services/api.ts
+// src/services/api.ts
+
 export async function createReview(
   reviewData: CreateReviewInput
 ): Promise<ApiResponse<Review>> {
   try {
+    console.log('Iniciando createReview con datos:', reviewData);
+
     const formattedData = {
       data: {
         restaurant: reviewData.restaurantId,
@@ -201,6 +205,8 @@ export async function createReview(
       },
     };
 
+    console.log('Datos formateados para API:', formattedData);
+
     const response = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
       method: 'POST',
       headers: {
@@ -210,13 +216,16 @@ export async function createReview(
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create review');
+      const errorData = await response.json();
+      console.error('Error response from API:', errorData);
+      throw new Error(errorData.error?.message || 'Failed to create review');
     }
 
     const json = await response.json();
+    console.log('Review creada exitosamente:', json);
     return json;
   } catch (error) {
-    console.error('Error in createReview:', error);
+    console.error('Error en createReview:', error);
     throw error;
   }
 }
