@@ -12,6 +12,8 @@ export class ApiError extends Error {
 class SecureApiClient {
   private static instance: SecureApiClient;
   private baseUrl: string;
+  private retryCount: number = 0;
+  private maxRetries: number = 3;
 
   private constructor() {
     this.baseUrl =
@@ -44,11 +46,44 @@ class SecureApiClient {
     }
   }
 
+  private async fetchWithRetry<T>(
+    url: string,
+    options: RequestInit
+  ): Promise<T> {
+    try {
+      const response = await fetch(url, options);
+
+      if (response.status === 502 && this.retryCount < this.maxRetries) {
+        this.retryCount++;
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * this.retryCount)
+        );
+        return this.fetchWithRetry(url, options);
+      }
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new ApiError(
+          response.status,
+          error.error?.message ||
+            `Error ${response.status}: ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      this.retryCount = 0;
+      return data.data;
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(500, 'Error de conexión');
+    }
+  }
+
   async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
       const token = await this.getToken();
 
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      return await this.fetchWithRetry(`${this.baseUrl}${endpoint}`, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
@@ -56,37 +91,37 @@ class SecureApiClient {
           ...options.headers,
         },
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new ApiError(
-          response.status,
-          error.error?.message || 'Error en la petición'
-        );
-      }
-
-      const data = await response.json();
-      return data.data;
     } catch (error) {
       console.error('API Error:', error);
-      if (error instanceof ApiError) {
-        throw error;
-      }
+      if (error instanceof ApiError) throw error;
       throw new ApiError(500, 'Error de conexión');
     }
   }
 
-  // Métodos específicos
+  // Métodos específicos con manejo de errores mejorado
   async getRestaurantByFirebaseUID(uid: string) {
-    return this.fetch(
-      `/restaurants?filters[firebaseUID][$eq]=${uid}&populate=owner`
-    );
+    try {
+      const data = await this.fetch(
+        `/restaurants?filters[firebaseUID][$eq]=${uid}&populate=owner`
+      );
+      if (!data) throw new ApiError(404, 'Restaurante no encontrado');
+      return data;
+    } catch (error) {
+      console.error('Error fetching restaurant:', error);
+      throw error;
+    }
   }
 
   async getRestaurantReviews(documentId: string) {
-    return this.fetch(
-      `/reviews?filters[restaurant][documentId][$eq]=${documentId}&populate=*&sort[0]=createdAt:desc`
-    );
+    try {
+      const data = await this.fetch(
+        `/reviews?filters[restaurant][documentId][$eq]=${documentId}&populate=*&sort[0]=createdAt:desc`
+      );
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      return [];
+    }
   }
 
   async updateReview(documentId: string, data: any) {
