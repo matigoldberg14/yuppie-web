@@ -234,7 +234,12 @@ export function ReviewsContent() {
           <Card key={review.id} className="bg-white/10 border-0">
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
-                <CardTitle className="text-white">{review.email}</CardTitle>
+                <CardTitle className="text-white">
+                  {review.email === 'prefirio-no-dar-su-email@nodiosuemail.com'
+                    ? '-'
+                    : review.email}
+                </CardTitle>
+
                 <div className="flex items-center mt-1">
                   {[...Array(5)].map((_, i) => (
                     <Star
@@ -263,32 +268,33 @@ export function ReviewsContent() {
                   </div>
                 )}
               </div>
-              {review.couponCode ? (
-                <div className="space-y-2">
-                  <div className="bg-green-600 text-white text-center py-2 rounded">
-                    Cupón de descuento: <strong>{review.couponCode}</strong>
-                  </div>
-                  {!review.couponUsed ? (
-                    <Button
-                      variant="secondary"
-                      onClick={() => handleMarkCouponUsed(review)}
-                    >
-                      Marcar como usado
-                    </Button>
-                  ) : (
-                    <div className="text-sm text-white/60 text-center">
-                      Cupón usado
+              {review.email !== 'prefirio-no-dar-su-email@nodiosuemail.com' &&
+                (review.couponCode ? (
+                  <div className="space-y-2">
+                    <div className="bg-green-600 text-white text-center py-2 rounded">
+                      Cupón de descuento: <strong>{review.couponCode}</strong>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <Button
-                  variant="secondary"
-                  onClick={() => handleSendCoupon(review)}
-                >
-                  Enviar cupón de descuento
-                </Button>
-              )}
+                    {!review.couponUsed ? (
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleMarkCouponUsed(review)}
+                      >
+                        Marcar como usado
+                      </Button>
+                    ) : (
+                      <div className="text-sm text-white/60 text-center">
+                        Cupón usado
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleSendCoupon(review)}
+                  >
+                    Enviar cupón de descuento
+                  </Button>
+                ))}
             </CardContent>
           </Card>
         ))}

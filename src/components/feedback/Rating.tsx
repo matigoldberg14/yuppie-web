@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
+import { createReview } from '../../services/api';
 
 interface Props {
   restaurantId: string;
@@ -35,21 +36,28 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
     try {
       setIsSubmitting(true);
 
-      // Solo guardamos en localStorage y navegamos
       localStorage.setItem('yuppie_rating', rating.toString());
       localStorage.setItem('yuppie_restaurant', restaurantId);
 
-      // Si es 5 estrellas, va a Google Maps
       if (rating === 5) {
+        // Crear review automática antes de redirigir
+        await createReview({
+          restaurantId: parseInt(restaurantId, 10),
+          calification: 5,
+          typeImprovement: 'Otra',
+          email: 'prefirio-no-dar-su-email@nodiosuemail.com',
+          comment: 'Review enviado a Google',
+          googleSent: true,
+        });
+
+        // Redirigir a Google Maps
         window.location.href = linkMaps;
       } else {
-        // Si no, va al siguiente paso
         window.location.href = nextUrl;
       }
     } catch (error) {
       console.error('Error procesando calificación:', error);
       setIsSubmitting(false);
-
       toast({
         variant: 'destructive',
         title: 'Error',
