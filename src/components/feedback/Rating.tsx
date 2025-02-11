@@ -36,24 +36,26 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
     try {
       setIsSubmitting(true);
 
+      // Guardamos en localStorage como siempre
       localStorage.setItem('yuppie_rating', rating.toString());
       localStorage.setItem('yuppie_restaurant', restaurantId);
 
       if (rating === 5) {
-        try {
-          await createReview({
-            restaurantId: parseInt(restaurantId, 10),
-            calification: 5,
-            typeImprovement: 'Otra',
-            email: 'prefirio-no-dar-su-email@nodiosuemail.com',
-            comment: 'Review enviado a Google',
-            googleSent: true,
-          });
-        } catch (reviewError) {
-          console.error('Error creando review:', reviewError);
-        }
+        // COMENTARIO: Como esta es una review automática cuando el usuario da 5 estrellas,
+        // la marcamos con googleSent = true y usamos un email genérico
+        await createReview({
+          restaurantId: parseInt(restaurantId, 10),
+          calification: 5,
+          typeImprovement: 'Otra',
+          email: 'prefirio-no-dar-su-email@nodiosuemail.com',
+          comment: 'Review enviado a Google',
+          googleSent: true,
+        });
+
+        // Después de crear la review, redirigimos a Google Maps
         window.location.href = linkMaps;
       } else {
+        // Si no es 5 estrellas, seguimos el flujo normal
         window.location.href = nextUrl;
       }
     } catch (error) {
