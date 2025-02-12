@@ -259,7 +259,11 @@ export function ReviewsContent() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="mb-4">
+              {/* 
+                AGREGAMOS max-h-24, overflow-auto y break-words 
+                para limitar el espacio vertical y permitir scroll si es muy largo 
+              */}
+              <div className="mb-4 max-h-24 overflow-auto break-words">
                 <p className="text-white">{review.comment}</p>
                 {review.typeImprovement && (
                   <div className="mt-2">
