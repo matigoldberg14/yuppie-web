@@ -557,7 +557,7 @@ export async function updateReview(
   }
 }
 
-// Función para obtener el ID numérico de Strapi usando el documentId
+// Función para obtener el ID numérico de Strapi usando el documentId.
 export async function getRestaurantNumericId(
   documentId: string
 ): Promise<number | null> {
