@@ -11,7 +11,7 @@ const commentSchema = z.object({
   comment: z
     .string()
     .min(10, 'El comentario debe tener al menos 10 caracteres')
-    .max(500, 'El comentario no puede exceder los 500 caracteres'),
+    .max(150, 'El comentario no puede exceder los 150 caracteres'),
 });
 
 type CommentFormData = {
@@ -100,9 +100,9 @@ export function CommentForm({ restaurantId }: Props) {
         if (formData.comment.trim().length < 10) {
           newErrors.comment = 'El comentario debe tener al menos 10 caracteres';
           valid = false;
-        } else if (formData.comment.trim().length > 500) {
+        } else if (formData.comment.trim().length > 150) {
           newErrors.comment =
-            'El comentario no puede exceder los 500 caracteres';
+            'El comentario no puede exceder los 150 caracteres';
           valid = false;
         }
       }
@@ -365,12 +365,12 @@ export function CommentForm({ restaurantId }: Props) {
               />
               <span
                 className={`absolute bottom-2 right-2 text-sm ${
-                  formData.comment.length > 500
+                  formData.comment.length > 150
                     ? 'text-red-400'
                     : 'text-gray-400'
                 }`}
               >
-                {formData.comment.length}/500
+                {formData.comment.length}/150
               </span>
             </motion.div>
 
