@@ -185,8 +185,6 @@ export async function incrementTaps(documentId: string) {
 }
 
 // src/services/api.ts
-// src/services/api.ts!
-
 // src/services/api.ts
 export async function createReview(
   reviewData: CreateReviewInput
@@ -194,7 +192,7 @@ export async function createReview(
   try {
     const formattedData = {
       data: {
-        restaurant: reviewData.restaurantId, // <-- AQUÍ ESTÁ EL CAMBIO
+        restaurant: reviewData.restaurantId,
         calification: reviewData.calification,
         typeImprovement: reviewData.typeImprovement,
         email: reviewData.email,
@@ -212,18 +210,15 @@ export async function createReview(
       body: JSON.stringify(formattedData),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      // Si es un error de review duplicada (403)
-      if (response.status === 403) {
-        throw new Error(
-          errorData.error?.message || 'Ya has enviado una review hoy'
-        );
-      }
-      throw new Error(errorData.error?.message || 'Error al crear la review');
+      throw new Error(
+        data.message || data.error?.message || 'Error al crear la review'
+      );
     }
 
-    return await response.json();
+    return data;
   } catch (error) {
     console.error('Error en createReview:', error);
     throw error;

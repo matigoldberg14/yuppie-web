@@ -309,8 +309,11 @@ export function CommentForm({ restaurantId }: Props) {
         variant: 'destructive',
         title: '¡Ups!',
         description: errorMessage,
-        duration: 5000,
+        duration: 6000, // Más tiempo para leer
       });
+
+      // Hacer scroll al top para que se vea el mensaje
+      window.scrollTo({ top: 0, behavior: 'smooth' });
 
       setIsSubmitting(false);
     }
