@@ -185,7 +185,6 @@ export async function incrementTaps(documentId: string) {
 }
 
 // src/services/api.ts
-// src/services/api.ts
 export async function createReview(
   reviewData: CreateReviewInput
 ): Promise<ApiResponse<Review>> {
@@ -213,9 +212,9 @@ export async function createReview(
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        data.message || data.error?.message || 'Error al crear la review'
-      );
+      // Extraer el mensaje de error de la respuesta
+      const errorMessage = data.error?.message || 'Error al crear la review';
+      throw new Error(errorMessage);
     }
 
     return data;
