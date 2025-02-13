@@ -191,39 +191,36 @@ export async function createReview(
   reviewData: CreateReviewInput
 ): Promise<ApiResponse<Review>> {
   try {
-    console.log('Iniciando createReview con datos:', reviewData);
-
-    const formattedData = {
-      data: {
-        restaurant: reviewData.restaurantId,
-        calification: reviewData.calification,
-        typeImprovement: reviewData.typeImprovement,
-        email: reviewData.email,
-        comment: reviewData.comment,
-        googleSent: reviewData.googleSent,
-        date: new Date().toISOString().split('T')[0],
-      },
-    };
-
-    console.log('Datos formateados para API:', formattedData);
+    // Verificar localStorage primero
+    const storageKey = `review_${reviewData.restaurantId}_${
+      new Date().toISOString().split('T')[0]
+    }`;
+    if (localStorage.getItem(storageKey)) {
+      throw new Error('Ya has dejado una review hoy para este restaurante');
+    }
 
     const response = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(formattedData),
+      body: JSON.stringify({
+        data: {
+          ...reviewData,
+          date: new Date().toISOString(),
+        },
+      }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Error response from API:', errorData);
-      throw new Error(errorData.error?.message || 'Failed to create review');
+      throw new Error(errorData.error?.message || 'Error al crear la review');
     }
 
-    const json = await response.json();
-    console.log('Review creada exitosamente:', json);
-    return json;
+    // Solo guardamos en localStorage si la creación fue exitosa
+    localStorage.setItem(storageKey, 'true');
+
+    return await response.json();
   } catch (error) {
     console.error('Error en createReview:', error);
     throw error;
