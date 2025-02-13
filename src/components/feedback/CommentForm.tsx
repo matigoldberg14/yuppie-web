@@ -14,6 +14,21 @@ const commentSchema = z.object({
     .max(500, 'El comentario no puede exceder los 500 caracteres'),
 });
 
+const formatErrorMessage = (error: unknown): string => {
+  if (error instanceof z.ZodError) {
+    return error.errors.map((e) => e.message).join('\n');
+  }
+
+  if (error instanceof Error) {
+    // Personalizar mensajes específicos
+    if (error.message.includes('24 horas')) {
+      return '¡Ups! Ya has compartido tu opinión hoy. ¡Gracias por tu entusiasmo! Te invitamos a volver mañana para contarnos sobre una nueva experiencia.';
+    }
+    return error.message;
+  }
+
+  return 'Error desconocido al procesar tu solicitud';
+};
 type CommentFormData = {
   email: string;
   comment: string;
@@ -184,6 +199,23 @@ export function CommentForm({ restaurantId }: Props) {
     setHasInteractedWithComment(false);
   };
 
+  const formatErrorMessage = (error: unknown): string => {
+    if (error instanceof z.ZodError) {
+      return error.errors.map((e) => e.message).join('\n');
+    }
+
+    if (error instanceof Error) {
+      // Personalizar mensajes específicos
+      if (error.message.includes('24 horas')) {
+        return '¡Ups! Ya has compartido tu opinión hoy. ¡Gracias por tu entusiasmo! Te invitamos a volver mañana para contarnos sobre una nueva experiencia.';
+      }
+      return error.message;
+    }
+
+    return 'Error desconocido al procesar tu solicitud';
+  };
+
+  // Reemplazar solo el handleSubmit en el CommentForm
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -271,23 +303,18 @@ export function CommentForm({ restaurantId }: Props) {
         window.location.href = '/thanks';
       }, 1500);
     } catch (error) {
-      let errorMessage = 'Error desconocido';
-      if (error instanceof z.ZodError) {
-        errorMessage = error.errors.map((e) => e.message).join('\n');
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
+      const errorMessage = formatErrorMessage(error);
 
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: '¡Ups!',
         description: errorMessage,
+        duration: 5000,
       });
 
       setIsSubmitting(false);
     }
   };
-
   return (
     <motion.form
       onSubmit={handleSubmit}

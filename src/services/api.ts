@@ -214,6 +214,12 @@ export async function createReview(
 
     if (!response.ok) {
       const errorData = await response.json();
+      // Si es un error de review duplicada (403)
+      if (response.status === 403) {
+        throw new Error(
+          errorData.error?.message || 'Ya has enviado una review hoy'
+        );
+      }
       throw new Error(errorData.error?.message || 'Error al crear la review');
     }
 
