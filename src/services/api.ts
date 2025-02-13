@@ -212,15 +212,18 @@ export async function createReview(
     const data = await response.json();
 
     if (!response.ok) {
-      // Extraer el mensaje de error de la respuesta
-      const errorMessage = data.error?.message || 'Error al crear la review';
-      throw new Error(errorMessage);
+      // Aquí está el cambio clave
+      throw new Error(
+        data.error?.message || data.message || 'No se pudo crear la review'
+      );
     }
 
     return data;
   } catch (error) {
-    console.error('Error en createReview:', error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Error al crear la review');
   }
 }
 
