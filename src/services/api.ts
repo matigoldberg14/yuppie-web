@@ -187,38 +187,35 @@ export async function incrementTaps(documentId: string) {
 // src/services/api.ts
 // src/services/api.ts!
 
+// src/services/api.ts
 export async function createReview(
   reviewData: CreateReviewInput
 ): Promise<ApiResponse<Review>> {
   try {
-    // Verificar localStorage primero
-    const storageKey = `review_${reviewData.restaurantId}_${
-      new Date().toISOString().split('T')[0]
-    }`;
-    if (localStorage.getItem(storageKey)) {
-      throw new Error('Ya has dejado una review hoy para este restaurante');
-    }
+    const formattedData = {
+      data: {
+        restaurant: reviewData.restaurantId, // <-- AQUÍ ESTÁ EL CAMBIO
+        calification: reviewData.calification,
+        typeImprovement: reviewData.typeImprovement,
+        email: reviewData.email,
+        comment: reviewData.comment,
+        googleSent: reviewData.googleSent,
+        date: new Date().toISOString(),
+      },
+    };
 
     const response = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        data: {
-          ...reviewData,
-          date: new Date().toISOString(),
-        },
-      }),
+      body: JSON.stringify(formattedData),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error?.message || 'Error al crear la review');
     }
-
-    // Solo guardamos en localStorage si la creación fue exitosa
-    localStorage.setItem(storageKey, 'true');
 
     return await response.json();
   } catch (error) {
