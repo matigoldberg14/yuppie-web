@@ -305,19 +305,23 @@ export function CommentForm({ restaurantId }: Props) {
     } catch (error) {
       const errorMessage = formatErrorMessage(error);
 
+      // Toast más visible y amigable
       toast({
         variant: 'destructive',
-        title: '¡Ups!',
-        description: errorMessage,
-        duration: 6000, // Más tiempo para leer?
+        title: '¡Un momento!',
+        description: `😊 ${errorMessage}\n\nPuedes dejar una nueva opinión en 24 horas`,
+        duration: 10000, // 10 segundos para que puedan leerlo bien
       });
 
-      // Hacer scroll al top para que se vea el mensaje
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-
+      // Deshabilitar el botón de submit y mostrar mensaje claro
       setIsSubmitting(false);
+      setIsButtonDisabled(true);
+
+      // Hacer scroll hacia arriba suavemente para asegurar que vean el mensaje
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
   return (
     <motion.form
       onSubmit={handleSubmit}
