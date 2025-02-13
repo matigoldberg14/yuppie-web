@@ -184,18 +184,13 @@ export async function incrementTaps(documentId: string) {
   }
 }
 
+// src/services/api.ts
+// src/services/api.ts
+
 export async function createReview(
   reviewData: CreateReviewInput
 ): Promise<ApiResponse<Review>> {
   try {
-    // Verificar si ya existe una review en localStorage
-    const localStorageKey = `review_${reviewData.restaurantId}_${
-      new Date().toISOString().split('T')[0]
-    }`;
-    if (localStorage.getItem(localStorageKey)) {
-      throw new Error('Ya has dejado una review hoy para este restaurante');
-    }
-
     console.log('Iniciando createReview con datos:', reviewData);
 
     const formattedData = {
@@ -206,7 +201,7 @@ export async function createReview(
         email: reviewData.email,
         comment: reviewData.comment,
         googleSent: reviewData.googleSent,
-        date: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0],
       },
     };
 
@@ -227,10 +222,6 @@ export async function createReview(
     }
 
     const json = await response.json();
-
-    // Guardar en localStorage que ya se hizo una review
-    localStorage.setItem(localStorageKey, 'true');
-
     console.log('Review creada exitosamente:', json);
     return json;
   } catch (error) {
