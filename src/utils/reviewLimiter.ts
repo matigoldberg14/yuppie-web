@@ -1,6 +1,5 @@
 // src/utils/reviewLimiter.ts
 
-// Añadir la interfaz faltante
 interface ReviewRecord {
   restaurantId: string;
   timestamp: number;
