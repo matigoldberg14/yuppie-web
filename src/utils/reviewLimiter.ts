@@ -1,67 +1,73 @@
 // src/utils/reviewLimiter.ts
+
+// Añadir la interfaz faltante
 interface ReviewRecord {
   restaurantId: string;
   timestamp: number;
 }
 
-/**
- * Verifica si un usuario ya ha enviado una review para un restaurante
- * específico en las últimas 24 horas basándose en localStorage
- */
 export const hasSubmittedReviewToday = (restaurantId: string): boolean => {
   try {
-    // Obtener registros existentes
-    const storedRecordsJson = localStorage.getItem('yuppie_review_history');
-    console.log('localStorage review history:', storedRecordsJson);
+    console.log(`[DEBUG] Verificando restaurantId: ${restaurantId}`);
 
-    if (!storedRecordsJson) return false;
+    const storedRecordsJson = localStorage.getItem('yuppie_review_history');
+    console.log(`[DEBUG] Datos en localStorage: ${storedRecordsJson}`);
+
+    if (!storedRecordsJson) {
+      console.log('[DEBUG] No hay registros previos');
+      return false;
+    }
 
     const storedRecords: ReviewRecord[] = JSON.parse(storedRecordsJson);
+    console.log(`[DEBUG] Registros parseados:`, storedRecords);
 
-    // Calcular timestamp de hace 24 horas
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    console.log(`[DEBUG] Tiempo límite: ${new Date(oneDayAgo).toISOString()}`);
 
-    // Filtrar registros antiguos y buscar coincidencia de restaurante
     const validRecords = storedRecords.filter(
       (record) => record.timestamp > oneDayAgo
     );
+    console.log(`[DEBUG] Registros válidos:`, validRecords);
+
     const hasSentReview = validRecords.some(
       (record) => record.restaurantId === restaurantId
     );
+    console.log(`[DEBUG] ¿Ha enviado review? ${hasSentReview}`);
 
-    // Limpiar registros antiguos
     localStorage.setItem('yuppie_review_history', JSON.stringify(validRecords));
-
     return hasSentReview;
   } catch (error) {
-    console.error('Error verificando historial de reviews:', error);
-    return false; // En caso de error, permitimos continuar
+    console.error('[ERROR] Error verificando historial:', error);
+    return false;
   }
 };
 
-/**
- * Registra una nueva review en localStorage
- */
 export const recordReviewSubmission = (restaurantId: string): void => {
   try {
-    // Obtener registros existentes o crear array vacío
+    console.log(
+      `[DEBUG] Registrando submission para restaurante: ${restaurantId}`
+    );
+
     const storedRecordsJson = localStorage.getItem('yuppie_review_history');
     const storedRecords: ReviewRecord[] = storedRecordsJson
       ? JSON.parse(storedRecordsJson)
       : [];
 
-    // Añadir nuevo registro
+    console.log(`[DEBUG] Registros actuales:`, storedRecords);
+
     const newRecord: ReviewRecord = {
       restaurantId,
       timestamp: Date.now(),
     };
 
-    // Guardar registros actualizados
+    const updatedRecords = [...storedRecords, newRecord];
     localStorage.setItem(
       'yuppie_review_history',
-      JSON.stringify([...storedRecords, newRecord])
+      JSON.stringify(updatedRecords)
     );
+
+    console.log(`[DEBUG] Registros actualizados:`, updatedRecords);
   } catch (error) {
-    console.error('Error guardando registro de review:', error);
+    console.error('[ERROR] Error guardando registro:', error);
   }
 };
