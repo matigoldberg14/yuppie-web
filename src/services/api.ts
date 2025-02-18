@@ -229,15 +229,26 @@ export async function createReview(
 
 export async function getRestaurant(documentId: string) {
   try {
+    // Buscamos por document_id y aseguramos que esté publicado
     const response = await fetch(
-      `${API_CONFIG.baseUrl}/restaurants/${documentId}?populate=*`
+      `${API_CONFIG.baseUrl}/restaurants?filters[document_id][$eq]=${documentId}&filters[published_at][$notNull]=true&populate=*`
     );
 
     if (!response.ok) return null;
     const data = await response.json();
-    return data.data;
+
+    // Si no hay resultados o el array está vacío
+    if (!data.data || data.data.length === 0) {
+      console.error(
+        `No se encontró restaurante publicado con documentId: ${documentId}`
+      );
+      return null;
+    }
+
+    // Tomar el primer resultado (podría haber duplicados)
+    return data.data[0];
   } catch (error) {
-    console.error('Error fetching restaurant:', error);
+    console.error(`Error fetching restaurant ${documentId}:`, error);
     return null;
   }
 }
