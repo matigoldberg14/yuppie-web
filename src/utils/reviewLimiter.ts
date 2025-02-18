@@ -12,6 +12,8 @@ export const hasSubmittedReviewToday = (restaurantId: string): boolean => {
   try {
     // Obtener registros existentes
     const storedRecordsJson = localStorage.getItem('yuppie_review_history');
+    console.log('localStorage review history:', storedRecordsJson);
+
     if (!storedRecordsJson) return false;
 
     const storedRecords: ReviewRecord[] = JSON.parse(storedRecordsJson);

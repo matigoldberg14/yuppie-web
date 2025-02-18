@@ -239,11 +239,11 @@ export function CommentForm({ restaurantId }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (hasSubmittedReviewToday(restaurantId)) {
-      throw new Error('Ya has compartido tu opinión en las últimas 24 horas');
-    }
-
     try {
+      if (hasSubmittedReviewToday(restaurantId)) {
+        throw new Error('Ya has compartido tu opinión en las últimas 24 horas');
+      }
+
       setIsSubmitting(true);
 
       let finalComment = '';
