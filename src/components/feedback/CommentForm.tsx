@@ -5,6 +5,10 @@ import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
 import emailjs from '@emailjs/browser';
 import { FiArrowLeft } from 'react-icons/fi';
+import {
+  hasSubmittedReviewToday,
+  recordReviewSubmission,
+} from '../../utils/reviewLimiter';
 
 const commentSchema = z.object({
   email: z.string().email('Por favor, ingresa un email válido').optional(),
@@ -95,6 +99,22 @@ export function CommentForm({ restaurantId }: Props) {
   const { toast } = useToast();
   const [improvementType, setImprovementType] = useState<string | null>(null);
   const [hasInteractedWithEmail, setHasInteractedWithEmail] = useState(false);
+
+  useEffect(() => {
+    if (restaurantId) {
+      const alreadySubmitted = hasSubmittedReviewToday(restaurantId);
+      if (alreadySubmitted) {
+        toast({
+          variant: 'destructive',
+          title: 'Ya has opinado hoy',
+          description:
+            'Podrás compartir otra opinión en 24 horas. ¡Gracias por tu entusiasmo!',
+          duration: 5000,
+        });
+        setIsButtonDisabled(true);
+      }
+    }
+  }, [restaurantId]);
 
   useEffect(() => {
     // Obtener el tipo de mejora del localStorage al montar el componente
@@ -219,6 +239,10 @@ export function CommentForm({ restaurantId }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (hasSubmittedReviewToday(restaurantId)) {
+      throw new Error('Ya has compartido tu opinión en las últimas 24 horas');
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -259,6 +283,7 @@ export function CommentForm({ restaurantId }: Props) {
         comment: finalComment.trim(),
         googleSent: rating === 5,
       });
+      recordReviewSubmission(restaurantId);
 
       // Solo intentamos enviar el email si hay uno proporcionado
       if (rating <= 2 && formData.email) {
