@@ -1,8 +1,12 @@
+//Users/Mati/Desktop/yuppie-web/src/components/feedback/Rating.tsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 import { createReview, getRestaurantNumericId } from '../../services/api';
-import { hasSubmittedReviewToday } from '../../utils/reviewLimiter';
+import {
+  hasSubmittedReviewToday,
+  recordReviewSubmission,
+} from '../../utils/reviewLimiter';
 
 interface Props {
   // Se espera que este restaurantId sea un string que contenga un número válido
@@ -54,13 +58,12 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
 
   const handleRatingSelect = async (rating: number) => {
     if (isSubmitting || alreadySubmitted) return;
-
     try {
       setIsSubmitting(true);
 
       // Guarda la calificación y el ID numérico del restaurante en localStorage
       localStorage.setItem('yuppie_rating', rating.toString());
-      localStorage.setItem('yuppie_restaurant', restaurantId);
+      localStorage.setItem('yuppie_restaurant', restaurantId); // restaurantId ya es el ID numérico en cadena
 
       if (rating === 5) {
         localStorage.setItem('yuppie_improvement', 'Otra');
@@ -71,13 +74,13 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
           duration: 2000,
         });
 
-        const numericRestaurantId = await getRestaurantNumericId(restaurantId);
-        if (numericRestaurantId === null) {
-          throw new Error('No se encontró el restaurante con ese documentId');
+        // Ya tenemos el ID numérico; lo usamos directamente
+        if (isNaN(numericRestaurantId)) {
+          throw new Error('ID de restaurante inválido');
         }
 
         const reviewData = {
-          restaurantId: numericRestaurantId,
+          restaurantId: numericRestaurantId, // Usamos el valor ya calculado
           calification: 5,
           typeImprovement: 'Otra',
           email: 'prefirio-no-dar-su-email@nodiosuemail.com',
@@ -87,6 +90,9 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
 
         console.log('Iniciando createReview con datos:', reviewData);
         await createReview(reviewData);
+
+        // Registra la submission para bloquear futuros envíos hoy
+        recordReviewSubmission(restaurantId);
 
         setTimeout(() => {
           window.location.href = linkMaps;
