@@ -1,12 +1,11 @@
-// src/components/feedback/Rating.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 import { createReview, getRestaurantNumericId } from '../../services/api';
+import { hasSubmittedReviewToday } from '../../utils/reviewLimiter';
 
 interface Props {
-  // Asegúrate de que este restaurantId sea un string que contenga un número válido
-  // o pásalo directamente como number si así lo deseas
+  // Se espera que este restaurantId sea un string que contenga un número válido
   restaurantId: string;
   nextUrl: string;
   linkMaps: string;
@@ -21,32 +20,45 @@ const ratingOptions = [
 ] as const;
 
 export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
-  // Convierto restaurantId a número una sola vez
   const numericRestaurantId = parseInt(restaurantId, 10);
-
-  // (Opcional) Verificación básica:
   if (isNaN(numericRestaurantId)) {
-    console.error(`restaurantId ("${restaurantId}") no es un número válido. 
-      Asegúrate de pasar un ID numérico proveniente de Strapi.`);
+    console.error(
+      `restaurantId ("${restaurantId}") no es un número válido. Asegúrate de pasar un ID numérico proveniente de Strapi.`
+    );
   }
 
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const { toast } = useToast();
 
+  // Verificar al montar si ya se envió una review para este restaurante hoy
+  useEffect(() => {
+    if (restaurantId && hasSubmittedReviewToday(restaurantId)) {
+      setAlreadySubmitted(true);
+      toast({
+        variant: 'destructive',
+        title: 'Ya has opinado hoy',
+        description:
+          'Ya has enviado tu calificación para este restaurante. ¡Gracias por compartir tu opinión!',
+        duration: 5000,
+      });
+    }
+  }, [restaurantId, toast]);
+
   const handleRatingHover = (rating: number) => {
-    if (!isSubmitting) {
+    if (!isSubmitting && !alreadySubmitted) {
       setSelectedRating(rating);
     }
   };
 
   const handleRatingSelect = async (rating: number) => {
-    if (isSubmitting) return;
+    if (isSubmitting || alreadySubmitted) return;
 
     try {
       setIsSubmitting(true);
 
-      // Guarda la calificación y el documentId en localStorage
+      // Guarda la calificación y el ID numérico del restaurante en localStorage
       localStorage.setItem('yuppie_rating', rating.toString());
       localStorage.setItem('yuppie_restaurant', restaurantId);
 
@@ -59,15 +71,13 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
           duration: 2000,
         });
 
-        // Obtenemos el ID numérico a partir del documentId
         const numericRestaurantId = await getRestaurantNumericId(restaurantId);
         if (numericRestaurantId === null) {
           throw new Error('No se encontró el restaurante con ese documentId');
         }
 
-        // Preparamos los datos de la review
         const reviewData = {
-          restaurantId: numericRestaurantId, // Ahora es el ID numérico correcto
+          restaurantId: numericRestaurantId,
           calification: 5,
           typeImprovement: 'Otra',
           email: 'prefirio-no-dar-su-email@nodiosuemail.com',
@@ -95,6 +105,25 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
       });
     }
   };
+
+  // Si ya se envió la review, mostramos un mensaje amigable en lugar de las opciones de calificación
+  if (alreadySubmitted) {
+    return (
+      <div className="w-full max-w-md flex flex-col items-center gap-4 p-8 bg-white/10 rounded-lg">
+        <motion.h2
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-2xl font-medium text-white text-center"
+        >
+          ¡Gracias por compartir tu opinión hoy!
+        </motion.h2>
+        <p className="text-white text-center">
+          Ya has enviado tu calificación para este restaurante. Por favor,
+          vuelve mañana para compartir otra experiencia.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md flex flex-col items-center gap-8">
@@ -131,7 +160,6 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
                 {emoji}
               </span>
 
-              {/* Etiqueta con la descripción (Muy insatisfecho, Satisfecho, etc.) */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{
@@ -143,7 +171,6 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
                 {label}
               </motion.div>
 
-              {/* Pequeño punto de color bajo el emoji seleccionado */}
               <motion.div
                 initial={false}
                 animate={{

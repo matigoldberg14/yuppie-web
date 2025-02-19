@@ -28,11 +28,21 @@ export function ImprovementSelector({ restaurantId, nextUrl }: Props) {
       const rating = localStorage.getItem('yuppie_rating');
       const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
 
+      // Mostrar en consola para depuración
+      console.log(
+        'ImprovementSelector -> storedRestaurantId:',
+        storedRestaurantId
+      );
+      console.log('ImprovementSelector -> prop restaurantId:', restaurantId);
+
       if (!rating) {
         throw new Error('No se encontró la calificación');
       }
 
-      if (storedRestaurantId !== restaurantId) {
+      // Comparamos como números
+      if (
+        parseInt(storedRestaurantId || '', 10) !== parseInt(restaurantId, 10)
+      ) {
         throw new Error('Error de coincidencia de restaurante');
       }
 

@@ -1,19 +1,14 @@
 ---
-// src/pages/improvement.astro
 import Layout from '../layouts/Layout.astro';
 import { ImprovementSelector } from '../components/feedback/ImprovementSelector';
 import { getRestaurant } from '../services/api';
 
 const documentId = Astro.url.searchParams.get('local');
-
-// Si no hay documentId, redirigir
 if (!documentId) {
   return Astro.redirect('/404');
 }
 
 const restaurant = await getRestaurant(documentId);
-
-// Si no se encuentra el restaurante, redirigir
 if (!restaurant) {
   return Astro.redirect('/404');
 }
@@ -25,12 +20,13 @@ if (!restaurant) {
       <h1 class="text-4xl font-bold mb-6 text-center text-shadow">
         {restaurant.name}
       </h1>
-      
+
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">¿En qué podríamos mejorar?</h2>
+        <!-- Se pasa el ID numérico convertido a string -->
         <ImprovementSelector 
           client:load 
-          restaurantId={documentId}
+          restaurantId={restaurant.id.toString()}
           nextUrl={`/comment?local=${documentId}`}
         />
       </div>

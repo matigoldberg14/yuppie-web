@@ -134,9 +134,16 @@ export async function incrementTaps(documentId: string) {
   try {
     console.log('Incrementando taps para documentId:', documentId);
 
-    // 1. Obtener el restaurante actual
+    // Primero, obtenemos el restaurante usando getRestaurant para extraer el ID numérico
+    const restaurant = await getRestaurant(documentId);
+    if (!restaurant) {
+      throw new Error('Restaurant not found in incrementTaps');
+    }
+    const numericId = restaurant.id; // ID numérico
+
+    // Ahora, hacemos GET usando el numericId
     const response = await fetch(
-      `${API_CONFIG.baseUrl}/restaurants/${documentId}`
+      `${API_CONFIG.baseUrl}/restaurants/${numericId}`
     );
 
     if (!response.ok) {
@@ -147,14 +154,13 @@ export async function incrementTaps(documentId: string) {
     const data = await response.json();
     console.log('Datos del restaurante obtenido:', data);
 
-    // 2. Actualizar los taps
     const currentTaps = parseInt(data.data.taps || '0');
     const newTaps = currentTaps + 1;
-
     console.log('Actualizando taps de:', currentTaps, 'a:', newTaps);
 
+    // Actualizamos usando el numericId
     const updateResponse = await fetch(
-      `${API_CONFIG.baseUrl}/restaurants/${documentId}`,
+      `${API_CONFIG.baseUrl}/restaurants/${numericId}`,
       {
         method: 'PUT',
         headers: {
@@ -229,24 +235,30 @@ export async function createReview(
 
 export async function getRestaurant(documentId: string) {
   try {
-    // Buscamos por document_id y aseguramos que esté publicado
-    const response = await fetch(
-      `${API_CONFIG.baseUrl}/restaurants?filters[document_id][$eq]=${documentId}&filters[published_at][$notNull]=true&populate=*`
-    );
+    // En modo development, no se aplica el filtro publishedAt
+    const publishedFilter =
+      import.meta.env.MODE === 'development'
+        ? ''
+        : '&filters[publishedAt][$notNull]=true';
 
-    if (!response.ok) return null;
-    const data = await response.json();
+    const url = `${API_CONFIG.baseUrl}/restaurants?filters[documentId][$eq]=${documentId}${publishedFilter}&populate=*`;
+    console.log('getRestaurant -> URL:', url);
 
-    // Si no hay resultados o el array está vacío
-    if (!data.data || data.data.length === 0) {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error('getRestaurant -> response not ok:', response.status);
+      return null;
+    }
+    const json = await response.json();
+
+    if (!json.data || json.data.length === 0) {
       console.error(
-        `No se encontró restaurante publicado con documentId: ${documentId}`
+        `getRestaurant -> No se encontró restaurante con documentId: ${documentId}`
       );
       return null;
     }
-
-    // Tomar el primer resultado (podría haber duplicados)
-    return data.data[0];
+    // Devuelve directamente el primer restaurante
+    return json.data[0];
   } catch (error) {
     console.error(`Error fetching restaurant ${documentId}:`, error);
     return null;

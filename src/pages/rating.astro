@@ -1,5 +1,4 @@
 ---
-// src/pages/rating.astro
 import Layout from '../layouts/Layout.astro';
 import { RatingForm } from '../components/feedback/Rating';
 import { getRestaurant, incrementTaps } from '../services/api';
@@ -9,18 +8,16 @@ if (!documentId) {
   return Astro.redirect('/404');
 }
 
-let restaurant;
-try {
-  restaurant = await getRestaurant(documentId);
-  if (!restaurant) {
-    throw new Error('Restaurant not found');
-  }
+let restaurant = await getRestaurant(documentId);
+if (!restaurant) {
+  throw new Error('Restaurant not found');
+}
 
-  // Incrementar taps solo una vez
-  await incrementTaps(documentId);
-} catch (error) {
-  console.error('Error in rating:', error);
-  return Astro.redirect('/404');
+// Incrementar taps y actualizar el objeto restaurant
+const updatedRestaurant = await incrementTaps(documentId);
+if (updatedRestaurant && updatedRestaurant.data) {
+  // Suponemos que incrementTaps devuelve el objeto actualizado con la propiedad "data"
+  restaurant = updatedRestaurant.data;
 }
 ---
 
@@ -33,9 +30,10 @@ try {
       
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">Califica tu experiencia</h2>
+        <!-- Se pasa el ID numérico convertido a string -->
         <RatingForm 
           client:load 
-          restaurantId={documentId}
+          restaurantId={restaurant.id.toString()}
           nextUrl={`/improvement?local=${documentId}`}
           linkMaps={restaurant.linkMaps}
         />
