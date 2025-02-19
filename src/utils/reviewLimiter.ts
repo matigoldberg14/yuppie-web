@@ -2,38 +2,35 @@
 
 interface ReviewRecord {
   restaurantId: string;
-  timestamp: number;
+  date: string; // formato YYYY-MM-DD
 }
 
 export const hasSubmittedReviewToday = (restaurantId: string): boolean => {
   try {
-    console.log(`[DEBUG] Verificando restaurantId: ${restaurantId}`);
+    // Obtenemos la fecha actual en formato YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
 
     const storedRecordsJson = localStorage.getItem('yuppie_review_history');
-    console.log(`[DEBUG] Datos en localStorage: ${storedRecordsJson}`);
-
     if (!storedRecordsJson) {
       console.log('[DEBUG] No hay registros previos');
       return false;
     }
-
     const storedRecords: ReviewRecord[] = JSON.parse(storedRecordsJson);
-    console.log(`[DEBUG] Registros parseados:`, storedRecords);
+    console.log('[DEBUG] Registros en localStorage:', storedRecords);
 
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-    console.log(`[DEBUG] Tiempo límite: ${new Date(oneDayAgo).toISOString()}`);
-
-    const validRecords = storedRecords.filter(
-      (record) => record.timestamp > oneDayAgo
+    // Filtramos los registros para el día de hoy
+    const todayRecords = storedRecords.filter(
+      (record) => record.date === today
     );
-    console.log(`[DEBUG] Registros válidos:`, validRecords);
+    console.log('[DEBUG] Registros de hoy:', todayRecords);
 
-    const hasSentReview = validRecords.some(
+    const hasSentReview = todayRecords.some(
       (record) => record.restaurantId === restaurantId
     );
-    console.log(`[DEBUG] ¿Ha enviado review? ${hasSentReview}`);
-
-    localStorage.setItem('yuppie_review_history', JSON.stringify(validRecords));
+    console.log(
+      `[DEBUG] ¿Ya enviaste review para restaurante ${restaurantId}?`,
+      hasSentReview
+    );
     return hasSentReview;
   } catch (error) {
     console.error('[ERROR] Error verificando historial:', error);
@@ -43,29 +40,26 @@ export const hasSubmittedReviewToday = (restaurantId: string): boolean => {
 
 export const recordReviewSubmission = (restaurantId: string): void => {
   try {
-    console.log(
-      `[DEBUG] Registrando submission para restaurante: ${restaurantId}`
-    );
-
+    const today = new Date().toISOString().split('T')[0];
     const storedRecordsJson = localStorage.getItem('yuppie_review_history');
-    const storedRecords: ReviewRecord[] = storedRecordsJson
+    let storedRecords: ReviewRecord[] = storedRecordsJson
       ? JSON.parse(storedRecordsJson)
       : [];
 
-    console.log(`[DEBUG] Registros actuales:`, storedRecords);
+    // Mantenemos solo los registros de hoy (opcional)
+    storedRecords = storedRecords.filter((record) => record.date === today);
 
+    // Agregamos el nuevo registro
     const newRecord: ReviewRecord = {
       restaurantId,
-      timestamp: Date.now(),
+      date: today,
     };
-
-    const updatedRecords = [...storedRecords, newRecord];
+    storedRecords.push(newRecord);
     localStorage.setItem(
       'yuppie_review_history',
-      JSON.stringify(updatedRecords)
+      JSON.stringify(storedRecords)
     );
-
-    console.log(`[DEBUG] Registros actualizados:`, updatedRecords);
+    console.log('[DEBUG] Registros actualizados:', storedRecords);
   } catch (error) {
     console.error('[ERROR] Error guardando registro:', error);
   }
