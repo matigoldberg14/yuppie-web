@@ -1,5 +1,6 @@
 ---
 //Users/Mati/Desktop/yuppie-web/src/pages/improvement.astro
+
 import Layout from '../layouts/Layout.astro';
 import { ImprovementSelector } from '../components/feedback/ImprovementSelector';
 import { getRestaurant } from '../services/api';
@@ -13,9 +14,12 @@ const restaurant = await getRestaurant(documentId);
 if (!restaurant) {
   return Astro.redirect('/404');
 }
+
+// Usamos documentId para tracking y restaurantId para API
+const restaurantId = restaurant.id.toString();
 ---
 
-<Layout title="¿En qué podríamos mejorar?">
+<Layout title={`¿En qué podríamos mejorar? - ${restaurant.name}`}>
   <div class="min-h-screen bg-gradient flex flex-col items-center justify-center p-4">
     <div class="w-full max-w-md">
       <h1 class="text-4xl font-bold mb-6 text-center text-shadow">
@@ -24,17 +28,15 @@ if (!restaurant) {
 
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">¿En qué podríamos mejorar?</h2>
-        <!-- Se pasa el ID numérico convertido a string -->
-        <ImprovementSelector 
-          client:load 
-          restaurantId={restaurant.id.toString()}
+        <ImprovementSelector
+          restaurantDocumentId={documentId}
           nextUrl={`/comment?local=${documentId}`}
+          client:load
         />
       </div>
     </div>
   </div>
 </Layout>
-
 <style>
   .card {
     transition: transform 0.3s ease;

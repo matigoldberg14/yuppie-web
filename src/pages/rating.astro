@@ -14,11 +14,10 @@ if (!restaurant) {
   throw new Error('Restaurant not found');
 }
 
-// Incrementar taps y actualizar el objeto restaurant
-const updatedRestaurant = await incrementTaps(documentId);
-if (updatedRestaurant && updatedRestaurant.data) {
-  // Suponemos que incrementTaps devuelve el objeto actualizado con la propiedad "data"
-  restaurant = updatedRestaurant.data;
+// Incrementar taps y actualizar el objeto restaurante
+const updatedResponse = await incrementTaps(documentId);
+if (updatedResponse && updatedResponse.data) {
+  restaurant = updatedResponse.data;
 }
 ---
 
@@ -31,10 +30,11 @@ if (updatedRestaurant && updatedRestaurant.data) {
       
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">Califica tu experiencia</h2>
-        <!-- Se pasa el ID numérico convertido a string -->
+        <!-- Se pasan ambos identificadores -->
         <RatingForm 
           client:load 
           restaurantId={restaurant.id.toString()}
+          restaurantDocumentId={documentId}
           nextUrl={`/improvement?local=${documentId}`}
           linkMaps={restaurant.linkMaps}
         />

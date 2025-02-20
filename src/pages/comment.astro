@@ -1,4 +1,5 @@
 ---
+//Users/Mati/Desktop/yuppie-web/src/pages/comment.astro
 import Layout from '../layouts/Layout.astro';
 import { CommentForm } from '../components/feedback/CommentForm';
 import { getRestaurant } from '../services/api';
@@ -12,20 +13,24 @@ const restaurant = await getRestaurant(documentId);
 if (!restaurant) {
   return Astro.redirect('/404');
 }
+
+// Usamos documentId para tracking y restaurantId para API
+const restaurantId = restaurant.id.toString();
 ---
 
-<Layout title="Déjanos tu comentario">
+<Layout title={`Deja tu comentario - ${restaurant.name}`}>
   <div class="min-h-screen bg-gradient flex flex-col items-center justify-center p-4">
     <div class="w-full max-w-md">
       <h1 class="text-4xl font-bold mb-6 text-center text-shadow">
-        Yuppie
+        {restaurant.name}
       </h1>
-      
+
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">Déjanos tu comentario</h2>
         <CommentForm 
-          client:load 
-          restaurantId={restaurant.id.toString()}
+          restaurantId={restaurantId} 
+          restaurantDocumentId={documentId}
+          client:load
         />
       </div>
     </div>

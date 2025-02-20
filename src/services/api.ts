@@ -134,46 +134,42 @@ export async function incrementTaps(documentId: string) {
   try {
     console.log('Incrementando taps para documentId:', documentId);
 
-    // Primero, obtenemos el restaurante usando getRestaurant para extraer el ID numérico
-    const restaurant = await getRestaurant(documentId);
-    if (!restaurant) {
-      throw new Error('Restaurant not found in incrementTaps');
-    }
-    const numericId = restaurant.id; // ID numérico
-
-    // Ahora, hacemos GET usando el numericId
-    const response = await fetch(
-      `${API_CONFIG.baseUrl}/restaurants/${numericId}`
+    // Obtener el restaurante usando el filtro por documentId
+    const response0 = await fetch(
+      `${API_CONFIG.baseUrl}/restaurants?filters[documentId][$eq]=${documentId}&populate=*`
     );
-
-    if (!response.ok) {
-      console.error('Error obteniendo restaurante:', await response.text());
+    if (!response0.ok) {
+      console.error(
+        'Error obteniendo restaurante (sin filtro):',
+        await response0.text()
+      );
       return null;
     }
+    const json0 = await response0.json();
+    if (!json0.data || json0.data.length === 0) {
+      throw new Error('Restaurant not found in incrementTaps');
+    }
+    const restaurant = json0.data[0];
+    console.log('Restaurant obtenido:', restaurant);
 
-    const data = await response.json();
-    console.log('Datos del restaurante obtenido:', data);
-
-    const currentTaps = parseInt(data.data.taps || '0');
+    // Leer taps actual del objeto obtenido
+    const currentTaps = parseInt(restaurant.taps || '0');
     const newTaps = currentTaps + 1;
     console.log('Actualizando taps de:', currentTaps, 'a:', newTaps);
 
-    // Actualizamos usando el numericId
+    // Actualizar taps usando el documentId en la URL (ya que funciona en tu entorno)
     const updateResponse = await fetch(
-      `${API_CONFIG.baseUrl}/restaurants/${numericId}`,
+      `${API_CONFIG.baseUrl}/restaurants/${documentId}`,
       {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          data: {
-            taps: newTaps.toString(),
-          },
+          data: { taps: newTaps.toString() },
         }),
       }
     );
-
     if (!updateResponse.ok) {
       throw new Error(
         `Error actualizando taps: ${await updateResponse.text()}`
@@ -183,6 +179,7 @@ export async function incrementTaps(documentId: string) {
     const result = await updateResponse.json();
     console.log('Resultado de la actualización:', result);
 
+    // Devolver el objeto actualizado
     return result;
   } catch (error) {
     console.error('Error en incrementTaps:', error);

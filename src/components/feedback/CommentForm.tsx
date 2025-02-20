@@ -1,4 +1,4 @@
-//Users/Mati/Desktop/yuppie-web/src/components/feedback/CommentForm.tsx
+// /Users/Mati/Desktop/yuppie-web/src/components/feedback/CommentForm.tsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createReview } from '../../services/api';
@@ -40,7 +40,9 @@ type CommentFormData = {
 };
 
 type Props = {
-  restaurantId: string;
+  // Cambiamos para usar el documentId estable
+  restaurantId: string; // ID numérico para API
+  restaurantDocumentId: string; // ID del documento para tracking
 };
 
 type CreateReviewInput = {
@@ -83,7 +85,7 @@ const improvementOptions = {
   ],
 } as const;
 
-export function CommentForm({ restaurantId }: Props) {
+export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
   const [formData, setFormData] = useState<CommentFormData>({
     comment: '',
     email: '',
@@ -95,6 +97,7 @@ export function CommentForm({ restaurantId }: Props) {
   }>({});
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [hasInteractedWithComment, setHasInteractedWithComment] =
     useState(false);
   const { toast } = useToast();
@@ -102,9 +105,12 @@ export function CommentForm({ restaurantId }: Props) {
   const [hasInteractedWithEmail, setHasInteractedWithEmail] = useState(false);
 
   useEffect(() => {
-    if (restaurantId) {
-      const alreadySubmitted = hasSubmittedReviewToday(restaurantId);
-      if (alreadySubmitted) {
+    // Verificar si ya se envió una opinión usando el documentId
+    if (restaurantDocumentId) {
+      const hasSubmitted = hasSubmittedReviewToday(restaurantDocumentId);
+      setAlreadySubmitted(hasSubmitted);
+
+      if (hasSubmitted) {
         toast({
           variant: 'destructive',
           title: 'Ya has opinado hoy',
@@ -115,7 +121,7 @@ export function CommentForm({ restaurantId }: Props) {
         setIsButtonDisabled(true);
       }
     }
-  }, [restaurantId]);
+  }, [restaurantDocumentId, toast]);
 
   useEffect(() => {
     // Obtener el tipo de mejora del localStorage al montar el componente
@@ -130,7 +136,10 @@ export function CommentForm({ restaurantId }: Props) {
     let valid = true;
     const newErrors: { [key in keyof CommentFormData]?: string } = {};
 
-    if (showTextArea) {
+    // Si ya ha enviado una opinión, deshabilitar el botón
+    if (alreadySubmitted) {
+      valid = false;
+    } else if (showTextArea) {
       // Validación del comentario (solo si el usuario ya interactuó con el textarea)
       if (hasInteractedWithComment) {
         if (formData.comment.trim().length < 10) {
@@ -185,6 +194,7 @@ export function CommentForm({ restaurantId }: Props) {
     showTextArea,
     hasInteractedWithComment,
     hasInteractedWithEmail,
+    alreadySubmitted,
   ]);
 
   const handleChange = (
@@ -220,28 +230,12 @@ export function CommentForm({ restaurantId }: Props) {
     setHasInteractedWithComment(false);
   };
 
-  const formatErrorMessage = (error: unknown): string => {
-    if (error instanceof z.ZodError) {
-      return error.errors.map((e) => e.message).join('\n');
-    }
-
-    if (error instanceof Error) {
-      // Personalizar mensajes específicos
-      if (error.message.includes('24 horas')) {
-        return '¡Ups! Ya has compartido tu opinión hoy. ¡Gracias por tu entusiasmo! Te invitamos a volver mañana para contarnos sobre una nueva experiencia.';
-      }
-      return error.message;
-    }
-
-    return 'Error desconocido al procesar tu solicitud';
-  };
-
-  // Reemplazar solo el handleSubmit en el CommentForm
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      if (hasSubmittedReviewToday(restaurantId)) {
+      // Verificar si ya envió una opinión usando el documentId
+      if (hasSubmittedReviewToday(restaurantDocumentId)) {
         throw new Error('Ya has compartido tu opinión en las últimas 24 horas');
       }
 
@@ -268,6 +262,12 @@ export function CommentForm({ restaurantId }: Props) {
         throw new Error('No se encontró la calificación');
       }
 
+      // Verificar que el restaurante almacenado coincide con el actual
+      const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
+      if (storedRestaurantId !== restaurantDocumentId) {
+        throw new Error('Error de coincidencia de restaurante');
+      }
+
       const restaurantIdNumber = parseInt(restaurantId, 10);
       if (isNaN(restaurantIdNumber)) {
         throw new Error('ID de restaurante inválido');
@@ -284,7 +284,9 @@ export function CommentForm({ restaurantId }: Props) {
         comment: finalComment.trim(),
         googleSent: rating === 5,
       });
-      recordReviewSubmission(restaurantId);
+
+      // Registrar la submission con el documentId
+      recordReviewSubmission(restaurantDocumentId);
 
       // Solo intentamos enviar el email si hay uno proporcionado
       if (rating <= 2 && formData.email) {
@@ -347,6 +349,29 @@ export function CommentForm({ restaurantId }: Props) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
+  // Si ya envió una opinión, mostrar un mensaje amigable
+  if (alreadySubmitted) {
+    return (
+      <motion.div
+        className="w-full max-w-md flex flex-col items-center gap-4 p-8 bg-white/10 rounded-lg"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <motion.h2
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-2xl font-medium text-white text-center"
+        >
+          ¡Gracias por compartir tu opinión hoy!
+        </motion.h2>
+        <p className="text-white text-center">
+          Valoramos mucho tu feedback. Vuelve mañana para contarnos sobre una
+          nueva experiencia.
+        </p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.form

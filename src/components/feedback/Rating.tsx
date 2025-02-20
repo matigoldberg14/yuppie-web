@@ -1,16 +1,18 @@
-//Users/Mati/Desktop/yuppie-web/src/components/feedback/Rating.tsx
+// /Users/Mati/Desktop/yuppie-web/src/components/feedback/Rating.tsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
-import { createReview, getRestaurantNumericId } from '../../services/api';
+import { createReview } from '../../services/api';
 import {
   hasSubmittedReviewToday,
   recordReviewSubmission,
 } from '../../utils/reviewLimiter';
 
 interface Props {
-  // Se espera que este restaurantId sea un string que contenga un número válido
+  // Este es el ID numérico del restaurante (en cadena) usado para las llamadas a la API
   restaurantId: string;
+  // Este es el identificador estable (documentId) usado para el bloqueo y registro en localStorage
+  restaurantDocumentId: string;
   nextUrl: string;
   linkMaps: string;
 }
@@ -23,12 +25,15 @@ const ratingOptions = [
   { rating: 5, emoji: '😍', label: 'Muy satisfecho', color: 'bg-green-500' },
 ] as const;
 
-export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
+export function RatingForm({
+  restaurantId,
+  restaurantDocumentId,
+  nextUrl,
+  linkMaps,
+}: Props) {
   const numericRestaurantId = parseInt(restaurantId, 10);
   if (isNaN(numericRestaurantId)) {
-    console.error(
-      `restaurantId ("${restaurantId}") no es un número válido. Asegúrate de pasar un ID numérico proveniente de Strapi.`
-    );
+    console.error(`restaurantId ("${restaurantId}") no es un número válido.`);
   }
 
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
@@ -36,9 +41,9 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const { toast } = useToast();
 
-  // Verificar al montar si ya se envió una review para este restaurante hoy
+  // Verificar al montar si ya se envió una review para este restaurante (usando el identificador estable)
   useEffect(() => {
-    if (restaurantId && hasSubmittedReviewToday(restaurantId)) {
+    if (restaurantDocumentId && hasSubmittedReviewToday(restaurantDocumentId)) {
       setAlreadySubmitted(true);
       toast({
         variant: 'destructive',
@@ -48,7 +53,7 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
         duration: 5000,
       });
     }
-  }, [restaurantId, toast]);
+  }, [restaurantDocumentId, toast]);
 
   const handleRatingHover = (rating: number) => {
     if (!isSubmitting && !alreadySubmitted) {
@@ -61,9 +66,9 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
     try {
       setIsSubmitting(true);
 
-      // Guarda la calificación y el ID numérico del restaurante en localStorage
+      // Guardar la calificación y el identificador estable en localStorage
       localStorage.setItem('yuppie_rating', rating.toString());
-      localStorage.setItem('yuppie_restaurant', restaurantId); // restaurantId ya es el ID numérico en cadena
+      localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
 
       if (rating === 5) {
         localStorage.setItem('yuppie_improvement', 'Otra');
@@ -74,13 +79,12 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
           duration: 2000,
         });
 
-        // Ya tenemos el ID numérico; lo usamos directamente
         if (isNaN(numericRestaurantId)) {
           throw new Error('ID de restaurante inválido');
         }
-
+        // Para 5 estrellas usamos el ID numérico que ya tenemos
         const reviewData = {
-          restaurantId: numericRestaurantId, // Usamos el valor ya calculado
+          restaurantId: numericRestaurantId,
           calification: 5,
           typeImprovement: 'Otra',
           email: 'prefirio-no-dar-su-email@nodiosuemail.com',
@@ -91,13 +95,15 @@ export function RatingForm({ restaurantId, nextUrl, linkMaps }: Props) {
         console.log('Iniciando createReview con datos:', reviewData);
         await createReview(reviewData);
 
-        // Registra la submission para bloquear futuros envíos hoy
-        recordReviewSubmission(restaurantId);
+        // Registrar la submission en el historial para bloquear futuros envíos en el mismo día
+        recordReviewSubmission(restaurantDocumentId);
 
         setTimeout(() => {
           window.location.href = linkMaps;
         }, 2000);
       } else {
+        // Para calificaciones menores a 5
+        // No registramos la submission todavía, lo haremos al finalizar todo el proceso
         window.location.href = nextUrl;
       }
     } catch (error) {
