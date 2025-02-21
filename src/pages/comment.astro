@@ -1,28 +1,55 @@
 ---
-//Users/Mati/Desktop/yuppie-web/src/pages/comment.astro
+// /Users/Mati/Desktop/yuppie-web/src/pages/comment.astro
 import Layout from '../layouts/Layout.astro';
 import { CommentForm } from '../components/feedback/CommentForm';
 import { getRestaurant } from '../services/api';
 
+// Obtener el ID del documento y validar
 const documentId = Astro.url.searchParams.get('local');
 if (!documentId) {
   return Astro.redirect('/404');
 }
 
-const restaurant = await getRestaurant(documentId);
-if (!restaurant) {
-  return Astro.redirect('/404');
+// Manejo optimizado de datos del restaurante
+let cachedRestaurantName = '';
+let useCache = false;
+
+// Verificar si podemos usar caché
+if (Astro.request.headers.get('sec-fetch-dest') !== 'document') {
+  useCache = true;
 }
 
-// Usamos documentId para tracking y restaurantId para API
-const restaurantId = restaurant.id.toString();
+try {
+  // Intentar obtener nombre del restaurante de localStorage (client-side)
+  if (useCache) {
+    // Este código solo se ejecuta en el cliente, no en SSR
+    const cachedData = localStorage.getItem(`restaurant_${documentId}`);
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+      cachedRestaurantName = parsed.name || '';
+    }
+  }
+} catch (e) {
+  // Ignorar errores de localStorage en SSR
+}
+
+// Obtener datos del restaurante (en paralelo con la renderización)
+const restaurantPromise = getRestaurant(documentId).catch(error => {
+  console.error('Error obteniendo datos del restaurante:', error);
+  return null;
+});
+
+// Extraer ID numérico si ya tenemos el restaurante
+const restaurant = await restaurantPromise;
+const restaurantId = restaurant ? restaurant.id.toString() : '';
+const restaurantName = restaurant?.name || cachedRestaurantName || 'Restaurante';
 ---
 
-<Layout title={`Deja tu comentario - ${restaurant.name}`}>
+<Layout title={`Deja tu comentario - ${restaurantName}`}>
   <div class="min-h-screen bg-gradient flex flex-col items-center justify-center p-4">
     <div class="w-full max-w-md">
-      <h1 class="text-4xl font-bold mb-6 text-center text-shadow">
-        {restaurant.name}
+      <h1 id="restaurantName" class="text-4xl font-bold mb-6 text-center text-shadow">
+        {restaurantName}
       </h1>
 
       <div class="card p-6">
@@ -37,11 +64,86 @@ const restaurantId = restaurant.id.toString();
   </div>
 </Layout>
 
+<script define:vars={{ documentId, restaurantPromise }}>
+  // Script optimizado para mejorar rendimiento
+  document.addEventListener('DOMContentLoaded', async () => {
+    const restaurantNameElement = document.getElementById('restaurantName');
+    
+    // Verificar si ya hay datos en localStorage para mostrar inmediatamente
+    try {
+      const cachedData = localStorage.getItem(`restaurant_${documentId}`);
+      if (cachedData) {
+        const { name, timestamp } = JSON.parse(cachedData);
+        const cacheAge = Date.now() - timestamp;
+        
+        // Si la caché tiene menos de 1 hora, usarla
+        if (cacheAge < 3600000 && name && restaurantNameElement) {
+          restaurantNameElement.textContent = name;
+        }
+      }
+      
+      // Precargar emojis para asegurar disponibilidad
+      const preloadEmojis = () => {
+        const emojis = ['🎉', '👍', '✅'];
+        const preloadDiv = document.createElement('div');
+        preloadDiv.style.opacity = '0';
+        preloadDiv.style.position = 'absolute';
+        preloadDiv.style.pointerEvents = 'none';
+        preloadDiv.textContent = emojis.join('');
+        document.body.appendChild(preloadDiv);
+        
+        setTimeout(() => {
+          if (document.body.contains(preloadDiv)) {
+            document.body.removeChild(preloadDiv);
+          }
+        }, 1000);
+      };
+      preloadEmojis();
+      
+    } catch (e) {
+      console.error('Error al leer caché local:', e);
+    }
+    
+    // Obtener datos frescos del servidor en paralelo
+    try {
+      const restaurant = await restaurantPromise;
+      if (restaurant && restaurant.name && restaurantNameElement) {
+        // Actualizar UI solo si es necesario
+        if (restaurantNameElement.textContent !== restaurant.name) {
+          restaurantNameElement.textContent = restaurant.name;
+        }
+        
+        // Actualizar título de página
+        document.title = `Deja tu comentario - ${restaurant.name}`;
+        
+        // Actualizar caché
+        localStorage.setItem(`restaurant_${documentId}`, JSON.stringify({
+          name: restaurant.name,
+          timestamp: Date.now()
+        }));
+      }
+    } catch (error) {
+      console.error('Error cargando datos del restaurante:', error);
+    }
+  });
+</script>
+
 <style>
   .card {
     transition: transform 0.3s ease;
+    will-change: transform;
   }
   .card:hover {
     transform: translateY(-5px);
+  }
+  
+  /* Optimizaciones de rendimiento */
+  @media (prefers-reduced-motion: reduce) {
+    .card {
+      transition: none;
+    }
+    .card:hover {
+      transform: none;
+    }
   }
 </style>

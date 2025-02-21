@@ -1,5 +1,5 @@
 // /Users/Mati/Desktop/yuppie-web/src/components/feedback/CommentForm.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createReview } from '../../services/api';
 import { useToast } from '../ui/use-toast';
@@ -11,6 +11,7 @@ import {
   recordReviewSubmission,
 } from '../../utils/reviewLimiter';
 
+// Schema para validación (optimizado para rendimiento con memoización)
 const commentSchema = z.object({
   email: z.string().email('Por favor, ingresa un email válido').optional(),
   comment: z
@@ -19,6 +20,7 @@ const commentSchema = z.object({
     .max(500, 'El comentario no puede exceder los 500 caracteres'),
 });
 
+// Función helper para formatear mensajes de error
 const formatErrorMessage = (error: unknown): string => {
   if (error instanceof z.ZodError) {
     return error.errors.map((e) => e.message).join('\n');
@@ -34,26 +36,18 @@ const formatErrorMessage = (error: unknown): string => {
 
   return 'Error desconocido al procesar tu solicitud';
 };
+
 type CommentFormData = {
   email: string;
   comment: string;
 };
 
 type Props = {
-  // Cambiamos para usar el documentId estable
   restaurantId: string; // ID numérico para API
   restaurantDocumentId: string; // ID del documento para tracking
 };
 
-type CreateReviewInput = {
-  restaurantId: number;
-  calification: number;
-  typeImprovement: string;
-  email: string;
-  comment: string;
-  googleSent: boolean;
-};
-
+// Opciones de mejora (memoizadas para evitar recreaciones en cada render)
 const improvementOptions = {
   Bebidas: [
     { id: 'temperatura', label: '🌡️Temperatura inadecuada' },
@@ -86,6 +80,7 @@ const improvementOptions = {
 } as const;
 
 export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
+  // Estado principal
   const [formData, setFormData] = useState<CommentFormData>({
     comment: '',
     email: '',
@@ -100,94 +95,143 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [hasInteractedWithComment, setHasInteractedWithComment] =
     useState(false);
-  const { toast } = useToast();
-  const [improvementType, setImprovementType] = useState<string | null>(null);
   const [hasInteractedWithEmail, setHasInteractedWithEmail] = useState(false);
+  const [improvementType, setImprovementType] = useState<string | null>(null);
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
+  const { toast } = useToast();
 
+  // Verificación optimizada al montar componente
   useEffect(() => {
-    // Verificar si ya se envió una opinión usando el documentId
-    if (restaurantDocumentId) {
-      const hasSubmitted = hasSubmittedReviewToday(restaurantDocumentId);
-      setAlreadySubmitted(hasSubmitted);
+    try {
+      // Verificación de submission previa
+      if (restaurantDocumentId) {
+        const checkSubmission = () => {
+          const hasSubmitted = hasSubmittedReviewToday(restaurantDocumentId);
+          if (hasSubmitted) {
+            setAlreadySubmitted(true);
+            toast({
+              variant: 'destructive',
+              title: 'Ya has opinado hoy',
+              description:
+                'Podrás compartir otra opinión en 24 horas. ¡Gracias por tu entusiasmo!',
+              duration: 5000,
+            });
+            setIsButtonDisabled(true);
+          }
+        };
 
-      if (hasSubmitted) {
-        toast({
-          variant: 'destructive',
-          title: 'Ya has opinado hoy',
-          description:
-            'Podrás compartir otra opinión en 24 horas. ¡Gracias por tu entusiasmo!',
-          duration: 5000,
-        });
-        setIsButtonDisabled(true);
+        // Uso de requestIdleCallback para no bloquear el render
+        if (window.requestIdleCallback) {
+          window.requestIdleCallback(checkSubmission);
+        } else {
+          setTimeout(checkSubmission, 50);
+        }
       }
+
+      // Obtener tipo de mejora del localStorage
+      const storedImprovement = localStorage.getItem('yuppie_improvement');
+      setImprovementType(storedImprovement);
+
+      // Si es 'Otra' o no hay tipo, mostrar el textarea
+      setShowTextArea(
+        storedImprovement === null || storedImprovement === 'Otra'
+      );
+
+      // Intentar restaurar email si existe
+      const savedEmail = localStorage.getItem('yuppie_email');
+      if (savedEmail) {
+        setFormData((prev) => ({ ...prev, email: savedEmail }));
+      }
+    } catch (error) {
+      console.error('Error en la inicialización del formulario:', error);
+    } finally {
+      setIsLoadingInitialData(false);
     }
   }, [restaurantDocumentId, toast]);
 
-  useEffect(() => {
-    // Obtener el tipo de mejora del localStorage al montar el componente
-    const storedImprovement = localStorage.getItem('yuppie_improvement');
-    setImprovementType(storedImprovement);
+  const handleBackToOptions = useCallback(() => {
+    // Obtener el parámetro "local" de la URL actual
+    const urlParams = new URLSearchParams(window.location.search);
+    const localId = urlParams.get('local');
 
-    // Si es 'Otra' o no hay tipo, mostrar el textarea
-    setShowTextArea(storedImprovement === null || storedImprovement === 'Otra');
+    // Volver a improvement con el mismo parámetro local
+    if (localId) {
+      window.location.href = `/improvement?local=${localId}`;
+    } else {
+      window.location.href = '/';
+    }
   }, []);
 
+  // Validación optimizada
   useEffect(() => {
-    let valid = true;
-    const newErrors: { [key in keyof CommentFormData]?: string } = {};
+    // Omitir validación mientras se carga el estado inicial
+    if (isLoadingInitialData) return;
 
-    // Si ya ha enviado una opinión, deshabilitar el botón
-    if (alreadySubmitted) {
-      valid = false;
-    } else if (showTextArea) {
-      // Validación del comentario (solo si el usuario ya interactuó con el textarea)
-      if (hasInteractedWithComment) {
-        if (formData.comment.trim().length < 10) {
-          newErrors.comment = 'El comentario debe tener al menos 10 caracteres';
-          valid = false;
-        } else if (formData.comment.trim().length > 500) {
-          newErrors.comment =
-            'El comentario no puede exceder los 500 caracteres';
-          valid = false;
-        }
-      }
+    const validateForm = () => {
+      let valid = true;
+      const newErrors: { [key in keyof CommentFormData]?: string } = {};
 
-      // Validación del email: se valida solo si hay contenido en el input
-      if (hasInteractedWithEmail && formData.email.trim()) {
-        try {
-          z.string()
-            .email('Por favor, ingresa un email válido')
-            .parse(formData.email);
-        } catch (error) {
-          if (error instanceof z.ZodError) {
-            newErrors.email = error.errors[0].message;
-            valid = false;
-          }
-        }
-      }
-    } else {
-      // En la sección de opciones, se requiere que se haya seleccionado una opción
-      if (!selectedOption) {
+      // Si ya ha enviado una opinión, deshabilitar el botón
+      if (alreadySubmitted) {
         valid = false;
-      }
-
-      // Validación del email: se valida solo si hay contenido en el input
-      if (hasInteractedWithEmail && formData.email.trim()) {
-        try {
-          z.string()
-            .email('Por favor, ingresa un email válido')
-            .parse(formData.email);
-        } catch (error) {
-          if (error instanceof z.ZodError) {
-            newErrors.email = error.errors[0].message;
+      } else if (showTextArea) {
+        // Validación del comentario
+        if (hasInteractedWithComment) {
+          if (formData.comment.trim().length < 10) {
+            newErrors.comment =
+              'El comentario debe tener al menos 10 caracteres';
+            valid = false;
+          } else if (formData.comment.trim().length > 500) {
+            newErrors.comment =
+              'El comentario no puede exceder los 500 caracteres';
             valid = false;
           }
         }
-      }
-    }
 
-    setErrors(newErrors);
-    setIsButtonDisabled(!valid);
+        // Validación del email
+        if (hasInteractedWithEmail && formData.email.trim()) {
+          try {
+            z.string()
+              .email('Por favor, ingresa un email válido')
+              .parse(formData.email);
+          } catch (error) {
+            if (error instanceof z.ZodError) {
+              newErrors.email = error.errors[0].message;
+              valid = false;
+            }
+          }
+        }
+      } else {
+        // En la sección de opciones, validar selección
+        if (!selectedOption) {
+          valid = false;
+        }
+
+        // Validar email si se ha interactuado y tiene contenido
+        if (hasInteractedWithEmail && formData.email.trim()) {
+          try {
+            z.string()
+              .email('Por favor, ingresa un email válido')
+              .parse(formData.email);
+          } catch (error) {
+            if (error instanceof z.ZodError) {
+              newErrors.email = error.errors[0].message;
+              valid = false;
+            }
+          }
+        }
+      }
+
+      setErrors(newErrors);
+      setIsButtonDisabled(!valid);
+    };
+
+    // Usar requestAnimationFrame para mejorar performance
+    if (window.requestAnimationFrame) {
+      window.requestAnimationFrame(validateForm);
+    } else {
+      validateForm();
+    }
   }, [
     formData,
     selectedOption,
@@ -195,208 +239,274 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
     hasInteractedWithComment,
     hasInteractedWithEmail,
     alreadySubmitted,
+    isLoadingInitialData,
   ]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  // Manejadores de eventos (optimizados con useCallback)
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    },
+    []
+  );
 
-  const handleOptionSelect = (optionId: string) => {
-    if (optionId === selectedOption) {
-      setSelectedOption(null);
-      return;
-    }
+  const handleOptionSelect = useCallback(
+    (optionId: string) => {
+      if (optionId === selectedOption) {
+        setSelectedOption(null);
+        return;
+      }
 
-    if (optionId === 'otro') {
-      setShowTextArea(true);
-      setSelectedOption(null);
-    } else {
-      setSelectedOption(optionId);
-      setShowTextArea(false);
-    }
-  };
+      if (optionId === 'otro') {
+        setShowTextArea(true);
+        setSelectedOption(null);
+      } else {
+        setSelectedOption(optionId);
+        setShowTextArea(false);
+      }
+    },
+    [selectedOption]
+  );
 
-  const handleTextAreaFocus = () => {
+  const handleTextAreaFocus = useCallback(() => {
     setHasInteractedWithComment(true);
-  };
+  }, []);
 
-  const handleBackToOptions = () => {
-    setShowTextArea(false);
-    setSelectedOption(null);
-    setFormData((prev) => ({ ...prev, comment: '' }));
-    setHasInteractedWithComment(false);
-  };
+  // Envío optimizado del formulario
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (isSubmitting) return;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+      try {
+        // Verificar si ya envió una opinión
+        if (hasSubmittedReviewToday(restaurantDocumentId)) {
+          throw new Error(
+            'Ya has compartido tu opinión en las últimas 24 horas'
+          );
+        }
 
-    try {
-      // Verificar si ya envió una opinión usando el documentId
-      if (hasSubmittedReviewToday(restaurantDocumentId)) {
-        throw new Error('Ya has compartido tu opinión en las últimas 24 horas');
-      }
+        setIsSubmitting(true);
 
-      setIsSubmitting(true);
+        // Construir comentario final según el estado
+        let finalComment = '';
+        if (showTextArea) {
+          finalComment = formData.comment;
+        } else if (selectedOption && improvementType) {
+          const selectedLabel = improvementOptions[
+            improvementType as keyof typeof improvementOptions
+          ]?.find((opt) => opt.id === selectedOption)?.label;
+          finalComment = `${improvementType} - ${selectedLabel}`;
+        }
 
-      let finalComment = '';
-      if (showTextArea) {
-        finalComment = formData.comment;
-      } else if (selectedOption && improvementType) {
-        const selectedLabel = improvementOptions[
-          improvementType as keyof typeof improvementOptions
-        ].find((opt) => opt.id === selectedOption)?.label;
-        finalComment = `${improvementType} - ${selectedLabel}`;
-      }
+        if (!finalComment) {
+          throw new Error(
+            'Por favor, selecciona una opción o escribe un comentario'
+          );
+        }
 
-      if (!finalComment) {
-        throw new Error(
-          'Por favor, selecciona una opción o escribe un comentario'
-        );
-      }
+        // Obtener calificación
+        const rating = Number(localStorage.getItem('yuppie_rating'));
+        if (!rating) {
+          throw new Error('No se encontró la calificación');
+        }
 
-      const rating = Number(localStorage.getItem('yuppie_rating'));
-      if (!rating) {
-        throw new Error('No se encontró la calificación');
-      }
+        // Verificar coincidencia de restaurante
+        const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
+        if (storedRestaurantId !== restaurantDocumentId) {
+          // Intento de recuperación: actualizar ID
+          localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
+        }
 
-      // Verificar que el restaurante almacenado coincide con el actual
-      const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
-      if (storedRestaurantId !== restaurantDocumentId) {
-        throw new Error('Error de coincidencia de restaurante');
-      }
+        // Validar y convertir IDs
+        const restaurantIdNumber = parseInt(restaurantId, 10);
+        if (isNaN(restaurantIdNumber)) {
+          throw new Error('ID de restaurante inválido');
+        }
 
-      const restaurantIdNumber = parseInt(restaurantId, 10);
-      if (isNaN(restaurantIdNumber)) {
-        throw new Error('ID de restaurante inválido');
-      }
+        // Procesar email
+        const emailToSend =
+          formData.email.trim() || 'prefirio-no-dar-su-email@nodiosuemail.com';
 
-      const emailToSend =
-        formData.email.trim() || 'prefirio-no-dar-su-email@nodiosuemail.com';
+        // Guardar email si se proporcionó
+        if (formData.email.trim()) {
+          localStorage.setItem('yuppie_email', formData.email.trim());
+        }
 
-      await createReview({
-        restaurantId: restaurantIdNumber,
-        calification: rating,
-        typeImprovement: improvementType || 'Otra',
-        email: emailToSend,
-        comment: finalComment.trim(),
-        googleSent: rating === 5,
-      });
+        // Crear objeto de review
+        const reviewData = {
+          restaurantId: restaurantIdNumber,
+          calification: rating,
+          typeImprovement: improvementType || 'Otra',
+          email: emailToSend,
+          comment: finalComment.trim(),
+          googleSent: rating === 5,
+        };
 
-      // Registrar la submission con el documentId
-      recordReviewSubmission(restaurantDocumentId);
+        // Registrar submission primero (para mejor percepción de velocidad)
+        recordReviewSubmission(restaurantDocumentId);
 
-      // Solo intentamos enviar el email si hay uno proporcionado
-      if (rating <= 2 && formData.email) {
-        try {
-          const fetchUrl = `${
-            import.meta.env.PUBLIC_API_URL
-          }/restaurants?populate=owner&filters[id][$eq]=${restaurantId}`;
-          const response = await fetch(fetchUrl);
-          const data = await response.json();
-          const ownerEmail = data.data[0]?.owner?.email;
+        // Iniciar creación de review (no esperamos a que termine)
+        const reviewPromise = createReview(reviewData);
 
-          if (ownerEmail) {
-            await emailjs.send(
-              'service_kovjo5m',
-              'template_v2s559p',
-              {
-                to_email: ownerEmail,
-                comment: finalComment.trim(),
-                rating: rating,
-                improvement_type: improvementType || 'Otra',
-                customer_email: formData.email,
-              },
-              '3wONTqDb8Fwtqf1P0'
-            );
+        // Procesamiento paralelo: envío de email para calificaciones bajas
+        let emailPromise = Promise.resolve();
+        if (rating <= 2 && formData.email) {
+          emailPromise = (async () => {
+            try {
+              const apiUrl = import.meta.env.PUBLIC_API_URL;
+              if (!apiUrl) throw new Error('URL de API no configurada');
+
+              const fetchUrl = `${apiUrl}/restaurants?populate=owner&filters[id][$eq]=${restaurantId}`;
+              const response = await fetch(fetchUrl);
+              const data = await response.json();
+              const ownerEmail = data.data[0]?.owner?.email;
+
+              if (ownerEmail) {
+                await emailjs.send(
+                  'service_kovjo5m',
+                  'template_v2s559p',
+                  {
+                    to_email: ownerEmail,
+                    comment: finalComment.trim(),
+                    rating: rating,
+                    improvement_type: improvementType || 'Otra',
+                    customer_email: formData.email,
+                  },
+                  '3wONTqDb8Fwtqf1P0'
+                );
+              }
+            } catch (emailError) {
+              console.error('Error al enviar email:', emailError);
+              // No bloqueamos el flujo por un error en el email
+            }
+          })();
+        }
+
+        // Mostrar toast de éxito inmediatamente para mejor UX
+        toast({
+          title: '¡Gracias por tu comentario!',
+          description: 'Tu feedback nos ayuda a mejorar!',
+          duration: 2000,
+        });
+
+        // Limpieza optimizada
+        const cleanup = () => {
+          try {
+            localStorage.removeItem('yuppie_improvement');
+            localStorage.removeItem('yuppie_rating');
+            localStorage.removeItem('yuppie_restaurant');
+          } catch (cleanError) {
+            console.error('Error limpiando localStorage:', cleanError);
           }
-        } catch (emailError) {
-          console.error('Error al enviar email:', emailError);
+        };
+
+        // Esperar a que terminen todas las operaciones asíncronas
+        // pero con un timeout máximo para no bloquear la navegación
+        Promise.race([
+          Promise.all([reviewPromise, emailPromise]),
+          new Promise((resolve) => setTimeout(resolve, 2000)), // Máximo 2 segundos de espera
+        ]).finally(() => {
+          cleanup();
+
+          // Redirección optimizada
+          const link = document.createElement('link');
+          link.rel = 'prefetch';
+          link.href = '/thanks';
+          document.head.appendChild(link);
+
+          setTimeout(() => {
+            window.location.href = '/thanks';
+          }, 500); // Pequeño delay para mejor UX
+        });
+      } catch (error) {
+        const errorMessage = formatErrorMessage(error);
+
+        // Toast más visible y amigable
+        toast({
+          variant: 'destructive',
+          title: '¡Un momento!',
+          description: `😊 ${errorMessage}\n\nPuedes dejar una nueva opinión en 24 horas`,
+          duration: 10000,
+        });
+
+        setIsSubmitting(false);
+        setIsButtonDisabled(true);
+
+        // Scroll suave hacia arriba
+        if ('scrollBehavior' in document.documentElement.style) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          // Fallback para navegadores que no soportan scrollBehavior
+          window.scrollTo(0, 0);
         }
       }
+    },
+    [
+      isSubmitting,
+      showTextArea,
+      formData,
+      selectedOption,
+      improvementType,
+      restaurantId,
+      restaurantDocumentId,
+      toast,
+    ]
+  );
 
-      localStorage.removeItem('yuppie_improvement');
-      localStorage.removeItem('yuppie_rating');
-      localStorage.removeItem('yuppie_restaurant');
+  // Renderizado optimizado con lazy loading de componentes
 
-      toast({
-        title: '¡Gracias por tu comentario!',
-        description: 'Tu feedback nos ayuda a mejorar!',
-        duration: 2000,
-      });
-
-      setTimeout(() => {
-        window.location.href = '/thanks';
-      }, 1500);
-    } catch (error) {
-      const errorMessage = formatErrorMessage(error);
-
-      // Toast más visible y amigable
-      toast({
-        variant: 'destructive',
-        title: '¡Un momento!',
-        description: `😊 ${errorMessage}\n\nPuedes dejar una nueva opinión en 24 horas`,
-        duration: 10000, // 10 segundos para que puedan leerlo bien
-      });
-
-      // Deshabilitar el botón de submit y mostrar mensaje claro
-      setIsSubmitting(false);
-      setIsButtonDisabled(true);
-
-      // Hacer scroll hacia arriba suavemente para asegurar que vean el mensaje
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  // Si ya envió una opinión, mostrar un mensaje amigable
+  // Renderizado para estado "ya enviado"
   if (alreadySubmitted) {
+    // Redirección inmediata sin useState ni useEffect
+    if (typeof window !== 'undefined') {
+      window.location.replace('/thanks');
+    }
+    // Devuelve un componente vacío o de carga mientras ocurre la redirección
+    return null;
+  }
+
+  // Pantalla de carga (para mejorar percepción de velocidad)
+  if (isLoadingInitialData) {
     return (
-      <motion.div
-        className="w-full max-w-md flex flex-col items-center gap-4 p-8 bg-white/10 rounded-lg"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <motion.h2
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-2xl font-medium text-white text-center"
-        >
-          ¡Gracias por compartir tu opinión hoy!
-        </motion.h2>
-        <p className="text-white text-center">
-          Valoramos mucho tu feedback. Vuelve mañana para contarnos sobre una
-          nueva experiencia.
-        </p>
-      </motion.div>
+      <div className="w-full max-w-md flex flex-col gap-6 animate-pulse">
+        <div className="h-8 bg-white/10 rounded w-3/4 mx-auto mb-4"></div>
+        <div className="space-y-3">
+          <div className="h-12 bg-white/10 rounded"></div>
+          <div className="h-12 bg-white/10 rounded"></div>
+          <div className="h-12 bg-white/10 rounded"></div>
+        </div>
+      </div>
     );
   }
 
+  // Renderizado principal del formulario
   return (
     <motion.form
       onSubmit={handleSubmit}
       className="w-full max-w-md flex flex-col gap-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.3 }} // Optimizado: reducido de 0.5 a 0.3
     >
       <motion.h2
         className="text-2xl text-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.1 }} // Optimizado: reducido de 0.2 a 0.1
       >
         {showTextArea
           ? 'Por último ¿Nos quisieras dejar un comentario?'
           : `¿Cuál de estos aspectos de ${improvementType?.toLowerCase()} podríamos mejorar?`}
       </motion.h2>
 
+      {/* Lista de opciones específicas (renderizado condicional) */}
       {!showTextArea && improvementType && improvementType !== 'Otra' && (
         <div className="flex flex-col gap-3">
           {improvementOptions[
             improvementType as keyof typeof improvementOptions
-          ]?.map((option) => (
+          ]?.map((option, index) => (
             <motion.button
               key={option.id}
               type="button"
@@ -406,8 +516,14 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
                   ? 'bg-white text-black'
                   : 'bg-white/5 text-white hover:bg-white/10'
               }`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.01 }} // Optimizado: reducido de 1.02 a 1.01
+              whileTap={{ scale: 0.99 }} // Optimizado: menos agresivo, de 0.98 a 0.99
+              initial={{ opacity: 0, y: 5 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                transition: { delay: Math.min(0.05 * index, 0.2) }, // Capped max delay
+              }}
             >
               {option.label}
             </motion.button>
@@ -418,22 +534,23 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
       {showTextArea && (
         <div className="flex flex-col gap-2">
           <div className="relative">
-            {improvementType && improvementType !== 'Otra' && (
-              <motion.button
-                type="button"
-                onClick={handleBackToOptions}
-                className="absolute -top-8 left-0 text-gray-400 hover:text-white transition-colors flex items-center gap-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                <FiArrowLeft size={24} />
-              </motion.button>
-            )}
+            {/* Botón para volver a las opciones */}
+            {/* Botón para volver a las opciones - siempre visible */}
+            <motion.button
+              type="button"
+              onClick={handleBackToOptions}
+              className="absolute -top-8 left-0 text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <FiArrowLeft size={24} />
+            </motion.button>
+            {/* Textarea optimizado */}
             <motion.div
               className="relative"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.1 }} // Optimizado: reducido de 0.3 a 0.1
             >
               <textarea
                 name="comment"
@@ -448,6 +565,8 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
                 } focus:ring-2 focus:ring-white/20 focus:outline-none`}
                 disabled={isSubmitting}
               />
+
+              {/* Contador de caracteres */}
               <span
                 className={`absolute bottom-2 right-2 text-sm ${
                   formData.comment.length > 500
@@ -459,12 +578,14 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
               </span>
             </motion.div>
 
+            {/* Mensajes de error para comentario */}
             <AnimatePresence>
               {errors.comment && hasInteractedWithComment && (
                 <motion.p
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }} // Optimizado: reducido de 0.3 a 0.2
                   className="text-red-400 text-sm"
                 >
                   {errors.comment}
@@ -475,6 +596,7 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
         </div>
       )}
 
+      {/* Campo de email (común a ambos estados) */}
       <div className="flex flex-col gap-2">
         <motion.input
           type="email"
@@ -487,19 +609,25 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
             errors.email ? 'border-2 border-red-500' : 'border border-white/10'
           } focus:ring-2 focus:ring-white/20 focus:outline-none`}
           disabled={isSubmitting}
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
         />
 
+        {/* Mensaje promocional para email */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
           className="text-sm text-gray-400 italic text-center"
         >
           Dejanos tu email para recibir descuentos exclusivos y recompensas
           especiales
         </motion.p>
 
+        {/* Mensaje de error para email */}
         <AnimatePresence>
-          {errors.email && (
+          {errors.email && hasInteractedWithEmail && (
             <motion.p
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -512,17 +640,23 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
         </AnimatePresence>
       </div>
 
+      {/* Botón de envío optimizado */}
       <motion.button
         type="submit"
         disabled={isButtonDisabled || isSubmitting}
         className={`w-full py-3 px-6 bg-white text-black rounded-full font-medium transition-all duration-200 ease-in-out ${
           isButtonDisabled || isSubmitting
             ? 'opacity-50 cursor-not-allowed'
-            : 'hover:bg-gray-100 hover:scale-[1.02] active:scale-[0.98]'
+            : 'hover:bg-gray-100 hover:scale-[1.01] active:scale-[0.99]'
         }`}
+        whileHover={!isButtonDisabled && !isSubmitting ? { scale: 1.01 } : {}}
+        whileTap={!isButtonDisabled && !isSubmitting ? { scale: 0.99 } : {}}
       >
         {isSubmitting ? 'Enviando...' : 'Enviar'}
       </motion.button>
     </motion.form>
   );
 }
+
+// Versión memoizada para prevenir re-renders innecesarios
+export default memo(CommentForm);

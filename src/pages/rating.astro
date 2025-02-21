@@ -1,27 +1,37 @@
 ---
-//Users/Mati/Desktop/yuppie-web/src/pages/rating.astro
+// /Users/Mati/Desktop/yuppie-web/src/pages/rating.astro
 import Layout from '../layouts/Layout.astro';
 import { RatingForm } from '../components/feedback/Rating';
 import { getRestaurant, incrementTaps } from '../services/api';
 
+// Obtener el ID y validar al inicio
 const documentId = Astro.url.searchParams.get('local');
 if (!documentId) {
   return Astro.redirect('/404');
 }
 
-let restaurant = await getRestaurant(documentId);
+// Realizar ambas operaciones en paralelo
+const [restaurant, _] = await Promise.all([
+  getRestaurant(documentId),
+  incrementTaps(documentId).catch(err => {
+    console.error('Error incrementando taps:', err);
+    return null; // No bloqueamos la carga por un error en incrementTaps
+  })
+]);
+
+// Validar después de obtener los datos
 if (!restaurant) {
-  throw new Error('Restaurant not found');
+  return Astro.redirect('/404');
 }
 
-// Incrementar taps y actualizar el objeto restaurante
-const updatedResponse = await incrementTaps(documentId);
-if (updatedResponse && updatedResponse.data) {
-  restaurant = updatedResponse.data;
-}
+// Precargamos la siguiente página para reducir tiempo de transición
+const nextUrl = `/improvement?local=${documentId}`;
 ---
 
 <Layout title="Califica tu experiencia">
+  <!-- Precargar la siguiente página -->
+  <link rel="prefetch" href={nextUrl} />
+  
   <div class="min-h-screen bg-gradient flex flex-col items-center justify-center p-4">
     <div class="w-full max-w-md">
       <h1 class="text-4xl font-bold mb-6 text-center text-shadow">
@@ -30,12 +40,22 @@ if (updatedResponse && updatedResponse.data) {
       
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">Califica tu experiencia</h2>
-        <!-- Se pasan ambos identificadores -->
+        <!-- Fallback para emojis -->
+        <noscript>
+          <div class="flex justify-between w-full px-4 py-6 text-center">
+            <div class="flex flex-col items-center">😠<div class="mt-2">Muy insatisfecho</div></div>
+            <div class="flex flex-col items-center">🙁<div class="mt-2">Insatisfecho</div></div>
+            <div class="flex flex-col items-center">😐<div class="mt-2">Neutral</div></div>
+            <div class="flex flex-col items-center">🙂<div class="mt-2">Satisfecho</div></div>
+            <div class="flex flex-col items-center">😍<div class="mt-2">Muy satisfecho</div></div>
+          </div>
+        </noscript>
+        
         <RatingForm 
           client:load 
           restaurantId={restaurant.id.toString()}
           restaurantDocumentId={documentId}
-          nextUrl={`/improvement?local=${documentId}`}
+          nextUrl={nextUrl}
           linkMaps={restaurant.linkMaps}
         />
       </div>
@@ -50,4 +70,57 @@ if (updatedResponse && updatedResponse.data) {
   .card:hover {
     transform: translateY(-5px);
   }
+  
+  /* Estilos de fallback para emojis */
+  noscript .flex {
+    display: flex;
+  }
+  noscript .flex-col {
+    flex-direction: column;
+  }
+  noscript .items-center {
+    align-items: center;
+  }
+  noscript .justify-between {
+    justify-content: space-between;
+  }
+  noscript .mt-2 {
+    margin-top: 0.5rem;
+  }
+  noscript .text-center {
+    text-align: center;
+  }
+  noscript .px-4 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  noscript .py-6 {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
 </style>
+
+<script>
+  // Script para precarga de emojis y assets críticos
+  document.addEventListener('DOMContentLoaded', () => {
+    // Asegurarnos que los emojis están cargados
+    const emojis = ['😠', '🙁', '😐', '🙂', '😍'];
+    const preloadDiv = document.createElement('div');
+    preloadDiv.style.opacity = '0';
+    preloadDiv.style.position = 'absolute';
+    preloadDiv.style.pointerEvents = 'none';
+    preloadDiv.textContent = emojis.join('');
+    document.body.appendChild(preloadDiv);
+    
+    // Precarga de la siguiente página
+    const prefetchImprovement = document.createElement('link');
+    prefetchImprovement.rel = 'prefetch';
+    prefetchImprovement.href = '/improvement?local=' + new URLSearchParams(window.location.search).get('local');
+    document.head.appendChild(prefetchImprovement);
+    
+    // Eliminar el div después de un segundo
+    setTimeout(() => {
+      document.body.removeChild(preloadDiv);
+    }, 1000);
+  });
+</script>
