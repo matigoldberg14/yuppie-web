@@ -1,206 +1,167 @@
 ---
 // src/pages/tyc.astro
-import Layout from '../layouts/Layout.astro';
-return Astro.redirect('/404');
+import SharedLayout from '../layouts/SharedLayout.astro';
+import { Card } from '../components/ui/card';
+
 ---
 
-<Layout title="Términos y Condiciones | Yuppie">
+<SharedLayout title="Términos y Condiciones | Yuppie">
   <div class="min-h-screen">
-    <header class="px-8 lg:px-12 h-20 flex items-center bg-white border-b border-gray-200">
-      <a class="flex items-center justify-center" href="/">
-        <img
-          src="/logo_grande.png"
-          alt="Yuppie Logo"
-          class="h-10 w-auto"
-        />
-      </a>
-      <nav class="ml-auto flex gap-6 sm:gap-8">
-        <a class="text-base font-medium text-primary hover:text-primary-light transition-colors" href="/">
-          Inicio
-        </a>
-      </nav>
-    </header>
-
-    <main>
-      <section class="bg-primary py-12">
-        <div class="container mx-auto px-4">
-          <div class="max-w-3xl mx-auto text-center">
-            <h1 class="text-4xl font-bold text-white mb-4">
-              Términos y Condiciones
-            </h1>
-            <p class="text-white/80">
-              Última actualización: 08/02/2025
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section class="py-12 bg-gray-50">
-        <div class="container mx-auto px-4">
-          <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-sm">
-            <div class="p-8 space-y-8 prose prose-lg max-w-none">
-              <p class="text-gray-600 leading-relaxed">
-                Estos Términos y Condiciones (en adelante, los "Términos") regulan el acceso y uso de la plataforma de gestión de reseñas y experiencia de clientes de Yuppie (en adelante, "la Plataforma", "nosotros" o "el Servicio").
-              </p>
-
-              <div class="space-y-6">
-                <h2 class="text-2xl font-bold text-primary">1. Aceptación de los Términos</h2>
-                <p class="text-gray-600">
-                  Al marcar la casilla de aceptación o utilizar la Plataforma, el usuario declara haber leído, entendido y aceptado estos Términos. En caso de no estar de acuerdo, debe abstenerse de utilizar los servicios de Yuppie.
-                </p>
-
-                <h2 class="text-2xl font-bold text-primary">2. Identificación de la Empresa</h2>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Yuppie es el nombre comercial bajo el cual se brinda el servicio SaaS.</li>
-                  <li>Más detalles (razón social, dirección fiscal) podrán ser solicitados a info@yuppiecx.com.ar.</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-primary">3. Objeto del Contrato / Descripción del Servicio</h2>
-                <p class="text-gray-600">Yuppie ofrece un software como servicio (SaaS) que permite a dueños o gerentes de locales comerciales:</p>
-                <ol class="list-decimal pl-6 text-gray-600">
-                  <li>Recibir y gestionar reseñas de clientes.</li>
-                  <li>Ser notificados de reseñas negativas o incidencias.</li>
-                  <li>Analizar métricas y estadísticas de la satisfacción del cliente.</li>
-                  <li>Realizar evaluaciones internas sobre el desempeño del personal.</li>
-                </ol>
-                <p class="text-gray-600">El acceso al Servicio se otorga bajo una licencia de uso no exclusiva, intransferible y limitada conforme a estos Términos.</p>
-
-                <h2 class="text-2xl font-bold text-primary">4. Registro de Usuarios y Cuentas</h2>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Las cuentas son creadas por Yuppie al confirmar el pago y la contratación del servicio por parte del local comercial.</li>
-                  <li>Se requiere ser mayor de edad y/o representante legal de un comercio para suscribir estos Términos.</li>
-                  <li>Los usuarios finales (empleados y clientes que dejan reseñas) pueden acceder a la Plataforma sin un registro individual, siempre dentro del ámbito de uso del local contratante.</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-primary">5. Obligaciones y Responsabilidades del Usuario</h2>
-                <p class="text-gray-600">Uso Responsable: Los usuarios deben utilizar el Servicio con respeto y conforme a la ley, absteniéndose de actividades maliciosas o fraudulentas.</p>
-                <p class="text-gray-600">Prohibiciones:</p>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Publicar contenido ilegal, difamatorio, ofensivo o que vulnere derechos de terceros.</li>
-                  <li>Usar datos personales de forma indebida.</li>
-                  <li>Realizar spam masivo o cualquier intento de saturar o dañar la reputación de un local.</li>
-                  <li>Intentar acceder a áreas restringidas o violar la seguridad del Servicio.</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-primary">6. Planes y Pagos</h2>
-                <h3 class="text-xl font-semibold text-gray-800 mt-4">Estructura de Pagos:</h3>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Pago por local, con tarifa reducida para múltiples locales.</li>
-                  <li>Pago mensual o anual (este último con precio más económico).</li>
-                </ul>
-                <h3 class="text-xl font-semibold text-gray-800 mt-4">Condiciones de Facturación:</h3>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Cargo automático en la cuenta o tarjeta designada.</li>
-                  <li>Se aceptan pagos en dólares o pesos.</li>
-                  <li>No ofrecemos reembolsos.</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-primary">7. Prueba Gratuita (Free Trial)</h2>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Se ofrece un mes de prueba gratuito sin obligación de compra.</li>
-                  <li>Al finalizar el periodo de prueba, el usuario será automáticamente facturado a menos que cancele.</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-primary">8. Política de Cancelación y Reembolso</h2>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Los usuarios pueden cancelar en cualquier momento.</li>
-                  <li>No se otorgan reembolsos totales ni parciales, incluso si la cancelación ocurre antes de que finalice el periodo pagado.</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-primary">9. Derechos de Propiedad Intelectual</h2>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Titularidad: El software, la marca "Yuppie", el diseño y los materiales asociados son propiedad exclusiva de Yuppie.</li>
-                  <li>Protección: El usuario no adquiere ningún derecho de propiedad intelectual al usar la Plataforma. Queda prohibido descompilar, copiar o reproducir total o parcialmente el software.</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-primary">10. Uso de Contenido Generado por el Usuario</h2>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Los comentarios, reseñas y demás contenidos que el usuario (o los clientes finales) incorporen pueden ser moderados o eliminados por Yuppie si incumplen estos Términos o la legislación vigente.</li>
-                  <li>El usuario autoriza a Yuppie a reproducir y mostrar dichos contenidos dentro de la Plataforma y para fines de soporte, mejora del servicio o notificaciones.</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-primary">11. Responsabilidad y Limitaciones</h2>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Exención de Responsabilidad: Yuppie no garantiza la disponibilidad ininterrumpida de la Plataforma ni se responsabiliza por la eliminación o alteración de reseñas en servicios externos.</li>
-                  <li>Problemas Técnicos: No asumimos responsabilidad por fallas en servidores de terceros o brechas de seguridad fuera de nuestro control razonable.</li>
-                  <li>Límite de Responsabilidad Económica: En la medida permitida por la ley, cualquier reclamo se limitará a la cantidad efectivamente pagada a Yuppie en los últimos 12 meses.</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-primary">12. Suspensión o Terminación de la Cuenta</h2>
-                <p class="text-gray-600">Podemos suspender o cerrar una cuenta por uso indebido, incumplimiento de estos Términos o a nuestra sola discreción, sin previo aviso.</p>
-
-                <h2 class="text-2xl font-bold text-primary">13. Garantías</h2>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Sin Garantía Implícita: El servicio se presta "tal cual" y no ofrecemos garantías sobre disponibilidad, tiempos de respuesta ni sobre la compatibilidad con los sistemas del usuario.</li>
-                  <li>Exclusiones: No garantizamos resultados concretos en el posicionamiento o reputación del local en plataformas externas.</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-primary">14. Legislación Aplicable y Resolución de Disputas</h2>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Estos Términos se rigen por las leyes de la República Argentina.</li>
-                  <li>Cualquier controversia se someterá a los tribunales competentes de la Ciudad de Buenos Aires, salvo que la normativa aplicable disponga otro fuero imperativo.</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-primary">15. Modificaciones a los Términos</h2>
-                <ul class="list-disc pl-6 text-gray-600">
-                  <li>Yuppie se reserva el derecho de modificar estos Términos en cualquier momento.</li>
-                  <li>Se notificará a los usuarios por correo electrónico y se publicará la versión actualizada en www.yuppiecx.com.ar/tyc.</li>
-                  <li>Si el usuario no objeta dentro de las siguientes 24 horas (o el plazo mínimo legal que aplique) desde la notificación, se considerará que acepta las modificaciones.</li>
-                </ul>
-
-                <h2 class="text-2xl font-bold text-primary">16. Contacto</h2>
-                <p class="text-gray-600">Para consultas, reclamos o notificaciones legales, por favor escribir a info@yuppiecx.com.ar</p>
-
-                <h2 class="text-2xl font-bold text-primary">17. Aceptación de los Términos</h2>
-                <p class="text-gray-600">El usuario manifiesta su conformidad con estos Términos al marcar la casilla de aceptación o al usar la Plataforma.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="bg-primary py-12">
+    <!-- Hero Section -->
+    <section class="py-20 relative overflow-hidden">
       <div class="container mx-auto px-4">
-        <div class="text-center text-white/80">
-          <p>© 2024 Yuppie. Todos los derechos reservados.</p>
+        <div class="max-w-3xl mx-auto text-center">
+          <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">
+            Términos y Condiciones
+          </h1>
+          <p class="text-xl text-white/80">
+            Última actualización: 08/02/2025
+          </p>
         </div>
       </div>
-    </footer>
+    </section>
+
+    <!-- Content Section -->
+    <section class="py-12">
+      <div class="container mx-auto px-4">
+        <Card className="max-w-4xl mx-auto bg-black/40 backdrop-blur-xl border border-white/10">
+          <div class="p-8 space-y-8 prose prose-invert prose-lg max-w-none">
+            <p class="text-white/80 leading-relaxed">
+              Estos Términos y Condiciones (en adelante, los "Términos") regulan el acceso y uso de la plataforma de gestión de reseñas y experiencia de clientes de Yuppie (en adelante, "la Plataforma", "nosotros" o "el Servicio").
+            </p>
+
+            <div class="space-y-6">
+              <h2 class="text-2xl font-bold text-white">1. Aceptación de los Términos</h2>
+              <p class="text-white/80">
+                Al marcar la casilla de aceptación o utilizar la Plataforma, el usuario declara haber leído, entendido y aceptado estos Términos. En caso de no estar de acuerdo, debe abstenerse de utilizar los servicios de Yuppie.
+              </p>
+
+              <h2 class="text-2xl font-bold text-white">2. Identificación de la Empresa</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Yuppie es el nombre comercial bajo el cual se brinda el servicio SaaS.</li>
+                <li>Más detalles (razón social, dirección fiscal) podrán ser solicitados a info@yuppiecx.com.ar.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">3. Objeto del Contrato / Descripción del Servicio</h2>
+              <p class="text-white/80">Yuppie ofrece un software como servicio (SaaS) que permite a dueños o gerentes de locales comerciales:</p>
+              <ol class="list-decimal pl-6 text-white/80">
+                <li>Recibir y gestionar reseñas de clientes.</li>
+                <li>Ser notificados de reseñas negativas o incidencias.</li>
+                <li>Analizar métricas y estadísticas de la satisfacción del cliente.</li>
+                <li>Realizar evaluaciones internas sobre el desempeño del personal.</li>
+              </ol>
+
+              <h2 class="text-2xl font-bold text-white">4. Registro de Usuarios y Cuentas</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Las cuentas son creadas por Yuppie al confirmar el pago y la contratación del servicio por parte del local comercial.</li>
+                <li>Se requiere ser mayor de edad y/o representante legal de un comercio para suscribir estos Términos.</li>
+                <li>Los usuarios finales (empleados y clientes que dejan reseñas) pueden acceder a la Plataforma sin un registro individual, siempre dentro del ámbito de uso del local contratante.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">5. Obligaciones y Responsabilidades del Usuario</h2>
+              <p class="text-white/80">Uso Responsable: Los usuarios deben utilizar el Servicio con respeto y conforme a la ley, absteniéndose de actividades maliciosas o fraudulentas.</p>
+              <p class="text-white/80">Prohibiciones:</p>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Publicar contenido ilegal, difamatorio, ofensivo o que vulnere derechos de terceros.</li>
+                <li>Usar datos personales de forma indebida.</li>
+                <li>Realizar spam masivo o cualquier intento de saturar o dañar la reputación de un local.</li>
+                <li>Intentar acceder a áreas restringidas o violar la seguridad del Servicio.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">6. Planes y Pagos</h2>
+              <h3 class="text-xl font-semibold text-white mt-4">Estructura de Pagos:</h3>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Pago por local, con tarifa reducida para múltiples locales.</li>
+                <li>Pago mensual o anual (este último con precio más económico).</li>
+              </ul>
+              <h3 class="text-xl font-semibold text-white mt-4">Condiciones de Facturación:</h3>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Cargo automático en la cuenta o tarjeta designada.</li>
+                <li>Se aceptan pagos en dólares o pesos.</li>
+                <li>No ofrecemos reembolsos.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">7. Prueba Gratuita (Free Trial)</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Se ofrece un mes de prueba gratuito sin obligación de compra.</li>
+                <li>Al finalizar el periodo de prueba, el usuario será automáticamente facturado a menos que cancele.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">8. Política de Cancelación y Reembolso</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Los usuarios pueden cancelar en cualquier momento.</li>
+                <li>No se otorgan reembolsos totales ni parciales, incluso si la cancelación ocurre antes de que finalice el periodo pagado.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">9. Derechos de Propiedad Intelectual</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Titularidad: El software, la marca "Yuppie", el diseño y los materiales asociados son propiedad exclusiva de Yuppie.</li>
+                <li>Protección: El usuario no adquiere ningún derecho de propiedad intelectual al usar la Plataforma. Queda prohibido descompilar, copiar o reproducir total o parcialmente el software.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">10. Uso de Contenido Generado por el Usuario</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Los comentarios, reseñas y demás contenidos que el usuario (o los clientes finales) incorporen pueden ser moderados o eliminados por Yuppie si incumplen estos Términos o la legislación vigente.</li>
+                <li>El usuario autoriza a Yuppie a reproducir y mostrar dichos contenidos dentro de la Plataforma y para fines de soporte, mejora del servicio o notificaciones.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">11. Responsabilidad y Limitaciones</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Exención de Responsabilidad: Yuppie no garantiza la disponibilidad ininterrumpida de la Plataforma ni se responsabiliza por la eliminación o alteración de reseñas en servicios externos.</li>
+                <li>Problemas Técnicos: No asumimos responsabilidad por fallas en servidores de terceros o brechas de seguridad fuera de nuestro control razonable.</li>
+                <li>Límite de Responsabilidad Económica: En la medida permitida por la ley, cualquier reclamo se limitará a la cantidad efectivamente pagada a Yuppie en los últimos 12 meses.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">12. Suspensión o Terminación de la Cuenta</h2>
+              <p class="text-white/80">Podemos suspender o cerrar una cuenta por uso indebido, incumplimiento de estos Términos o a nuestra sola discreción, sin previo aviso.</p>
+
+              <h2 class="text-2xl font-bold text-white">13. Garantías</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Sin Garantía Implícita: El servicio se presta "tal cual" y no ofrecemos garantías sobre disponibilidad, tiempos de respuesta ni sobre la compatibilidad con los sistemas del usuario.</li>
+                <li>Exclusiones: No garantizamos resultados concretos en el posicionamiento o reputación del local en plataformas externas.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">14. Legislación Aplicable y Resolución de Disputas</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Estos Términos se rigen por las leyes de la República Argentina.</li>
+                <li>Cualquier controversia se someterá a los tribunales competentes de la Ciudad de Buenos Aires, salvo que la normativa aplicable disponga otro fuero imperativo.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">15. Modificaciones a los Términos</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Yuppie se reserva el derecho de modificar estos Términos en cualquier momento.</li>
+                <li>Se notificará a los usuarios por correo electrónico y se publicará la versión actualizada en www.yuppiecx.com.ar/tyc.</li>
+                <li>Si el usuario no objeta dentro de las siguientes 24 horas (o el plazo mínimo legal que aplique) desde la notificación, se considerará que acepta las modificaciones.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">16. Contacto</h2>
+              <p class="text-white/80">Para consultas, reclamos o notificaciones legales, por favor escribir a info@yuppiecx.com.ar</p>
+
+              <h2 class="text-2xl font-bold text-white">17. Aceptación de los Términos</h2>
+              <p class="text-white/80">El usuario manifiesta su conformidad con estos Términos al marcar la casilla de aceptación o al usar la Plataforma.</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </section>
   </div>
-</Layout>
+</SharedLayout>
 
 <style>
-  .container {
-    max-width: 1200px;
-  }
-
   .prose h2 {
-    margin-top: 2rem;
-    margin-bottom: 1rem;
-    color: theme('colors.primary.DEFAULT');
-  }
-
-  .prose h3 {
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
-    color: theme('colors.gray.800');
+    @apply text-white border-b border-white/10 pb-4 mb-6;
   }
 
   .prose p {
-    margin-top: 1rem;
-    margin-bottom: 1rem;
-    line-height: 1.75;
+    @apply text-white/80;
   }
 
   .prose ul, .prose ol {
-    margin-top: 1rem;
-    margin-bottom: 1rem;
+    @apply text-white/80;
   }
 
   .prose li {
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
+    @apply mb-2;
   }
 
   @media (max-width: 640px) {
@@ -210,10 +171,6 @@ return Astro.redirect('/404');
     
     .prose h2 {
       font-size: 1.5rem;
-    }
-
-    .prose h3 {
-      font-size: 1.25rem;
     }
   }
 </style>

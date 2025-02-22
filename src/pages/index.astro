@@ -1,474 +1,676 @@
 ---
 // src/pages/index.astro
-import Layout from '../layouts/Layout.astro';
+import HomeLayout from '../layouts/HomeLayout.astro';
+import { motion } from "framer-motion";
+import { 
+  ChartBarIcon, 
+  ChatBubbleBottomCenterTextIcon,
+  BoltIcon,
+  StarIcon,
+  ArrowRightIcon,
+  Bars3Icon,
+  XMarkIcon
+} from '@heroicons/react/24/outline';
+
+// Importar componentes necesarios
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/card';
-import { AccordionDemo } from '../components/ui/AccordionDemo';
-import {
-  Star,
-  AlertCircle,
-  MessageSquare,
-  Users2,
-  BarChart3,
-  Calendar,
-  Target,
-  Lightbulb,
-  Home,
-  TrendingUp,
-  Smartphone,
-  Nfc,
-  Users,
-} from 'lucide-react';
+import { Heading } from '@/components/ui/heading';
+import type { ComponentType } from 'react';
+import type { SVGProps } from 'react';
 
-const features = [
+
+// Types
+interface Feature {
+  title: string;
+  description: string;
+  icon: HeroIcon;  // Usamos el tipo correcto para los iconos
+}
+
+interface Testimonial {
+  rating: number;
+  content: string;
+  author: {
+    name: string;
+    role: string;
+    company: string;
+    image: string;
+  };
+}
+
+interface Step {
+  number: number;
+  title: string;
+  description: string;
+}
+
+type HeroIcon = ComponentType<SVGProps<SVGSVGElement>>;
+
+
+// Datos para las secciones
+const features: Feature[] = [
   {
-    Icon: Nfc,
-    title: 'Recibe más reseñas con facilidad',
-    description: 'Sistema NFC y encuestas rápidas en solo 4 clics, sin molestar al cliente'
+    title: "Feedback en Tiempo Real",
+    description: "Recibe y gestiona comentarios de tus clientes al instante",
+    icon: ChatBubbleBottomCenterTextIcon as HeroIcon
   },
   {
-    Icon: AlertCircle,
-    title: 'Actúa en tiempo real ante reseñas negativas',
-    description: 'Recibe alertas automáticas de reseñas negativas y mejora al instante'
+    title: "Análisis Detallado",
+    description: "Métricas y estadísticas para mejorar tu negocio",
+    icon: ChartBarIcon as HeroIcon
   },
   {
-    Icon: BarChart3,
-    title: 'Obtén métricas clave',
-    description: 'Análisis automatizado de calificaciones y tendencias'
+    title: "Respuesta Rápida",
+    description: "Actúa inmediatamente ante las opiniones de tus clientes",
+    icon: BoltIcon as HeroIcon
   }
 ];
 
-const process = [
+const testimonials: Testimonial[] = [
   {
-    Icon: AlertCircle,
-    title: 'Responde en minutos',
-    description: 'Alertas automáticas de nuevas reseñas'
+    rating: 5,
+    content: "Yuppie ha revolucionado la forma en que manejamos nuestras reseñas. Nuestro rating promedio subió de 4.2 a 4.8 en solo tres meses.",
+    author: {
+      name: "María González",
+      role: "Gerente",
+      company: "Restaurante El Sabor",
+      image: "/testimonial-1.jpg"
+    }
   },
   {
-    Icon: Smartphone,
-    title: 'Fácil recolección',
-    description: 'A través de NFC y encuestas rápidas'
+    rating: 5,
+    content: "La plataforma es intuitiva y los insights que obtenemos son invaluables para mejorar nuestro servicio.",
+    author: {
+      name: "Carlos Ruiz",
+      role: "Director",
+      company: "Hotel Vista Mar",
+      image: "/testimonial-2.jpg"
+    }
   },
   {
-    Icon: TrendingUp,
-    title: 'Análisis de calificaciones',
-    description: 'Identifica patrones y detecta áreas de mejora'
-  },
-  {
-    Icon: Users,
-    title: 'Evaluación del Equipo',
-    description: 'Evalúa el desempeño de tu equipo'
+    rating: 5,
+    content: "El soporte al cliente es excepcional y las actualizaciones constantes mejoran la plataforma cada vez más.",
+    author: {
+      name: "Ana Martínez",
+      role: "Propietaria",
+      company: "Café La Esquina",
+      image: "/testimonial-3.jpg"
+    }
   }
 ];
 
-const pricingTiers = [
+const steps: Step[] = [
   {
-    range: '1-5',
-    monthly: 125,
-    annual: 104,
-    setupFee: 50
+    number: 1,
+    title: "Agendá tu Demo",
+    description: "Coordiná una reunión con nuestro equipo y descubrí cómo Yuppie puede transformar la forma en la que manejás tu negocio."
   },
   {
-    range: '6-10',
-    monthly: 110,
-    annual: 92,
-    setupFee: 0
+    number: 2,
+    title: "Proceso de onboarding",
+    description: "Nos encargamos de todo: en pocos días tendrás tu sistema funcionando y listo para recibir feedback."
   },
   {
-    range: '11-25',
-    monthly: 90,
-    annual: 75,
-    setupFee: 0
-  },
-  {
-    range: '25+',
-    monthly: 75,
-    annual: 63,
-    setupFee: 0
+    number: 3,
+    title: "Analiza y Mejora",
+    description: "Accedé a insights valiosos y optimizá la experiencia de tus clientes para hacer crecer tu negocio."
   }
 ];
 
-const testimonials = [
-  {
-    text: "Con Yuppie, conseguimos un 30% más de reseñas en un mes, y nuestra calificación promedio subió de 4.2 a 4.6.",
-    author: "Restaurante Palermo"
-  },
-  {
-    text: "La facilidad de uso y el sistema NFC han revolucionado la forma en que recolectamos feedback de nuestros clientes.",
-    author: "Café Central"
-  }
-];
-
-const faqs = [
-  {
-    question: "¿Cómo funciona el sistema NFC?",
-    answer: "El sistema NFC permite a tus clientes dejar reseñas simplemente acercando su teléfono al punto NFC. No necesitan descargar ninguna aplicación."
-  },
-  {
-    question: "¿Puedo cambiar mi cantidad de locales en el futuro?",
-    answer: "Sí, puedes modificar la cantidad de locales en cualquier momento. El precio se ajustará automáticamente según tu nuevo plan."
-  },
-  {
-    question: "¿Qué pasa si cancelo mi suscripción anual?",
-    answer: "Si cancelas tu suscripción anual, podrás seguir usando el servicio hasta el final del período pagado."
-  }
-];
-
-return Astro.redirect('/404');
 ---
 
-<Layout title="Inicio | Yuppie">
-  <div class="flex flex-col min-h-screen">
-    <!-- Header actualizado -->
-    <header class="px-8 lg:px-12 h-20 flex items-center bg-white border-b border-gray-200">
-      <a class="flex items-center justify-center" href="#">
-        <img
-          src="/violeta.png"
-          alt="Yuppie Logo"
-          class="h-10 w-auto"
-        />
-      </a>
-      <nav class="ml-auto flex gap-6 sm:gap-8">
-        <a 
-        class="text-base font-medium text-primary hover:text-primary-light hover:scale-105 transform transition-all duration-200" 
-        href="#features"
-      >
-        Características
-      </a>
-      <a 
-      class="text-base font-medium text-primary hover:text-primary-light hover:scale-105 transform transition-all duration-200" 
-      href="#features"
-    >
+<HomeLayout title="Yuppie - Mejora la experiencia de tus clientes">
+  <!-- Particles Background -->
+  <div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-to-b from-black via-blue-900/20 to-black"></div>
+    <div id="particles-js" class="absolute inset-0"></div>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="fixed inset-0 bg-black/90 backdrop-blur-lg z-50 hidden lg:hidden">
+    <div class="container mx-auto px-4 py-8">
+      <button id="close-menu" class="absolute top-6 right-6 text-white">
+        <XMarkIcon className="w-8 h-8" />
+      </button>
+      <div class="mb-8 text-center">
+        <a href="/">
+          <img 
+            src="/logo_grande.png" 
+            alt="Yuppie Logo" 
+            class="h-10 mx-auto" 
+            width="160"
+            height="40"
+          />
+        </a>
+      </div>
+      <nav class="flex flex-col space-y-6 text-center mt-2">
+        <a href="#caracteristicas" class="text-2xl text-white hover:text-blue-400 transition-colors">
+          Características
+        </a>
+        <a href="#como-funciona" class="text-2xl text-white hover:text-blue-400 transition-colors">
+          Cómo Funciona
+        </a>
+        <a href="#precios" class="text-2xl text-white hover:text-blue-400 transition-colors">
           Precios
         </a>
-        <a 
-        class="text-base font-medium text-primary hover:text-primary-light hover:scale-105 transform transition-all duration-200" 
-        href="#features"
-      >
-          Contacto
+        <div class="pt-6 flex flex-col space-y-4">
+          <a href="https://calendly.com/matigarfio/30min" target="_blank" rel="noopener noreferrer">
+            <Button variant="primary" size="lg">
+              Comenzar Gratis
+            </Button>
+          </a>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="fixed w-full z-40 transition-all duration-300" id="header">
+    <div class="container mx-auto px-4 h-20 flex items-center justify-between">
+      <a href="/" class="flex items-center space-x-2">
+        <img 
+          src="/logo_grande.png" 
+          alt="Yuppie Logo" 
+          class="h-8 w-auto"
+          width="128"
+          height="32"
+        />
+      </a>
+  
+      <nav class="hidden lg:flex items-center space-x-8">
+        <a href="#caracteristicas" class="text-white/80 transition-transform duration-300 hover:text-white hover:-translate-y-1">
+          Características
+        </a>
+        <a href="#como-funciona" class="text-white/80 transition-transform duration-300 hover:text-white hover:-translate-y-1">
+          Cómo Funciona
+        </a>
+        <a href="#demo" class="text-white/80 transition-transform duration-300 hover:text-white hover:-translate-y-1">
+          Reserva tu Demo
         </a>
       </nav>
-    </header>
+  
+      <div class="hidden lg:flex items-center space-x-4">
+        <Button asChild variant="primary" size="lg">
+          <a href="https://calendly.com/matigarfio/30min" target="_blank" rel="noopener noreferrer">
+            Comenzar demo
+          </a>
+        </Button>
+      </div>
+  
+      <button id="open-menu" class="lg:hidden text-white">
+        <Bars3Icon className="w-8 h-8" />
+      </button>
+    </div>
+  </header>
 
-    <main class="flex-1">
-      <!-- Hero Section actualizada -->
-      <section class="w-full py-20 md:py-32 bg-[#2F02CC]">
-        <div class="container px-4 md:px-6 mx-auto">
-          <div class="grid gap-8 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px]">
-            <div class="flex flex-col justify-center max-w-3xl mx-auto text-center lg:text-left lg:mx-0">
-              <h1 class="text-4xl font-bold tracking-tighter sm:text-6xl xl:text-7xl/none text-white mb-8">
-                Gestiona tus reseñas de manera rápida, fácil y efectiva
-              </h1>
-              <p class="text-xl text-gray-200 mb-10">
-                Con Yuppie, responde reseñas, mejora tu reputación y optimiza tu visibilidad online
-              </p>
-              <div>
-                <a 
-                href="/contact" 
-                class="inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-primary bg-white rounded-full hover:bg-white/90 transform hover:scale-105 transition-all duration-200 hover:shadow-yuppie"
-              >
-                Solicita una Demo Gratis
-              </a>
-              </div>
-            </div>
-            <div class="flex items-center justify-center">
-              <img
-                src="/dashboardviejo.png"
-                alt="Yuppie Dashboard"
-                class="rounded-lg shadow-2xl w-full"
-                width={600}
-                height={400}
-              />
-            </div>
-          </div>
+  <!-- Hero Section -->
+  <section class="min-h-screen flex flex-col items-center pt-20 relative overflow-hidden">
+    <div class="container mx-auto px-4 flex flex-col items-center justify-center flex-1 mt-20" data-aos="fade-up" data-aos-duration="1000">
+      <div class="text-center">
+        <Heading as="h1" size="7xl" className="mb-6 tracking-tight">
+          <span class="text-gradient">Revoluciona</span> la Experiencia de tus Clientes
+        </Heading>
+        <p class="text-xl lg:text-2xl text-white/80 mb-8 max-w-3xl mx-auto">
+          Obtén feedback en tiempo real y transforma la satisfacción de tus clientes con nuestra plataforma inteligente
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+          <Button variant="primary" size="lg" className="group">
+            Comenzar Ahora
+          </Button>
         </div>
-      </section>
+      </div>
+    </div>
+  
+    <div class="w-full flex justify-center mb-10" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200">
+      <div class="relative max-w-3xl w-full">
+        <div class="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-purple-500/30 blur-3xl"></div>
+        <img 
+          src="/dashboard_preview.png" 
+          alt="Yuppie Dashboard" 
+          class="relative rounded-lg shadow-2xl animate-float"
+          loading="lazy"
+          width="1200"
+          height="800"
+        />
+      </div>
+    </div>
+  
+    <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent"></div>
+  </section>
 
-      <!-- Features Section actualizada -->
-      <section id="features" class="w-full py-20 bg-white">
-        <div class="container px-4 md:px-6 mx-auto">
-          <div class="grid gap-10 sm:px-10">
-            <div class="space-y-4 text-center">
-              <h2 class="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-primary">
-                ¿Por qué elegir Yuppie?
-              </h2>
-            </div>
-            <div class="grid md:grid-cols-3 gap-8">
-              {features.map(({ Icon, title, description }) => (
-                <Card className="border-2 border-[#2F02CC]/20 bg-white">
-                  <div class="p-6">
-                    <Icon className="h-12 w-12 mb-4 text-[#2F02CC]" />
-                    <h3 class="text-xl font-bold mb-2 text-primary-dark">{title}</h3>
-                    <p class="text-gray-600">{description}</p>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Process Section actualizada -->
-      <section class="w-full py-20 bg-[#f9fafb]">
-        <div class="container px-4 md:px-6 mx-auto">
-          <div class="grid gap-10">
-            <div class="space-y-4 text-center">
-              <h2 class="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-primary-dark">
-                Cómo Yuppie simplifica la gestión de tus reseñas
-              </h2>
-            </div>
-            <div class="grid md:grid-cols-4 gap-8">
-              {process.map(({ Icon, title, description }) => (
-                <div class="flex flex-col items-center text-center space-y-4">
-                  <div class="p-4 bg-[#2F02CC] rounded-full">
-                    <Icon className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 class="text-xl font-bold text-primary-dark">{title}</h3>
-                  <p class="text-gray-600">{description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Pricing Section -->
-      <section id="pricing" class="w-full py-20 bg-white">
-        <div class="container px-4 md:px-6 mx-auto">
-          <div class="text-center mb-12">
-            <h2 class="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-primary-dark">
-              Elige la opción que mejor se adapte a tu negocio
-            </h2>
-          </div>
-          <div class="max-w-3xl mx-auto">
-            <Card className="border-2 border-[#2F02CC]/20">
+  <!-- Features Section -->
+  <section id="caracteristicas" class="py-20 relative">
+    <div class="container mx-auto px-4">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl lg:text-5xl font-bold mb-6">
+          Todo lo que Necesitas para Crecer
+        </h2>
+        <p class="text-xl text-white/80">
+          Herramientas poderosas diseñadas para impulsar tu negocio al siguiente nivel
+        </p>
+      </div>
+  
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {features.map((feature, index) => (
+          <div data-key={feature.title} class="feature-card" data-aos="fade-up">
+            <Card className="card hover:scale-105 transition-all duration-300 h-full">
               <div class="p-6">
-                <!-- Contenido del pricing aquí -->
-                <div class="grid gap-6">
-                  <div class="flex justify-between items-center">
-                    <div>
-                      <h3 class="text-2xl font-bold text-[#2F02CC]">Plan Flexible</h3>
-                      <p class="text-gray-600">Paga por local, sin compromisos</p>
-                    </div>
-                    <div class="text-right">
-                      <p class="text-3xl font-bold text-[#2F02CC]">$199 USD</p>
-                      <p class="text-gray-600">por local/mes</p>
-                    </div>
-                  </div>
-                  <Button 
-                  className="w-full bg-white text-primary border-2 border-primary rounded-full hover:bg-primary hover:text-white transform hover:scale-105 transition-all duration-200 hover:shadow-yuppie"
-                >
-                  Comenzar ahora
-                </Button>
-                
+                <div class="rounded-full bg-blue-500/10 w-16 h-16 flex items-center justify-center mb-6">
+                  <feature.icon className="w-8 h-8 text-blue-400" />
                 </div>
+                <h3 class="text-xl font-semibold mb-4">{feature.title}</h3>
+                <p class="text-white/70">{feature.description}</p>
               </div>
             </Card>
           </div>
-        </div>
-      </section>
-
-      <!-- Testimonials Section -->
-      <section class="w-full py-20 bg-[#2F02CC]">
-        <div class="container px-4 md:px-6 mx-auto">
-          <div class="text-center mb-12">
-            <h2 class="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-white">
-              Así hemos ayudado a negocios como el tuyo
-            </h2>
-          </div>
-          <div class="grid md:grid-cols-2 gap-8">
-            {testimonials.map(({ text, author }) => (
-<Card className="bg-white hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
-  <div class="p-6">
-    <div class="flex items-center space-x-1 mb-4">
-      {[...Array(5)].map(() => (
-        <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-      ))}
+        ))}
+      </div>
     </div>
-    <p class="text-lg mb-4 text-gray-600">{text}</p>
-    <p class="font-bold text-primary-dark">{author}</p>
-  </div>
-</Card>
+  </section>
+  
+  <!-- How it Works -->
+  <section id="como-funciona" class="py-20 scroll-mt-20 bg-gradient-to-b from-primary-light/5 to-primary/5">
+    <div class="container mx-auto px-4">
+      <div class="grid lg:grid-cols-2 gap-12 items-center">
+        <div class="order-2 lg:order-1">
+          <h2 class="text-3xl lg:text-5xl font-bold mb-6">
+            Cómo Funciona Yuppie
+          </h2>
+          <p class="text-xl text-white/80 mb-12">
+            Implementa un sistema de feedback efectivo en 3 simples pasos
+          </p>
+          <div class="space-y-8">
+            {steps.map((step) => (
+  <div 
+    data-key={step.number}
+    class="flex items-start space-x-4"
+    data-aos="fade-right"
+    data-aos-delay={step.number * 100}
+  >
+                <div class="flex-shrink-0 w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold">
+                  {step.number}
+                </div>
+                <div>
+                  <h3 class="text-xl font-semibold mb-2">{step.title}</h3>
+                  <p class="text-white/70">{step.description}</p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
-      </section>
-
-<!-- FAQ Section -->
-<section class="w-full py-20 bg-white">
-  <div class="container px-4 md:px-6 mx-auto">
-    <div class="text-center mb-12">
-      <h2 class="text-4xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-primary-dark">
-        Preguntas Frecuentes
-      </h2>
+        <div class="order-1 lg:order-2 relative">
+          <div class="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-purple-500/30 blur-3xl"></div>
+          <img 
+            src="/how-it-works.png" 
+            alt="Cómo funciona Yuppie" 
+            class="relative rounded-lg shadow-2xl animate-float"
+            loading="lazy"
+            width="800"
+            height="600"
+            data-aos="fade-left"
+          />
+        </div>
+      </div>
     </div>
-    <div class="max-w-3xl mx-auto">
-      <AccordionDemo client:load faqs={faqs} />
-    </div>
-  </div>
-</section>
+  </section>
 
-      <!-- Contact Section actualizada -->
-      <section class="w-full py-20 bg-white">
-        <div class="container px-4 md:px-6 mx-auto">
-          <div class="max-w-3xl mx-auto text-center">
-            <h2 class="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-gray-900 mb-8">
-              ¿Necesitas más información?
-            </h2>
-            <Card className="border-2 border-[#2F02CC]/20">
+  <!-- Demo Section with Calendly -->
+  <section id="demo" class="py-20 scroll-mt-20 bg-gradient-to-b from-primary/5 to-primary-light/5">
+    <div class="container mx-auto px-4">
+      <Heading as="h2" size="5xl" className="text-center mb-12">
+        Agenda una Demo Personalizada
+      </Heading>
+      <Card 
+        className="mx-auto bg-white/5 backdrop-blur-md border border-primary-light/10 w-[600px] max-w-full"
+      >
+        <div 
+          class="calendly-inline-widget"
+          data-url="https://calendly.com/matigarfio/30min?background_color=ffffff&text_color=230e81"
+          style="width:100%; height:700px; margin:0; padding:0; border:none;"
+        >
+        </div>
+        <script 
+          type="text/javascript" 
+          src="https://assets.calendly.com/assets/external/widget.js" 
+          async
+        ></script>
+      </Card>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+   <!--
+  <section class="py-20 relative">
+    <div class="container mx-auto px-4">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl lg:text-5xl font-bold mb-6">
+          Lo que Dicen Nuestros Clientes
+        </h2>
+        <p class="text-xl text-white/80">
+          Descubre cómo Yuppie ha transformado negocios como el tuyo
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {testimonials.map((testimonial, index) => (
+  <div 
+    data-key={testimonial.author.name}
+    class="testimonial-card"
+    data-aos="fade-up"
+    data-aos-delay={index * 100}
+  >
+            <Card className="card h-full">
               <div class="p-6">
-                <form class="space-y-6">
-                  <div class="space-y-2">
-                    <label class="text-sm font-medium text-primary-dark">Nombre</label>
-                    <input 
-                      type="text" 
-                      placeholder="Tu nombre" 
-                      class="w-full p-3 bg-white/5 border border-primary/20 rounded-md text-primary-dark placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200" 
-                    />
+                <div class="flex items-center mb-4">
+                  {Array.from({ length: testimonial.rating }).map((_, i) => (
+                    <StarIcon key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <p class="text-white/80 mb-6">{testimonial.content}</p>
+                <div class="flex items-center">
+                  <img 
+                    src={testimonial.author.image} 
+                    alt={testimonial.author.name}
+                    class="w-12 h-12 rounded-full mr-4"
+                    loading="lazy"
+                    width="48"
+                    height="48"
+                  />
+                  <div>
+                    <h4 class="font-semibold">{testimonial.author.name}</h4>
+                    <p class="text-sm text-white/60">{testimonial.author.company}</p>
                   </div>
-                  <div class="space-y-2">
-                    <label class="text-sm font-medium text-primary-dark">Email</label>
-                    <input 
-                      type="email" 
-                      placeholder="tu@email.com" 
-                      class="w-full p-3 bg-white/5 border border-primary/20 rounded-md text-primary-dark placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200" 
-                    />
-                  </div>
-                  <div class="space-y-2">
-                    <label class="text-sm font-medium text-primary-dark">Mensaje</label>
-                    <textarea 
-                      placeholder="¿En qué podemos ayudarte?" 
-                      class="w-full p-3 bg-white/5 border border-primary/20 rounded-md text-primary-dark placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200 h-32" 
-                    />
-                  </div>
-                  <Button 
-                  type="submit" 
-                  className="w-full bg-white text-primary border-2 border-primary rounded-full hover:bg-primary hover:text-white transform hover:scale-105 transition-all duration-200 hover:shadow-yuppie"
-                >
-                  Enviar Consulta
-                </Button>
-                </form>
+                </div>
               </div>
             </Card>
           </div>
-        </div>
-      </section>
-    </main>
-
-    <!-- Footer actualizado -->
-    <footer class="w-full py-12 bg-primary">
-      <div class="container px-4 md:px-6 mx-auto">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div class="space-y-4">
-            <h3 class="text-lg font-medium text-white">Sobre Nosotros</h3>
-            <ul class="space-y-2">
-              <li>
-                <a 
-                href="/blog" 
-                class="text-gray-300 hover:text-white flex items-center gap-2 transform hover:translate-x-1 transition-all duration-200"
-              >
-                Blog
-              </a>
-              </li>
-              <li>
-                <a href="/contact" class="text-gray-300 hover:text-white flex items-center gap-2 transform hover:translate-x-1 transition-all duration-200">
-                  Contacto</a>
-              </li>
-            </ul>
-          </div>
-          
-          <div class="space-y-4">
-            <h3 class="text-lg font-medium text-white">Legal</h3>
-            <ul class="space-y-2">
-              <li>
-                <a href="/tyc" class="text-gray-300 hover:text-white flex items-center gap-2 transform hover:translate-x-1 transition-all duration-200">Términos y Condiciones</a>
-              </li>
-              <li>
-                <a href="/privacy" class="text-gray-300 hover:text-white flex items-center gap-2 transform hover:translate-x-1 transition-all duration-200">Privacidad</a>
-              </li>
-            </ul>
-          </div>
-          
-          <div class="space-y-4">
-            <h3 class="text-lg font-medium text-white">Redes Sociales</h3>
-            <ul class="space-y-2">
-              <li>
-                <a 
-                href="https://linkedin.com" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                class="text-gray-300 hover:text-white flex items-center gap-2 transform hover:translate-x-1 hover:scale-105 transition-all duration-200"
-              >
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                </svg>
-                LinkedIn
-              </a>
-              </li>
-              <li>
-                <a href="https://www.instagram.com/yuppie.ar/" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  class="text-gray-300 hover:text-white flex items-center gap-2 transform hover:translate-x-1 hover:scale-105 transition-all duration-200"
-                >
-                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                  </svg>
-                  Instagram
-                </a>
-              </li>
-            </ul>
-          </div>
-          
-          <div class="space-y-4">
-            <h3 class="text-lg font-medium text-white">Newsletter</h3>
-            <form class="flex flex-col sm:flex-row gap-2">
-              <input
-                type="email"
-                placeholder="tu@email.com"
-                class="flex-1 px-4 py-2 rounded-md bg-white/10 border border-white/20 text-white placeholder:text-gray-400"
-              />
-              <Button 
-              type="submit" 
-              variant="secondary" 
-              className="whitespace-nowrap bg-white text-primary hover:bg-primary hover:text-white transform hover:scale-105 transition-all duration-200 rounded-full"
-            >
-              Suscribirse
-            </Button>
-            </form>
-          </div>
-        </div>
-        
-        <div class="mt-8 pt-8 border-t border-gray-800">
-          <p class="text-center text-gray-400">
-            © 2024 Yuppie. Todos los derechos reservados.
+        ))}
+      </div>
+    </div>
+  </section>
+-->
+  <!-- CTA Section -->
+  <section class="py-20 relative overflow-hidden">
+    <div class="container mx-auto px-4">
+      <Card className="card relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20"></div>
+        <div class="relative p-12 text-center">
+          <h2 class="text-3xl lg:text-5xl font-bold mb-6">
+            Comienza a Mejorar tu Negocio Hoy
+          </h2>
+          <p class="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
+            Únete a cientos de negocios que ya están mejorando con Yuppie
           </p>
+          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button variant="primary" size="lg">
+              <a href="https://calendly.com/matigarfio/30min" target="_blank" rel="noopener noreferrer">
+                Comenzar prueba
+              </a>
+            </Button>
+            <Button variant="secondary" size="lg">
+              Contacto
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  </section>
+
+ <!-- Footer -->
+<!-- Footer -->
+<footer class="py-12 border-t border-white/10">
+  <div class="container mx-auto px-4">
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+      <div>
+        <img 
+          src="/logo_grande.png" 
+          alt="Yuppie Logo" 
+          class="h-8 w-auto mb-4"
+          width="128"
+          height="32"
+        />
+        <p class="text-white/60 mb-4">
+          Cada experiencia es una oportunidad!
+        </p>
+        <div class="flex space-x-4">
+          <a 
+            href="https://www.instagram.com/yuppie.ar/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="text-white/60 hover:text-white transition-colors"
+          >
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.17.06 1.805.249 2.227.419.562.217.96.477 1.382.896.419.42.679.819.896 1.381.17.422.36 1.057.419 2.227.058 1.265.07 1.645.07 4.85s-.012 3.585-.07 4.85c-.06 1.17-.249 1.805-.419 2.227-.217.562-.477.96-.896 1.382-.419.419-.819.679-1.381.896-.422.17-1.057.36-2.227.419-1.265.058-1.645.07-4.85.07s-3.585-.012-4.85-.07c-1.17-.06-1.805-.249-2.227-.419-.562-.217-.96-.477-1.382-.896-.419-.419-.679-.819-.896-1.381-.17-.422-.36-1.057-.419-2.227-.058-1.265-.07-1.645-.07-4.85s.012-3.585.07-4.85c.06-1.17.249-1.805.419-2.227.217-.562.477-.96.896-1.382.419-.419.819-.679 1.381-.896.422-.17 1.057-.36 2.227-.419 1.265-.058 1.645-.07 4.85-.07zm0-2.163c-3.259 0-3.667.014-4.947.072-1.277.058-2.148.261-2.913.558-.789.306-1.459.717-2.126 1.384s-1.078 1.337-1.384 2.126c-.297.765-.5 1.636-.558 2.913-.058 1.28-.072 1.688-.072 4.947s.014 3.667.072 4.947c.058 1.277.261 2.148.558 2.913.306.789.717 1.459 1.384 2.126s1.337 1.078 2.126 1.384c.765.297 1.636.5 2.913.558 1.28.058 1.688.072 4.947.072s3.667-.014 4.947-.072c1.277-.058 2.148-.261 2.913-.558.789-.306 1.459-.717 2.126-1.384s1.078-1.337 1.384-2.126c.297-.765.5-1.636.558-2.913.058-1.28.072-1.688.072-4.947s-.014-3.667-.072-4.947c-.058-1.277-.261-2.148-.558-2.913-.306-.789-.717-1.459-1.384-2.126s-1.337-1.078-2.126-1.384c-.765-.297-1.636-.5-2.913-.558-1.28-.058-1.688-.072-4.947-.072zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.162 6.162 6.162 6.162-2.759 6.162-6.162-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.791-4-4s1.791-4 4-4 4 1.791 4 4-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.441s.645 1.441 1.441 1.441c.795 0 1.439-.645 1.439-1.441s-.644-1.441-1.439-1.441z"/>
+            </svg>
+          </a>
+          <a 
+            href="https://www.linkedin.com/company/yuppiear" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="text-white/60 hover:text-white transition-colors"
+          >
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+            </svg>
+          </a>
         </div>
       </div>
-    </footer>
+
+      <div>
+        <h4 class="font-semibold mb-4">Legal</h4>
+        <ul class="space-y-2">
+          <li>
+            <a href="/privacidad" class="text-white/60 hover:text-white transition-colors">
+              Privacidad
+            </a>
+          </li>
+          <li>
+            <a href="/terminos" class="text-white/60 hover:text-white transition-colors">
+              Términos
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="font-semibold mb-4">Contacto</h4>
+        <ul class="space-y-2">
+          <li>
+            <a href="/contacto" class="text-white/60 hover:text-white transition-colors">
+              Contacto
+            </a>
+          </li>
+          <li>
+            <a href="mailto:info@yuppiecx.com.ar" class="text-white/60 hover:text-white transition-colors">
+              info@yuppiecx.com.ar
+            </a>
+          </li>
+          <li>
+            <a 
+              href="https://wa.me/5491132523618?text=Hola,%20me%20gustaría%20saber%20más%20sobre%20Yuppie" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="text-white/60 hover:text-white transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+              </svg>
+              Escríbenos por WhatsApp
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="text-center text-sm text-white/60">
+      <p>&copy; {new Date().getFullYear()} Yuppie. Todos los derechos reservados.</p>
+    </div>
   </div>
-</Layout>
+</footer>
+</HomeLayout>
+
+<script>
+  // Tipos para el script
+  interface ScrollOptions {
+    behavior: ScrollBehavior;
+    block?: ScrollLogicalPosition;
+    inline?: ScrollLogicalPosition;
+  }
+
+  interface AOSOptions {
+    duration?: number;
+    once?: boolean;
+    offset?: number;
+  }
+
+  // Importar AOS con type declaration
+  import AOS from 'aos';
+  import 'aos/dist/aos.css';
+
+  document.addEventListener('astro:page-load', () => {
+    // Inicializar AOS con tipos
+    const aosOptions: AOSOptions = {
+      duration: 1000,
+      once: true,
+      offset: 100
+    };
+    
+    AOS.init(aosOptions);
+
+    // Header scroll effect con comprobación de tipo
+    const header = document.getElementById('header');
+    const handleScroll = (): void => {
+      if (!header) return;
+      
+      if (window.scrollY > 50) {
+        header.classList.add('bg-black/50', 'backdrop-blur-lg');
+      } else {
+        header.classList.remove('bg-black/50', 'backdrop-blur-lg');
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
+    // Mobile menu con tipos mejorados
+    const mobileMenu = document.getElementById('mobile-menu');
+    const openMenuBtn = document.getElementById('open-menu');
+    const closeMenuBtn = document.getElementById('close-menu');
+
+    if (!mobileMenu || !openMenuBtn || !closeMenuBtn) return;
+
+    const toggleMenu = (show: boolean): void => {
+      if (show) {
+        mobileMenu.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      } else {
+        mobileMenu.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+    };
+
+    openMenuBtn.addEventListener('click', () => toggleMenu(true));
+    closeMenuBtn.addEventListener('click', () => toggleMenu(false));
+
+    // Cerrar menú al hacer click en los enlaces
+    const mobileLinks = mobileMenu.querySelectorAll('a');
+    mobileLinks.forEach(link => {
+      link.addEventListener('click', () => toggleMenu(false));
+    });
+
+    // Scroll to sections con tipos mejorados
+    const scrollToSection = (id: string): void => {
+      const element = document.getElementById(id);
+      if (element) {
+        const scrollOptions: ScrollOptions = {
+          behavior: 'smooth',
+          block: 'start'
+        };
+        element.scrollIntoView(scrollOptions);
+      }
+    };
+
+    // Event listeners para los links de navegación
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', (e: Event) => {
+        e.preventDefault();
+        const href = (e.currentTarget as HTMLAnchorElement).getAttribute('href');
+        if (href && href.startsWith('#')) {
+          const id = href.slice(1);
+          scrollToSection(id);
+        }
+      });
+    });
+
+    // Cleanup function
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  });
+</script>
 
 <style>
+/* Animaciones */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Gradientes animados */
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.bg-gradient {
+  background-size: 200% 200%;
+  animation: gradient 15s ease infinite;
+}
+
+/* Efectos hover */
+.feature-card:hover .card {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.testimonial-card:hover .card {
+  transform: translateY(-5px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
   .container {
-    max-width: 1200px;
-    margin: 0 auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
-  
-  /* Asegurarse que los íconos en las cards tengan el tamaño correcto */
-  :global(.card-icon) {
-    width: 2.5rem;
-    height: 2.5rem;
+
+  h1 {
+    font-size: 2.5rem;
+    line-height: 1.2;
   }
-  
-  /* Estilizar los inputs del formulario */
-  input:focus, textarea:focus {
-    outline: 2px solid #2F02CC;
-    outline-offset: 2px;
+
+  h2 {
+    font-size: 2rem;
+    line-height: 1.3;
   }
-  
-  /* Asegurar que las imágenes mantengan su aspecto */
-  img {
-    object-fit: cover;
+
+  .feature-card,
+  .testimonial-card {
+    transform: none !important;
   }
+}
+
+/* Gradientes y efectos */
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary-light to-primary;
+}
+
+.bg-gradient {
+  @apply bg-gradient-to-b from-primary-light/5 via-primary/10 to-primary-light/5;
+}
 </style>
