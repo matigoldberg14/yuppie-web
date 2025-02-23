@@ -1,5 +1,5 @@
 // src/components/dashboard/AnalyticsContent.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { auth } from '../../lib/firebase';
 import { getRestaurantByFirebaseUID } from '../../services/api';
 import {
@@ -10,47 +10,81 @@ import type { MetricsData, TimeFilter } from '../../types/metrics';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/Button';
 import { Progress } from '../ui/progress';
+import { Download, TrendingUp, TrendingDown, Star } from 'lucide-react';
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
-import {
-  CalendarIcon,
-  ChevronDown,
-  Download,
-  TrendingUp,
-  TrendingDown,
-  Star,
-  MessageSquare,
-  Users,
-} from 'lucide-react';
+  MetricsLineChart,
+  MetricsBarChart,
+  MetricsPieChart,
+} from './charts/ChartComponents';
+import { getCachedMetrics, setCachedMetrics } from './metricsCache';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+// Componentes Memoizados
+const MetricCard = React.memo(({ title, value, trend, icon }: any) => (
+  <Card className="bg-white/10 border-0">
+    <CardHeader className="pb-2">
+      <CardTitle className="text-white text-sm">{title}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold text-white">{value}</div>
+      {trend && (
+        <p className="text-xs text-white/60">
+          {trend >= 0 ? (
+            <TrendingUp className="h-4 w-4 text-green-400 inline mr-1" />
+          ) : (
+            <TrendingDown className="h-4 w-4 text-red-400 inline mr-1" />
+          )}
+          {Math.abs(trend).toFixed(1)}% vs período anterior
+        </p>
+      )}
+      {icon}
+    </CardContent>
+  </Card>
+));
+
+// Componente de carga
+const LoadingState = () => (
+  <div className="p-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="h-32 bg-white/10 rounded" />
+      ))}
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="h-[400px] bg-white/10 rounded" />
+      ))}
+    </div>
+  </div>
+);
 
 export function AnalyticsContent() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month');
   const [metrics, setMetrics] = useState<MetricsData | null>(null);
   const [history, setHistory] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchData = async () => {
       try {
         if (!auth?.currentUser?.uid) return;
 
+        // Intentar obtener datos del caché
+        const cacheKey = `${auth.currentUser.uid}_${timeFilter}`;
+        const cachedData = getCachedMetrics(cacheKey);
+
+        if (cachedData) {
+          setMetrics(cachedData.metrics);
+          setHistory(cachedData.history);
+          setLoading(false);
+          return;
+        }
+
         const restaurantData = await getRestaurantByFirebaseUID(
           auth.currentUser.uid
         );
+
         if (!restaurantData) throw new Error('No restaurant found');
 
         const [metricsData, historyData] = await Promise.all([
@@ -58,34 +92,59 @@ export function AnalyticsContent() {
           getMetricsHistory(restaurantData.documentId, timeFilter),
         ]);
 
-        // Calcular el índice de respuestas (reviews/taps)
         const responseRate =
           restaurantData.taps > 0
             ? (metricsData.totalReviews / parseInt(restaurantData.taps)) * 100
             : 0;
 
-        setMetrics({
+        const updatedMetrics = {
           ...metricsData,
-          responseRate, // Sobreescribimos responseRate con nuestro cálculo basado en taps
-        });
-        setHistory(historyData);
+          responseRate,
+        };
+
+        if (isMounted) {
+          setMetrics(updatedMetrics);
+          setHistory(historyData);
+          // Guardar en caché
+          setCachedMetrics(cacheKey, {
+            metrics: updatedMetrics,
+            history: historyData,
+          });
+        }
       } catch (error) {
         console.error('Error fetching metrics:', error);
+        if (isMounted) {
+          setError(
+            error instanceof Error ? error.message : 'Error loading data'
+          );
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [timeFilter]);
 
-  if (loading || !metrics || !history) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse text-white">Cargando análisis...</div>
-      </div>
-    );
-  }
+  // Datos procesados memorizados
+  const processedHistoryData = useMemo(() => {
+    if (!history?.dates) return [];
+    return history.dates.map((date: string, i: number) => ({
+      date,
+      reviews: history.reviews[i],
+      rating: history.ratings[i],
+    }));
+  }, [history]);
+
+  if (loading) return <LoadingState />;
+  if (error) return <div className="p-6 text-red-500">{error}</div>;
+  if (!metrics || !history) return null;
 
   return (
     <div className="p-6">
@@ -112,38 +171,16 @@ export function AnalyticsContent() {
 
       {/* Métricas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-white/10 border-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm">
-              Total de reseñas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">
-              {metrics.totalReviews}
-            </div>
-            <p className="text-xs text-white/60">
-              {metrics.trends.volumeTrend >= 0 ? (
-                <TrendingUp className="h-4 w-4 text-green-400 inline mr-1" />
-              ) : (
-                <TrendingDown className="h-4 w-4 text-red-400 inline mr-1" />
-              )}
-              {Math.abs(metrics.trends.volumeTrend).toFixed(1)}% vs período
-              anterior
-            </p>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Total de reseñas"
+          value={metrics.totalReviews}
+          trend={metrics.trends.volumeTrend}
+        />
 
-        <Card className="bg-white/10 border-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm">
-              Rating promedio
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">
-              {metrics.averageRating.toFixed(1)}
-            </div>
+        <MetricCard
+          title="Rating promedio"
+          value={metrics.averageRating.toFixed(1)}
+          icon={
             <div className="flex items-center">
               {[...Array(5)].map((_, i) => (
                 <Star
@@ -156,86 +193,39 @@ export function AnalyticsContent() {
                 />
               ))}
             </div>
-          </CardContent>
-        </Card>
+          }
+        />
 
-        <Card className="bg-white/10 border-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm">
-              Tasa de respuesta
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">
-              {metrics.responseRate.toFixed(1)}%
-            </div>
-            <Progress value={metrics.responseRate} className="h-2" />
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Tasa de respuesta"
+          value={`${metrics.responseRate.toFixed(1)}%`}
+          icon={<Progress value={metrics.responseRate} className="h-2" />}
+        />
 
-        <Card className="bg-white/10 border-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm">
-              Envíos a Google
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">
-              {metrics.googleSentRate.toFixed(1)}%
-            </div>
-            <Progress value={metrics.googleSentRate} className="h-2" />
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Envíos a Google"
+          value={`${metrics.googleSentRate.toFixed(1)}%`}
+          icon={<Progress value={metrics.googleSentRate} className="h-2" />}
+        />
       </div>
 
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Evolución de reseñas */}
         <Card className="bg-white/10 border-0">
           <CardHeader>
             <CardTitle className="text-white">Evolución de reseñas</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={history.dates.map((date: string, i: number) => ({
-                    date,
-                    reviews: history.reviews[i],
-                    rating: history.ratings[i],
-                  }))}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-                  <XAxis dataKey="date" stroke="#ffffff60" />
-                  <YAxis stroke="#ffffff60" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1a1a1a',
-                      border: 'none',
-                    }}
-                    labelStyle={{ color: '#fff' }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="reviews"
-                    stroke="#4318FF"
-                    strokeWidth={2}
-                    name="Reseñas"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="rating"
-                    stroke="#00C49F"
-                    strokeWidth={2}
-                    name="Rating"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <Suspense
+                fallback={<div className="animate-pulse h-full bg-white/10" />}
+              >
+                <MetricsLineChart data={processedHistoryData} />
+              </Suspense>
             </div>
           </CardContent>
         </Card>
 
-        {/* Distribución de calificaciones */}
         <Card className="bg-white/10 border-0">
           <CardHeader>
             <CardTitle className="text-white">
@@ -244,84 +234,40 @@ export function AnalyticsContent() {
           </CardHeader>
           <CardContent>
             <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={metrics.ratingsDistribution}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-                  <XAxis dataKey="rating" stroke="#ffffff60" />
-                  <YAxis stroke="#ffffff60" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1a1a1a',
-                      border: 'none',
-                    }}
-                    labelStyle={{ color: '#fff' }}
-                  />
-                  <Bar dataKey="count" name="Cantidad">
-                    {metrics.ratingsDistribution.map(
-                      (_: any, index: number) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      )
-                    )}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <Suspense
+                fallback={<div className="animate-pulse h-full bg-white/10" />}
+              >
+                <MetricsBarChart data={metrics.ratingsDistribution} />
+              </Suspense>
             </div>
           </CardContent>
         </Card>
 
-        {/* Tipos de mejora */}
         <Card className="bg-white/10 border-0">
           <CardHeader>
             <CardTitle className="text-white">Tipos de mejora</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={metrics.reviewsByType}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ type, percentage }) =>
-                      `${type} (${percentage.toFixed(0)}%)`
-                    }
-                    outerRadius={150}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
-                    {metrics.reviewsByType.map((_: any, index: number) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1a1a1a',
-                      border: 'none',
-                    }}
-                    labelStyle={{ color: '#fff' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <Suspense
+                fallback={<div className="animate-pulse h-full bg-white/10" />}
+              >
+                <MetricsPieChart data={metrics.reviewsByType} />
+              </Suspense>
             </div>
           </CardContent>
         </Card>
 
-        {/* Análisis por día de la semana */}
         <Card className="bg-white/10 border-0">
           <CardHeader>
             <CardTitle className="text-white">Análisis por día</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
+              <Suspense
+                fallback={<div className="animate-pulse h-full bg-white/10" />}
+              >
+                <MetricsBarChart
                   data={Object.entries(metrics.weekdayAnalysis).map(
                     ([day, data]) => ({
                       day,
@@ -329,21 +275,8 @@ export function AnalyticsContent() {
                       rating: data.averageRating,
                     })
                   )}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-                  <XAxis dataKey="day" stroke="#ffffff60" />
-                  <YAxis stroke="#ffffff60" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1a1a1a',
-                      border: 'none',
-                    }}
-                    labelStyle={{ color: '#fff' }}
-                  />
-                  <Bar dataKey="count" name="Cantidad" fill="#4318FF" />
-                  <Bar dataKey="rating" name="Rating" fill="#00C49F" />
-                </BarChart>
-              </ResponsiveContainer>
+                />
+              </Suspense>
             </div>
           </CardContent>
         </Card>

@@ -8,19 +8,27 @@ import Analytics from '@vercel/analytics/astro'
 interface Props {
   title: string;
   description?: string;
+  lang?: string;
 }
 
 const { 
   title, 
-  description = "Yuppie - Tu plataforma de feedback" 
+  description = "Yuppie - Tu plataforma de feedback",
+  lang = "es"
 } = Astro.props;
 ---
 
 <!DOCTYPE html>
-<html lang="es">
+<html lang={lang}>
   <head>
     <Head title={title} description={description} />
     <ViewTransitions />
+    <script>
+      // Inicializar el idioma
+      if (!localStorage.getItem('language')) {
+        localStorage.setItem('language', 'es');
+      }
+    </script>
   </head>
   <body class="min-h-screen bg-gradient font-['Poppins',sans-serif] text-white">
     <slot />
