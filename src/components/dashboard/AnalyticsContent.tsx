@@ -26,14 +26,20 @@ const MetricCard = React.memo(({ title, value, trend, icon }: any) => (
     </CardHeader>
     <CardContent>
       <div className="text-2xl font-bold text-white">{value}</div>
-      {trend && (
+      {trend !== undefined && (
         <p className="text-xs text-white/60">
-          {trend >= 0 ? (
-            <TrendingUp className="h-4 w-4 text-green-400 inline mr-1" />
+          {trend === 0 ? (
+            'Primer período - No hay datos anteriores para comparar'
           ) : (
-            <TrendingDown className="h-4 w-4 text-red-400 inline mr-1" />
+            <>
+              {trend >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-green-400 inline mr-1" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-red-400 inline mr-1" />
+              )}
+              {Math.abs(trend).toFixed(1)}% vs período anterior
+            </>
           )}
-          {Math.abs(trend).toFixed(1)}% vs período anterior
         </p>
       )}
       {icon}
