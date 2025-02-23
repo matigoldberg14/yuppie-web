@@ -66,7 +66,9 @@ export function AddEmployeeForm({
 
   const [photoPreview, setPhotoPreview] = useState<string | null>(
     initialData?.photo
-      ? `https://yuppieb-production.up.railway.app/${initialData.photo.formats.thumbnail.url}`
+      ? `${import.meta.env.PUBLIC_API_URL}${
+          initialData.photo.formats.thumbnail.url
+        }`
       : null
   );
   const [availableSchedules, setAvailableSchedules] = useState<Schedule[]>([]);
@@ -80,7 +82,7 @@ export function AddEmployeeForm({
     const fetchSchedules = async () => {
       try {
         const response = await fetch(
-          'https://yuppieb-production.up.railway.app/api/schedules' // URL corregida (sin doble barra)
+          `${import.meta.env.PUBLIC_API_URL}/schedules` // Cambiado a variable de entorno
         );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -118,7 +120,9 @@ export function AddEmployeeForm({
       });
       if (initialData.photo) {
         setPhotoPreview(
-          `https://yuppieb-production.up.railway.app/${initialData.photo.formats.thumbnail.url}`
+          `${import.meta.env.PUBLIC_API_URL}${
+            initialData.photo.formats.thumbnail.url
+          }` // Cambiado a variable de entorno
         );
       }
     }

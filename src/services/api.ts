@@ -280,8 +280,7 @@ interface Restaurant {
 export async function getRestaurantByFirebaseUID(firebaseUID: string) {
   try {
     // Validar si tenemos la URL base
-    const baseUrl =
-      API_CONFIG.baseUrl || 'https://yuppieb-production.up.railway.app/api';
+    const baseUrl = import.meta.env.PUBLIC_API_URL;
 
     // Asegurarnos que tenemos un firebaseUID
     if (!firebaseUID) {

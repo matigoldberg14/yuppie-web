@@ -143,10 +143,10 @@ export function ReviewsContent() {
 
     emailjs
       .send(
-        'service_kovjo5m',
-        'template_em90fox',
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_COUPON_TEMPLATE_ID,
         templateParams,
-        '3wONTqDb8Fwtqf1P0'
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
       )
       .then(
         async (result) => {

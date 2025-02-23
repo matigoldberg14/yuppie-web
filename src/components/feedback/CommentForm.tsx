@@ -365,8 +365,8 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
 
               if (ownerEmail) {
                 await emailjs.send(
-                  'service_kovjo5m',
-                  'template_v2s559p',
+                  import.meta.env.VITE_EMAILJS_SERVICE_ID,
+                  import.meta.env.VITE_EMAILJS_COMMENT_TEMPLATE_ID,
                   {
                     to_email: ownerEmail,
                     comment: finalComment.trim(),
@@ -374,7 +374,7 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
                     improvement_type: improvementType || 'Otra',
                     customer_email: formData.email,
                   },
-                  '3wONTqDb8Fwtqf1P0'
+                  import.meta.env.VITE_EMAILJS_PUBLIC_KEY
                 );
               }
             } catch (emailError) {
