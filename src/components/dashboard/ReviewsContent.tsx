@@ -13,6 +13,7 @@ import { Button } from '../ui/Button';
 import emailjs from '@emailjs/browser';
 import * as XLSX from 'xlsx';
 import { formatDateBuenosAires } from '../../utils/formatDate';
+import process from 'process/browser';
 
 interface Review {
   id: number;
@@ -79,6 +80,11 @@ export function ReviewsContent() {
     XLSX.writeFile(wb, fileName);
   };
 
+  // Inicializar EmailJS
+  useEffect(() => {
+    emailjs.init(import.meta.env.PUBLIC_EMAILJS_PUBLIC_KEY);
+  }, []);
+
   useEffect(() => {
     const fetchReviews = async () => {
       try {
@@ -143,22 +149,20 @@ export function ReviewsContent() {
 
     emailjs
       .send(
-        import.meta.env.VITE_EMAILJS_SERVICE_ID,
-        import.meta.env.VITE_EMAILJS_COUPON_TEMPLATE_ID,
+        import.meta.env.PUBLIC_EMAILJS_SERVICE_ID,
+        import.meta.env.PUBLIC_EMAILJS_COUPON_TEMPLATE_ID,
         templateParams,
-        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+        import.meta.env.PUBLIC_EMAILJS_PUBLIC_KEY
       )
       .then(
         async (result) => {
           console.log('Email enviado correctamente', result.text);
           alert('Cupón enviado exitosamente.');
           try {
-            // Actualizamos la review usando review.id (número)
             await updateReview(review.documentId, {
               couponCode: couponCode,
               couponUsed: false,
             });
-            // Actualizamos el estado local
             setSentCoupons((prev) => ({ ...prev, [review.id]: couponCode }));
             setReviews((prevReviews) =>
               prevReviews.map((r) =>
@@ -179,7 +183,6 @@ export function ReviewsContent() {
       );
   };
 
-  // Función para marcar el cupón como usado
   const handleMarkCouponUsed = (review: Review) => {
     const confirmation = window.confirm(
       '¿Está seguro de que desea marcar este cupón como usado? Esta acción no se puede revertir.'
