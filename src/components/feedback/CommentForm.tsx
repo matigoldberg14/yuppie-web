@@ -13,7 +13,7 @@ import {
 
 // Schema para validación (optimizado para rendimiento con memoización)
 const commentSchema = z.object({
-  email: z.string().email('Por favor, ingresa un email válido').optional(),
+  email: z.string().email('Por favor, ingresa un email válido'),
   comment: z
     .string()
     .min(10, 'El comentario debe tener al menos 10 caracteres')
@@ -100,6 +100,59 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
   const { toast } = useToast();
 
+  // Evento especial para procesar la tecla Delete/Backspace
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        // Permitir que la tecla Delete/Backspace funcione normalmente
+        // El cambio se capturará en el evento onChange
+        // No es necesario hacer nada especial aquí
+      }
+    },
+    []
+  );
+
+  // Verificar si hay una discrepancia entre el estado y el valor del input
+  useEffect(() => {
+    // Este efecto se ejecuta para garantizar que el DOM refleje correctamente el estado
+    const emailInput = document.querySelector(
+      'input[name="email"]'
+    ) as HTMLInputElement;
+    if (emailInput && emailInput.value !== formData.email) {
+      emailInput.value = formData.email;
+    }
+  }, [formData.email]);
+
+  // Función para limpiar completamente el email
+  const clearEmail = useCallback(() => {
+    // Limpiar el campo de forma directa sin usar el estado anterior
+    setFormData((prev) => {
+      const newData = { ...prev };
+      newData.email = '';
+      return newData;
+    });
+
+    // Eliminar también del localStorage
+    try {
+      localStorage.removeItem('yuppie_email');
+    } catch (error) {
+      console.error('Error al eliminar email del localStorage:', error);
+    }
+
+    // Asegurarnos de que el campo se marque como interactuado
+    setHasInteractedWithEmail(true);
+
+    // Dar foco al campo para que el usuario pueda comenzar a escribir inmediatamente
+    setTimeout(() => {
+      const emailInput = document.querySelector(
+        'input[name="email"]'
+      ) as HTMLInputElement;
+      if (emailInput) {
+        emailInput.focus();
+      }
+    }, 10);
+  }, []);
+
   // Verificación optimizada al montar componente
   useEffect(() => {
     try {
@@ -141,6 +194,8 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
       const savedEmail = localStorage.getItem('yuppie_email');
       if (savedEmail) {
         setFormData((prev) => ({ ...prev, email: savedEmail }));
+        // No marcamos como interactuado el email restaurado para evitar validaciones inmediatas
+        // Esto permite que el usuario pueda ver y modificar el email sin errores iniciales
       }
     } catch (error) {
       console.error('Error en la inicialización del formulario:', error);
@@ -188,17 +243,27 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
           }
         }
 
-        // Validación del email
-        if (hasInteractedWithEmail && formData.email.trim()) {
-          try {
-            z.string()
-              .email('Por favor, ingresa un email válido')
-              .parse(formData.email);
-          } catch (error) {
-            if (error instanceof z.ZodError) {
-              newErrors.email = error.errors[0].message;
-              valid = false;
+        // Validación del email (obligatorio, pero solo mostrar error después de interacción)
+        if (hasInteractedWithEmail) {
+          if (!formData.email.trim()) {
+            newErrors.email = 'El email es obligatorio';
+            valid = false;
+          } else {
+            try {
+              z.string()
+                .email('Por favor, ingresa un email válido')
+                .parse(formData.email);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                newErrors.email = error.errors[0].message;
+                valid = false;
+              }
             }
+          }
+        } else {
+          // Email vacío sin interacción - botón deshabilitado pero sin mensaje de error
+          if (!formData.email.trim()) {
+            valid = false;
           }
         }
       } else {
@@ -207,17 +272,27 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
           valid = false;
         }
 
-        // Validar email si se ha interactuado y tiene contenido
-        if (hasInteractedWithEmail && formData.email.trim()) {
-          try {
-            z.string()
-              .email('Por favor, ingresa un email válido')
-              .parse(formData.email);
-          } catch (error) {
-            if (error instanceof z.ZodError) {
-              newErrors.email = error.errors[0].message;
-              valid = false;
+        // Validar email (ahora obligatorio, pero solo mostrar error después de interacción)
+        if (hasInteractedWithEmail) {
+          if (!formData.email.trim()) {
+            newErrors.email = 'El email es obligatorio';
+            valid = false;
+          } else {
+            try {
+              z.string()
+                .email('Por favor, ingresa un email válido')
+                .parse(formData.email);
+            } catch (error) {
+              if (error instanceof z.ZodError) {
+                newErrors.email = error.errors[0].message;
+                valid = false;
+              }
             }
+          }
+        } else {
+          // Email vacío sin interacción - botón deshabilitado pero sin mensaje de error
+          if (!formData.email.trim()) {
+            valid = false;
           }
         }
       }
@@ -246,7 +321,16 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
+
+      // Actualización directa del valor sin dependencias del valor anterior
       setFormData((prev) => ({ ...prev, [name]: value }));
+
+      // Marcar como interactuado cuando se modifica el valor
+      if (name === 'email') {
+        setHasInteractedWithEmail(true);
+      } else if (name === 'comment') {
+        setHasInteractedWithComment(true);
+      }
     },
     []
   );
@@ -273,6 +357,16 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
     setHasInteractedWithComment(true);
   }, []);
 
+  const handleEmailFocus = useCallback(() => {
+    // No marcamos inmediatamente como interactuado al recibir el foco
+    // Solo lo marcaremos cuando haya cambios o cuando pierda el foco
+  }, []);
+
+  const handleEmailBlur = useCallback(() => {
+    // Al perder el foco, ahora sí marcamos como interactuado para validar
+    setHasInteractedWithEmail(true);
+  }, []);
+
   // Envío optimizado del formulario
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -288,6 +382,22 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
         }
 
         setIsSubmitting(true);
+
+        // Validar que el email no esté vacío
+        if (!formData.email.trim()) {
+          throw new Error('El email es obligatorio');
+        }
+
+        // Validar formato de email
+        try {
+          z.string()
+            .email('Por favor, ingresa un email válido')
+            .parse(formData.email);
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            throw new Error(error.errors[0].message);
+          }
+        }
 
         // Construir comentario final según el estado
         let finalComment = '';
@@ -325,21 +435,15 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
           throw new Error('ID de restaurante inválido');
         }
 
-        // Procesar email
-        const emailToSend =
-          formData.email.trim() || 'prefirio-no-dar-su-email@nodiosuemail.com';
-
-        // Guardar email si se proporcionó
-        if (formData.email.trim()) {
-          localStorage.setItem('yuppie_email', formData.email.trim());
-        }
+        // Guardar email
+        localStorage.setItem('yuppie_email', formData.email.trim());
 
         // Crear objeto de review
         const reviewData = {
           restaurantId: restaurantIdNumber,
           calification: rating,
           typeImprovement: improvementType || 'Otra',
-          email: emailToSend,
+          email: formData.email.trim(),
           comment: finalComment.trim(),
           googleSent: rating === 5,
         };
@@ -352,7 +456,7 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
 
         // Procesamiento paralelo: envío de email para calificaciones bajas
         let emailPromise = Promise.resolve();
-        if (rating <= 2 && formData.email) {
+        if (rating <= 2) {
           emailPromise = (async () => {
             try {
               const apiUrl = import.meta.env.PUBLIC_API_URL;
@@ -596,36 +700,63 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
         </div>
       )}
 
-      {/* Campo de email (común a ambos estados) */}
+      {/* Campo de email (común a ambos estados) - Ahora obligatorio */}
       <div className="flex flex-col gap-2">
-        <motion.input
-          type="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          onFocus={() => setHasInteractedWithEmail(true)}
-          placeholder="Tu email (opcional)*"
-          className={`w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 transition-all duration-200 ${
-            errors.email ? 'border-2 border-red-500' : 'border border-white/10'
-          } focus:ring-2 focus:ring-white/20 focus:outline-none`}
-          disabled={isSubmitting}
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        />
+        <motion.div className="relative">
+          <motion.div className="relative flex items-center">
+            {/* Indicador de campo obligatorio - ahora a la izquierda del campo */}
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 font-bold">
+              *
+            </span>
 
-        {/* Mensaje promocional para email */}
+            <motion.input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              onFocus={handleEmailFocus}
+              onBlur={handleEmailBlur}
+              placeholder="Tu email"
+              className={`w-full p-4 pl-8 pr-12 rounded-lg bg-white/5 text-white placeholder-gray-400 transition-all duration-200 ${
+                errors.email && hasInteractedWithEmail
+                  ? 'border-2 border-red-500'
+                  : 'border border-white/10'
+              } focus:ring-2 focus:ring-white/20 focus:outline-none`}
+              disabled={isSubmitting}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              required
+            />
+
+            {formData.email && (
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"
+                onClick={clearEmail}
+                aria-label="Borrar email"
+                tabIndex={0}
+              >
+                ✕
+              </button>
+            )}
+          </motion.div>
+        </motion.div>
+
+        {/* Mensaje promocional para email incluyendo mención de campo obligatorio */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
           className="text-sm text-gray-400 italic text-center"
         >
-          Dejanos tu email para recibir descuentos exclusivos y recompensas
-          especiales
+          Ingresa tu email para recibir descuentos exclusivos y recompensas
+          especiales{' '}
+          <span className="text-red-400 not-italic">(campo obligatorio)</span>
         </motion.p>
 
-        {/* Mensaje de error para email */}
+        {/* Mensaje de error para email - solo después de interacción */}
         <AnimatePresence>
           {errors.email && hasInteractedWithEmail && (
             <motion.p
