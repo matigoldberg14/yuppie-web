@@ -149,14 +149,6 @@ export function RatingForm({
         localStorage.setItem('yuppie_rating', rating.toString());
         localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
 
-        // Guardar empleado si existe
-        if (employeeDocumentId) {
-          localStorage.setItem('yuppie_employee', employeeDocumentId);
-          console.log(
-            `Guardado empleado en localStorage: ${employeeDocumentId}`
-          );
-        }
-
         if (rating === 5) {
           localStorage.setItem('yuppie_improvement', 'Otra');
 
@@ -234,9 +226,16 @@ export function RatingForm({
             window.location.href = linkMaps;
           }, 2000); // Incrementado a 2 segundos para dar más tiempo
         } else {
-          // Para calificaciones menores a 5 - Redirección inmediata
-          console.log(`Redirigiendo a: ${nextUrl}`);
-          window.location.href = nextUrl;
+          // Para calificaciones menores a 5 - Redirección a la siguiente página
+          // IMPORTANTE: Incluir el ID del empleado en la URL si existe
+          if (employeeDocumentId) {
+            const fullNextUrl = `${nextUrl}${
+              nextUrl.includes('?') ? '&' : '?'
+            }employee=${employeeDocumentId}`;
+            window.location.href = fullNextUrl;
+          } else {
+            window.location.href = nextUrl;
+          }
         }
       } catch (error) {
         console.error('Error procesando calificación:', error);
