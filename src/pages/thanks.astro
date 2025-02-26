@@ -37,16 +37,27 @@ const title = "Gracias por tu feedback";
 </Layout>
 
 <script>
-  // Clear any redirect flags to prevent loops
+  // Función más robusta para manejar la redirección
   document.addEventListener('DOMContentLoaded', () => {
-    // Clear any redirect flags to prevent loops on future page loads
+    // Verificar si venimos de una redirección correcta
+    const isRedirecting = localStorage.getItem('redirecting_from_comment');
+    
+    // Limpiar bandera de redirección inmediatamente
     localStorage.removeItem('redirecting_from_comment');
+    
+    // Si no venimos de una redirección válida y tenemos un historial, volver atrás
+    if (!isRedirecting && window.history.length > 1) {
+      console.warn('Acceso directo a página de agradecimiento sin envío previo');
+      // Opcional: Redirigir a inicio si se accede directamente
+      // window.location.href = '/';
+    }
 
-    // Clean up other review-related data that might be causing issues
+    // Limpiar toda la información relacionada con la review
     const keysToClean = [
       'yuppie_improvement',
       'yuppie_rating', 
-      'yuppie_restaurant'
+      'yuppie_restaurant',
+      'yuppie_employee'
     ];
     
     keysToClean.forEach(key => {

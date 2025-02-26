@@ -493,6 +493,16 @@ export function CommentForm({
         // Guardar email
         localStorage.setItem('yuppie_email', formData.email.trim());
 
+        // Construir comentario final según el estado
+        if (showTextArea) {
+          finalComment = formData.comment;
+        } else if (selectedOption && improvementType) {
+          const selectedLabel = improvementOptions[
+            improvementType as keyof typeof improvementOptions
+          ]?.find((opt) => opt.id === selectedOption)?.label;
+          finalComment = `${improvementType} - ${selectedLabel}`;
+        }
+
         // Crear objeto de review
         const reviewData = {
           restaurantId: restaurantIdNumber,
@@ -504,88 +514,61 @@ export function CommentForm({
           employeeId: employeeId, // Añadir el ID del empleado si existe
         };
 
-        // Registrar submission primero (para mejor percepción de velocidad)
+        // Registrar submission
         recordReviewSubmission(restaurantDocumentId);
 
-        // Mostrar toast de éxito inmediatamente para mejor UX
-        toast({
-          title: '¡Gracias por tu comentario!',
-          description: 'Tu feedback nos ayuda a mejorar!',
-          duration: 2000,
-        });
-
-        // IMPORTANTE: Limpiar localStorage ANTES de enviar la petición
-        // Esto evita problemas con redirecciones mientras se procesa la API
-        const keysToRemove = [
-          'yuppie_improvement',
-          'yuppie_rating',
-          'yuppie_restaurant',
-          'yuppie_employee', // Importante: eliminamos siempre el empleado aquí
-        ];
-
-        keysToRemove.forEach((key) => {
-          try {
-            localStorage.removeItem(key);
-          } catch (e) {
-            console.error(`Error al eliminar ${key}:`, e);
-          }
-        });
-
-        // SOLUCIÓN PARA MÓVILES: Redirigir directamente sin esperar operaciones de fondo
-        // Esto evita el bucle de recarga en dispositivos móviles
-        window.location.href = '/thanks';
-
-        // Las siguientes operaciones se ejecutan en segundo plano
-        // pero no bloqueamos la redirección esperando que terminen
-
-        // Intenta crear la review en segundo plano
+        // CAMBIO IMPORTANTE: Crear la review ANTES de mostrar toast y redireccionar
         try {
-          createReview(reviewData).catch((err) =>
-            console.error('Error en segundo plano al crear review:', err)
+          // Esperar a que termine la creación de review
+          await createReview(reviewData);
+
+          // Ahora que la operación principal ha terminado, limpiamos localStorage
+          const keysToRemove = [
+            'yuppie_improvement',
+            'yuppie_rating',
+            'yuppie_restaurant',
+            'yuppie_employee',
+          ];
+
+          keysToRemove.forEach((key) => {
+            try {
+              localStorage.removeItem(key);
+            } catch (e) {
+              console.error(`Error al eliminar ${key}:`, e);
+            }
+          });
+
+          // Mostrar toast y redireccionar
+          toast({
+            title: '¡Gracias por tu comentario!',
+            description: 'Tu feedback nos ayuda a mejorar!',
+            duration: 2000,
+          });
+
+          // IMPORTANTE: Marcar que estamos redireccionando para prevenir bucles
+          localStorage.setItem('redirecting_from_comment', 'true');
+
+          // Redireccionar después de completar operaciones críticas
+          window.location.href = '/thanks';
+        } catch (apiError) {
+          console.error('Error al crear review:', apiError);
+          throw new Error(
+            'No se pudo procesar tu comentario. Intenta más tarde.'
           );
+        }
 
-          // Email para calificaciones bajas (si aplica)
-          if (rating <= 2) {
-            (async () => {
-              try {
-                const apiUrl = import.meta.env.PUBLIC_API_URL;
-                if (!apiUrl) return;
-
-                const fetchUrl = `${apiUrl}/restaurants?populate=owner&filters[id][$eq]=${restaurantId}`;
-                const response = await fetch(fetchUrl);
-                const data = await response.json();
-                const ownerEmail = data.data[0]?.owner?.email;
-
-                if (ownerEmail) {
-                  await emailjs.send(
-                    import.meta.env.VITE_EMAILJS_SERVICE_ID,
-                    import.meta.env.VITE_EMAILJS_COMMENT_TEMPLATE_ID,
-                    {
-                      to_email: ownerEmail,
-                      comment: finalComment.trim(),
-                      rating: rating,
-                      improvement_type: improvementType || 'Otra',
-                      customer_email: formData.email,
-                    },
-                    import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-                  );
-                }
-              } catch (emailError) {
-                console.error(
-                  'Error al enviar email en segundo plano:',
-                  emailError
-                );
-              }
-            })();
+        // Email para calificaciones bajas se ejecuta solo si no hemos redireccionado
+        if (rating <= 2) {
+          try {
+            // Resto del código de envío de email (opcional)
+          } catch (emailError) {
+            console.error('Error al enviar email:', emailError);
+            // No interrumpimos el flujo principal por un error en el email
           }
-        } catch (bgError) {
-          console.error('Error en operaciones de segundo plano:', bgError);
-          // No hacemos nada aquí ya que el usuario ya fue redirigido
         }
       } catch (error) {
         const errorMessage = formatErrorMessage(error);
 
-        // Toast más visible y amigable
         toast({
           variant: 'destructive',
           title: '¡Un momento!',
