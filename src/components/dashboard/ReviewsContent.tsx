@@ -7,13 +7,22 @@ import {
   getRestaurantReviews,
   updateReview,
 } from '../../services/api';
-import { Star, Download } from 'lucide-react';
+import { Star, Download, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/Button';
+import { Badge } from '../ui/badge'; // Importamos Badge para mostrar el empleado
 import emailjs from '@emailjs/browser';
 import * as XLSX from 'xlsx';
 import { formatDateBuenosAires } from '../../utils/formatDate';
 import process from 'process/browser';
+
+interface Employee {
+  id: number;
+  documentId: string;
+  firstName: string;
+  lastName: string;
+  position: string;
+}
 
 interface Review {
   id: number;
@@ -27,6 +36,7 @@ interface Review {
   createdAt: string;
   couponCode?: string;
   couponUsed?: boolean;
+  employee?: Employee; // Agregamos el empleado asociado
 }
 
 export function ReviewsContent() {
@@ -50,6 +60,9 @@ export function ReviewsContent() {
       'Código de Cupón': review.couponCode || 'No enviado',
       'Cupón Usado': review.couponUsed ? 'Sí' : 'No',
       'ID de Review': review.documentId,
+      Empleado: review.employee
+        ? `${review.employee.firstName} ${review.employee.lastName}`
+        : 'No asignado',
     }));
 
     // Crear el libro de Excel
@@ -67,6 +80,7 @@ export function ReviewsContent() {
       { wch: 15 }, // Código de Cupón
       { wch: 12 }, // Cupón Usado
       { wch: 20 }, // ID de Review
+      { wch: 25 }, // Empleado
     ];
     ws['!cols'] = columnWidths;
 
@@ -99,9 +113,12 @@ export function ReviewsContent() {
           throw new Error('No se encontró el restaurante');
         }
         setRestaurantName(restaurantData.name || 'Yuppie');
+
+        // Obtener reseñas con información de empleados
         const reviewsData = await getRestaurantReviews(
           restaurantData.documentId
         );
+        console.log('Reviews data:', reviewsData); // Para debug
         setReviews(reviewsData);
       } catch (error) {
         console.error('Error fetching reviews:', error);
@@ -238,11 +255,22 @@ export function ReviewsContent() {
           <Card key={review.id} className="bg-white/10 border-0">
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
-                <CardTitle className="text-white">
-                  {review.email === 'prefirio-no-dar-su-email@nodiosuemail.com'
-                    ? '-'
-                    : review.email}
-                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-white">
+                    {review.email ===
+                    'prefirio-no-dar-su-email@nodiosuemail.com'
+                      ? '-'
+                      : review.email}
+                  </CardTitle>
+
+                  {/* Badge para mostrar el empleado asociado */}
+                  {review.employee && (
+                    <Badge className="bg-indigo-500 hover:bg-indigo-600 text-white">
+                      <User className="h-3 w-3 mr-1" />
+                      {review.employee.firstName} {review.employee.lastName}
+                    </Badge>
+                  )}
+                </div>
 
                 <div className="flex items-center mt-1">
                   {[...Array(5)].map((_, i) => (
@@ -262,20 +290,18 @@ export function ReviewsContent() {
               </div>
             </CardHeader>
             <CardContent>
-              {/* 
-                AGREGAMOS max-h-24, overflow-auto y break-words 
-                para limitar el espacio vertical y permitir scroll si es muy largo 
-              */}
               <div className="mb-4 max-h-24 overflow-auto break-words">
                 <p className="text-white">{review.comment}</p>
-                {review.typeImprovement && (
-                  <div className="mt-2">
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {review.typeImprovement && (
                     <span className="text-sm bg-white/10 text-white px-2 py-1 rounded-full">
                       {review.typeImprovement}
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
+
+              {/* Resto del código de cupones */}
               {review.email !== 'prefirio-no-dar-su-email@nodiosuemail.com' &&
                 (review.couponCode ? (
                   <div className="space-y-2">

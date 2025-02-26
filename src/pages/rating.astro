@@ -4,8 +4,10 @@ import Layout from '../layouts/Layout.astro';
 import { RatingForm } from '../components/feedback/Rating';
 import { getRestaurant, incrementTaps } from '../services/api';
 
-// Obtener el ID y validar al inicio
+// Obtener los IDs y validar al inicio
 const documentId = Astro.url.searchParams.get('local');
+const employeeDocumentId = Astro.url.searchParams.get('employee');
+
 if (!documentId) {
   return Astro.redirect('/404');
 }
@@ -15,7 +17,7 @@ const [restaurant, _] = await Promise.all([
   getRestaurant(documentId),
   incrementTaps(documentId).catch(err => {
     console.error('Error incrementando taps:', err);
-    return null; // No bloqueamos la carga por un error en incrementTaps
+    return null;
   })
 ]);
 
@@ -24,8 +26,9 @@ if (!restaurant) {
   return Astro.redirect('/404');
 }
 
+
 // Precargamos la siguiente página para reducir tiempo de transición
-const nextUrl = `/improvement?local=${documentId}`;
+const nextUrl = `/improvement?local=${documentId}${employeeDocumentId ? `&employee=${employeeDocumentId}` : ''}`;
 ---
 
 <Layout title="Califica tu experiencia">
@@ -52,12 +55,13 @@ const nextUrl = `/improvement?local=${documentId}`;
         </noscript>
         
         <RatingForm 
-          client:load 
-          restaurantId={restaurant.id.toString()}
-          restaurantDocumentId={documentId}
-          nextUrl={nextUrl}
-          linkMaps={restaurant.linkMaps}
-        />
+        client:load 
+        restaurantId={restaurant.id.toString()}
+        restaurantDocumentId={documentId}
+        employeeDocumentId={employeeDocumentId || undefined}
+        nextUrl={nextUrl}
+        linkMaps={restaurant.linkMaps}
+      />
       </div>
     </div>
   </div>

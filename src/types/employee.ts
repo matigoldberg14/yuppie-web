@@ -33,3 +33,12 @@ export interface EmployeeFormInput {
   photo: File | null;
   scheduleIds: number[];
 }
+
+interface CreateEmployeeInput {
+  firstName: string;
+  lastName: string;
+  position: string;
+  photo: File | null;
+  scheduleIds: string[]; // aquí son strings
+  restaurantId: string;
+}

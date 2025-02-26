@@ -1,8 +1,12 @@
-// /Users/Mati/Desktop/yuppie-web/src/components/feedback/Rating.tsx
+// Reemplaza completamente el archivo Rating.tsx
 import { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
-import { createReview } from '../../services/api';
+import {
+  createReview,
+  getRestaurantNumericId,
+  getEmployeeNumericId,
+} from '../../services/api';
 import {
   hasSubmittedReviewToday,
   recordReviewSubmission,
@@ -13,6 +17,7 @@ interface Props {
   restaurantDocumentId: string;
   nextUrl: string;
   linkMaps: string;
+  employeeDocumentId?: string;
 }
 
 // Memoized para evitar re-renders
@@ -30,6 +35,7 @@ export function RatingForm({
   restaurantDocumentId,
   nextUrl,
   linkMaps,
+  employeeDocumentId,
 }: Props) {
   // Parseamos el ID una sola vez
   const numericRestaurantId = parseInt(restaurantId, 10);
@@ -39,6 +45,15 @@ export function RatingForm({
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
+
+  console.log('RatingForm inicializado con:', {
+    restaurantId,
+    numericRestaurantId,
+    restaurantDocumentId,
+    employeeDocumentId,
+    nextUrl,
+    linkMaps,
+  });
 
   // Verificación de review enviada optimizada
   useEffect(() => {
@@ -83,15 +98,64 @@ export function RatingForm({
     [isSubmitting, alreadySubmitted]
   );
 
+  // Función central para crear reseñas
+  const createReviewWithData = async (
+    rating: number,
+    restaurantRealId: number,
+    employeeRealId?: number
+  ) => {
+    console.log(
+      `Creando reseña con: restaurante=${restaurantRealId}, rating=${rating}${
+        employeeRealId ? `, empleado=${employeeRealId}` : ''
+      }`
+    );
+
+    // Crear objeto de reseña
+    const reviewData: any = {
+      restaurantId: restaurantRealId,
+      calification: rating,
+      typeImprovement: 'Otra',
+      email: 'prefirio-no-dar-su-email@nodiosuemail.com',
+      comment: 'Google Review: 5 estrellas. Review enviada a Google!',
+      googleSent: true,
+    };
+
+    // Añadir empleado si existe
+    if (employeeRealId) {
+      reviewData.employeeId = employeeRealId;
+      console.log('Añadiendo employeeId:', employeeRealId);
+    }
+
+    try {
+      const result = await createReview(reviewData);
+      console.log('Review creada exitosamente:', result);
+      return true;
+    } catch (apiError) {
+      console.error('Error en createReview:', apiError);
+      throw apiError;
+    }
+  };
+
+  // FUNCIÓN PRINCIPAL
   const handleRatingSelect = useCallback(
     async (rating: number) => {
       if (isSubmitting || alreadySubmitted) return;
+
       try {
         setIsSubmitting(true);
+        console.log(`===== Procesando calificación: ${rating} =====`);
 
         // Guardar en localStorage (operación síncrona rápida)
         localStorage.setItem('yuppie_rating', rating.toString());
         localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
+
+        // Guardar empleado si existe
+        if (employeeDocumentId) {
+          localStorage.setItem('yuppie_employee', employeeDocumentId);
+          console.log(
+            `Guardado empleado en localStorage: ${employeeDocumentId}`
+          );
+        }
 
         if (rating === 5) {
           localStorage.setItem('yuppie_improvement', 'Otra');
@@ -102,36 +166,76 @@ export function RatingForm({
             duration: 2000,
           });
 
-          if (isNaN(numericRestaurantId)) {
-            throw new Error('ID de restaurante inválido');
-          }
-
-          // Para 5 estrellas usamos el ID numérico
-          const reviewData = {
-            restaurantId: numericRestaurantId,
-            calification: 5,
-            typeImprovement: 'Otra',
-            email: 'prefirio-no-dar-su-email@nodiosuemail.com',
-            comment: 'Google Review: 5 estrellas. Review enviada a Google!',
-            googleSent: true,
-          };
-
-          // Optimización: Registrar submission antes de la llamada API para mejorar percepción de velocidad
-          recordReviewSubmission(restaurantDocumentId);
-
-          // Iniciar redirección en paralelo con la llamada API
-          const redirectTimeout = setTimeout(() => {
-            window.location.href = linkMaps;
-          }, 1500);
-
+          // CRUCIAL: Obtenemos el ID real del restaurante y empleado (si existe) en Strapi
           try {
-            await createReview(reviewData);
-          } catch (apiError) {
-            // Logueamos pero no bloqueamos la experiencia del usuario
-            console.error('Error en createReview:', apiError);
+            // Obtener ID del restaurante
+            console.log(
+              `Obteniendo ID numerico real para restaurante documentId: ${restaurantDocumentId}`
+            );
+            const realRestaurantId = await getRestaurantNumericId(
+              restaurantDocumentId
+            );
+
+            if (realRestaurantId) {
+              console.log(
+                `ID numérico real del restaurante obtenido: ${realRestaurantId} (era ${numericRestaurantId})`
+              );
+
+              // Obtener ID del empleado (si existe)
+              let employeeRealId;
+              if (employeeDocumentId) {
+                try {
+                  console.log(
+                    `Obteniendo ID numerico real para empleado documentId: ${employeeDocumentId}`
+                  );
+                  employeeRealId = await getEmployeeNumericId(
+                    employeeDocumentId
+                  );
+                  console.log(
+                    `ID numérico real del empleado obtenido: ${employeeRealId}`
+                  );
+                } catch (empError) {
+                  console.error('Error obteniendo ID del empleado:', empError);
+                }
+              }
+
+              // Registrar submission para mejor UX
+              recordReviewSubmission(restaurantDocumentId);
+              console.log('Review registrada en localStorage');
+
+              // Enviar reseña con IDs correctos
+              try {
+                await createReviewWithData(
+                  5,
+                  realRestaurantId,
+                  employeeRealId || undefined
+                );
+              } catch (error) {
+                console.error(
+                  'Error al crear reseña, intentando sin empleado:',
+                  error
+                );
+
+                // Si falla con empleado, intentar sin él
+                if (employeeRealId) {
+                  await createReviewWithData(5, realRestaurantId);
+                }
+              }
+            } else {
+              console.error('No se pudo obtener el ID real del restaurante');
+            }
+          } catch (idError) {
+            console.error('Error obteniendo IDs reales:', idError);
           }
+
+          // Redirigir a Google Maps después de procesar todo
+          console.log(`Redirigiendo a Google Maps: ${linkMaps}`);
+          setTimeout(() => {
+            window.location.href = linkMaps;
+          }, 2000); // Incrementado a 2 segundos para dar más tiempo
         } else {
           // Para calificaciones menores a 5 - Redirección inmediata
+          console.log(`Redirigiendo a: ${nextUrl}`);
           window.location.href = nextUrl;
         }
       } catch (error) {
@@ -148,8 +252,10 @@ export function RatingForm({
     [
       isSubmitting,
       alreadySubmitted,
+      restaurantId,
       restaurantDocumentId,
       numericRestaurantId,
+      employeeDocumentId,
       toast,
       linkMaps,
       nextUrl,

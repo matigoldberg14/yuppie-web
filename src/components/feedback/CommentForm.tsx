@@ -1,7 +1,8 @@
 // /Users/Mati/Desktop/yuppie-web/src/components/feedback/CommentForm.tsx
 import { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createReview } from '../../services/api';
+import { createReview, getEmployeeNumericId } from '../../services/api';
+import type { CreateReviewInput } from '../../services/api'; // Importación de tipo
 import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
 import emailjs from '@emailjs/browser';
@@ -11,6 +12,7 @@ import {
   recordReviewSubmission,
 } from '../../utils/reviewLimiter';
 
+// Resto del código sin cambios...
 // Schema para validación (optimizado para rendimiento con memoización)
 const commentSchema = z.object({
   email: z.string().email('Por favor, ingresa un email válido'),
@@ -45,6 +47,7 @@ type CommentFormData = {
 type Props = {
   restaurantId: string; // ID numérico para API
   restaurantDocumentId: string; // ID del documento para tracking
+  employeeDocumentId?: string;
 };
 
 // Opciones de mejora (memoizadas para evitar recreaciones en cada render)
@@ -79,7 +82,11 @@ const improvementOptions = {
   ],
 } as const;
 
-export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
+export function CommentForm({
+  restaurantId,
+  restaurantDocumentId,
+  employeeDocumentId,
+}: Props) {
   // Estado principal
   const [formData, setFormData] = useState<CommentFormData>({
     comment: '',
@@ -194,24 +201,37 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
       const savedEmail = localStorage.getItem('yuppie_email');
       if (savedEmail) {
         setFormData((prev) => ({ ...prev, email: savedEmail }));
-        // No marcamos como interactuado el email restaurado para evitar validaciones inmediatas
-        // Esto permite que el usuario pueda ver y modificar el email sin errores iniciales
+      }
+
+      // Verificar si hay ID de empleado en localStorage (propagado desde páginas anteriores)
+      const storedEmployeeId = localStorage.getItem('yuppie_employee');
+
+      // Si tenemos employeeDocumentId en props pero no en localStorage, guardarlo
+      if (
+        employeeDocumentId &&
+        (!storedEmployeeId || storedEmployeeId !== employeeDocumentId)
+      ) {
+        localStorage.setItem('yuppie_employee', employeeDocumentId);
       }
     } catch (error) {
       console.error('Error en la inicialización del formulario:', error);
     } finally {
       setIsLoadingInitialData(false);
     }
-  }, [restaurantDocumentId, toast]);
-
+  }, [restaurantDocumentId, employeeDocumentId, toast]);
   const handleBackToOptions = useCallback(() => {
-    // Obtener el parámetro "local" de la URL actual
+    // Obtener los parámetros de la URL actual
     const urlParams = new URLSearchParams(window.location.search);
     const localId = urlParams.get('local');
+    const employeeId = urlParams.get('employee');
 
-    // Volver a improvement con el mismo parámetro local
+    // Construir la URL incluyendo el parámetro del empleado si existe
     if (localId) {
-      window.location.href = `/improvement?local=${localId}`;
+      let redirectUrl = `/improvement?local=${localId}`;
+      if (employeeId) {
+        redirectUrl += `&employee=${employeeId}`;
+      }
+      window.location.href = redirectUrl;
     } else {
       window.location.href = '/';
     }
@@ -342,9 +362,28 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
         return;
       }
 
+      console.log(
+        'Click en opción:',
+        optionId,
+        'ShowTextArea antes:',
+        showTextArea
+      );
+
       if (optionId === 'otro') {
+        // Actualizar ambos estados necesarios para mostrar el textarea
         setShowTextArea(true);
+        // Importante: actualizar también el improvementType para que el renderizado condicional funcione
+        setImprovementType('Otra'); // Con mayúscula como se espera en la condición de renderizado
         setSelectedOption(null);
+
+        // Actualizar localStorage para mantener consistencia en toda la aplicación
+        localStorage.setItem('yuppie_improvement', 'Otra');
+
+        console.log('Estados actualizados:', {
+          showTextArea: true,
+          improvementType: 'Otra',
+          selectedOption: null,
+        });
       } else {
         setSelectedOption(optionId);
         setShowTextArea(false);
@@ -352,7 +391,6 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
     },
     [selectedOption]
   );
-
   const handleTextAreaFocus = useCallback(() => {
     setHasInteractedWithComment(true);
   }, []);
@@ -416,7 +454,7 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
           );
         }
 
-        // Obtener calificación
+        // Obtener calificación y otros datos existentes...
         const rating = Number(localStorage.getItem('yuppie_rating'));
         if (!rating) {
           throw new Error('No se encontró la calificación');
@@ -427,6 +465,20 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
         if (storedRestaurantId !== restaurantDocumentId) {
           // Intento de recuperación: actualizar ID
           localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
+        }
+
+        // Verificar si existe ID de empleado en localStorage
+        const storedEmployeeId = localStorage.getItem('yuppie_employee');
+        let employeeId: number | undefined;
+
+        if (storedEmployeeId) {
+          // Obtener el ID numérico del empleado
+          const numericEmployeeId = await getEmployeeNumericId(
+            storedEmployeeId
+          );
+          if (numericEmployeeId) {
+            employeeId = numericEmployeeId;
+          }
         }
 
         // Validar y convertir IDs
@@ -446,6 +498,7 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
           email: formData.email.trim(),
           comment: finalComment.trim(),
           googleSent: rating === 5,
+          employeeId: employeeId, // Añadir el ID del empleado si existe
         };
 
         // Registrar submission primero (para mejor percepción de velocidad)
@@ -555,6 +608,7 @@ export function CommentForm({ restaurantId, restaurantDocumentId }: Props) {
       improvementType,
       restaurantId,
       restaurantDocumentId,
+      employeeDocumentId,
       toast,
     ]
   );

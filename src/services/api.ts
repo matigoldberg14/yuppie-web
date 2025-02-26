@@ -27,8 +27,8 @@ export interface CreateReviewInput {
   email: string;
   comment: string;
   googleSent: boolean;
+  employeeId?: number;
 }
-
 interface RestaurantData {
   id: number;
   documentId: string;
@@ -187,12 +187,24 @@ export async function incrementTaps(documentId: string) {
   }
 }
 
-// src/services/api.ts
+export interface CreateReviewInput {
+  restaurantId: number;
+  calification: number;
+  typeImprovement: string;
+  email: string;
+  comment: string;
+  googleSent: boolean;
+  employeeId?: number; // Empleado como opcional
+}
+
 export async function createReview(
   reviewData: CreateReviewInput
 ): Promise<ApiResponse<Review>> {
   try {
-    const formattedData = {
+    console.log('createReview llamado con datos:', JSON.stringify(reviewData));
+
+    // Construir el objeto de datos para la API
+    const formattedData: any = {
       data: {
         restaurant: reviewData.restaurantId,
         calification: reviewData.calification,
@@ -204,6 +216,19 @@ export async function createReview(
       },
     };
 
+    // Añadir el ID del empleado solo si existe
+    if (reviewData.employeeId) {
+      console.log('Añadiendo empleado ID:', reviewData.employeeId);
+      formattedData.data.employee = reviewData.employeeId;
+    } else {
+      console.log('No se incluyó ID de empleado en la solicitud');
+    }
+
+    console.log(
+      'Enviando solicitud a API:',
+      JSON.stringify(formattedData, null, 2)
+    );
+
     const response = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
       method: 'POST',
       headers: {
@@ -212,17 +237,31 @@ export async function createReview(
       body: JSON.stringify(formattedData),
     });
 
-    const data = await response.json();
+    // Obtener la respuesta como texto primero para depuración
+    const responseText = await response.text();
+    console.log('Respuesta como texto:', responseText);
+
+    // Intentar parsear la respuesta como JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+      console.log('Respuesta parseada:', data);
+    } catch (parseError) {
+      console.error('Error al parsear respuesta:', parseError);
+      throw new Error(`Error al parsear respuesta: ${responseText}`);
+    }
 
     if (!response.ok) {
-      // Aquí está el cambio clave
+      console.error('Error en respuesta HTTP:', response.status, data);
       throw new Error(
-        data.error?.message || data.message || 'No se pudo crear la review'
+        data.error?.message || data.message || `Error HTTP ${response.status}`
       );
     }
 
+    console.log('Review creada con éxito:', data);
     return data;
   } catch (error) {
+    console.error('Error en createReview:', error);
     if (error instanceof Error) {
       throw error;
     }
@@ -338,8 +377,17 @@ export async function getRestaurantReviews(restaurantId: string) {
       googleSent: review.googleSent,
       date: review.date,
       createdAt: review.createdAt,
-      couponCode: review.couponCode, // Nuevo campo
-      couponUsed: review.couponUsed, // Nuevo campo
+      couponCode: review.couponCode,
+      couponUsed: review.couponUsed,
+      employee: review.employee
+        ? {
+            id: review.employee.id,
+            documentId: review.employee.documentId,
+            firstName: review.employee.firstName,
+            lastName: review.employee.lastName,
+            position: review.employee.position,
+          }
+        : undefined,
     }));
   } catch (error) {
     console.error('Error fetching reviews:', error);
@@ -411,12 +459,18 @@ export async function getEmployeesByRestaurant(restaurantId: string) {
   }
 }
 
-interface CreateEmployeeInput {
+interface WorkSchedule {
+  day: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface CreateEmployeeInput {
   firstName: string;
   lastName: string;
   position: string;
   photo: File | null;
-  scheduleIds: string[];
+  schedules: WorkSchedule[];
   restaurantId: string;
 }
 
@@ -424,7 +478,7 @@ interface UpdateEmployeeData {
   firstName: string;
   lastName: string;
   position: string;
-  scheduleIds: string[];
+  schedules: WorkSchedule[]; // Cambiado de scheduleIds a schedules
   photo: File | null;
 }
 
@@ -445,7 +499,7 @@ export async function createEmployee(employeeData: CreateEmployeeInput) {
             position: employeeData.position,
             active: true,
             restaurant: employeeData.restaurantId,
-            schedules: employeeData.scheduleIds,
+            schedules: employeeData.schedules,
           },
         }),
       }
@@ -528,7 +582,7 @@ export async function updateEmployee(
             firstName: employeeData.firstName,
             lastName: employeeData.lastName,
             position: employeeData.position,
-            schedules: employeeData.scheduleIds,
+            schedules: employeeData.schedules,
           },
         }),
       }
@@ -590,6 +644,26 @@ export async function getRestaurantNumericId(
     return null;
   } catch (error) {
     console.error('Error in getRestaurantNumericId:', error);
+    return null;
+  }
+}
+
+export async function getEmployeeNumericId(
+  documentId: string
+): Promise<number | null> {
+  try {
+    const url = `${API_CONFIG.baseUrl}/employees?filters[documentId][$eq]=${documentId}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Error obteniendo ID numérico del empleado');
+    }
+    const data = await response.json();
+    if (data.data && data.data.length > 0) {
+      return data.data[0].id; // Obtiene el ID numérico interno
+    }
+    return null;
+  } catch (error) {
+    console.error('Error en getEmployeeNumericId:', error);
     return null;
   }
 }

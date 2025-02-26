@@ -68,6 +68,7 @@ export interface Review {
   comment: string;
   calification: number;
   restaurant: Restaurant;
+  employee?: Employee;
   createdAt: string;
   updatedAt: string;
   publishedAt: string;

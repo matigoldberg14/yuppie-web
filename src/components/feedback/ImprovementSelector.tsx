@@ -14,11 +14,13 @@ const improvementOptions = [
 
 type Props = {
   restaurantDocumentId: string;
+  employeeDocumentId?: string;
   nextUrl: string;
 };
 
 function ImprovementSelectorComponent({
   restaurantDocumentId,
+  employeeDocumentId,
   nextUrl,
 }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,6 +71,8 @@ function ImprovementSelectorComponent({
         // Verificación optimizada
         const rating = localStorage.getItem('yuppie_rating');
         const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
+        // Verificar si hay ID de empleado en localStorage (ya guardado por RatingForm)
+        const storedEmployeeId = localStorage.getItem('yuppie_employee');
 
         if (!rating) {
           throw new Error('No se encontró la calificación');
@@ -83,6 +87,14 @@ function ImprovementSelectorComponent({
           localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
         }
 
+        // Actualizar el ID del empleado si es diferente o no existe
+        if (
+          employeeDocumentId &&
+          (!storedEmployeeId || storedEmployeeId !== employeeDocumentId)
+        ) {
+          localStorage.setItem('yuppie_employee', employeeDocumentId);
+        }
+
         // Guardar mejora seleccionada - No bloqueante
         localStorage.setItem('yuppie_improvement', improvement);
 
@@ -93,26 +105,20 @@ function ImprovementSelectorComponent({
         preloadLink.as = 'document';
         document.head.appendChild(preloadLink);
 
-        // Navegación optimizada
+        // Navegación optimizada sin usar import.meta
         const navigationStart = performance.now();
 
-        // Intentar usar navegación moderna si está disponible (para mejor rendimiento)
-        if (
-          'navigation' in window &&
-          typeof (window as any).navigation?.navigate === 'function'
-        ) {
-          try {
-            (window as any).navigation.navigate(nextUrl);
-            return; // Salir si la navegación moderna funciona
-          } catch (navError) {
-            console.warn('Navegación moderna falló, usando método tradicional');
-          }
-        }
+        // Simpler navigation approach
+        toast({
+          title: 'Seleccionado',
+          description: `Has seleccionado "${improvement}"`,
+          duration: 1000,
+        });
 
-        // Optimización: Delayed redirect para permitir que los eventos de analytics se envíen
+        // Redirección directa con pequeño delay para permitir que los eventos se envíen
         setTimeout(() => {
           window.location.href = nextUrl;
-        }, 50); // Pequeño delay para mejor UI feedback
+        }, 50);
       } catch (error) {
         console.error('Error al seleccionar mejora:', error);
         setIsSubmitting(false);
@@ -125,7 +131,7 @@ function ImprovementSelectorComponent({
         });
       }
     },
-    [isSubmitting, restaurantDocumentId, nextUrl, toast]
+    [isSubmitting, restaurantDocumentId, employeeDocumentId, nextUrl, toast]
   );
 
   // Renderizado optimizado con menor carga de animación

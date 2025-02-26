@@ -1,56 +1,128 @@
 // src/components/dashboard/TeamContent.tsx
-
 import React, { useState, useEffect } from 'react';
 import { auth } from '../../lib/firebase';
 import {
   getRestaurantByFirebaseUID,
   getEmployeesByRestaurant,
+  getRestaurantReviews,
   createEmployee,
   deleteEmployee,
   updateEmployee,
 } from '../../services/api';
-import { Plus, User, Trash, Edit2 } from 'lucide-react';
-import { Card, CardContent } from '../ui/card';
+import {
+  Plus,
+  User,
+  Trash,
+  Edit2,
+  Star,
+  TrendingUp,
+  Award,
+  AlertCircle,
+  BarChart2,
+  Calendar,
+  ChevronRight,
+  Download,
+  QrCode,
+  Search,
+} from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '../ui/card';
 import { Button } from '../ui/Button';
 import { AddEmployeeForm } from './AddEmployeeForm';
 import { useToast } from '../ui/use-toast';
+import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Badge } from '../ui/badge';
+import { Progress } from '../ui/progress';
+import { Input } from '../ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+import * as XLSX from 'xlsx';
+// Importamos el tipo de Employee de forma type-only desde el archivo de tipos
+import type { Employee as BasicEmployee } from '../../types/employee';
 
 interface Schedule {
-  id: string;
+  id: number;
   documentId: string;
   day: string;
   startTime: string;
   endTime: string;
 }
 
-interface Employee {
+interface WorkSchedule {
+  id?: string;
+  day: string;
+  startTime: string;
+  endTime: string;
+}
+
+// Definimos la interfaz para Review
+interface Review {
   id: number;
   documentId: string;
+  calification: number;
+  typeImprovement: string;
+  comment: string;
+  email: string;
+  date: string;
+  createdAt: string;
+  employee?: {
+    documentId: string;
+    firstName?: string;
+    lastName?: string;
+  };
+}
+
+// Extendemos el tipo básico para incluir propiedades calculadas
+interface EnrichedEmployee extends BasicEmployee {
+  reviewCount?: number;
+  averageRating?: number;
+  reviews?: Review[];
+  lastReviewDate?: string | null;
+  daysWithoutReview?: number | null;
+  schedules: Schedule[];
+}
+interface CreateEmployeeInput {
   firstName: string;
   lastName: string;
   position: string;
-  active: boolean;
-  photo?: {
-    url: string;
-    formats: {
-      thumbnail: {
-        url: string;
-      };
-    };
-  };
-  schedules: Schedule[];
+  photo: File | null;
+  scheduleIds: string[]; // aquí son strings
+  restaurantId: string;
+}
+
+interface EmployeeOfMonthResult {
+  employee: EnrichedEmployee | null;
+  score: number;
 }
 
 export function TeamContent() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<EnrichedEmployee[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [editingEmployee, setEditingEmployee] =
+    useState<EnrichedEmployee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] =
+    useState<EnrichedEmployee | null>(null);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [sortOption, setSortOption] = useState('name'); // 'name', 'rating', 'reviews', 'lastReview'
+  const [filterText, setFilterText] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'leaderboard'>('grid');
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchEmployees = async () => {
+    const fetchEmployeesAndReviews = async () => {
       try {
         if (!auth?.currentUser?.uid) {
           console.log('No hay usuario autenticado');
@@ -60,33 +132,163 @@ export function TeamContent() {
         const restaurantData = await getRestaurantByFirebaseUID(
           auth.currentUser.uid
         );
-
         if (!restaurantData) {
           throw new Error('No se encontró el restaurante');
         }
-
         setRestaurantId(restaurantData.documentId);
 
-        const employeesData = await getEmployeesByRestaurant(
+        // Obtenemos los datos y forzamos el tipado
+        const employeesData = (await getEmployeesByRestaurant(
           restaurantData.documentId
+        )) as BasicEmployee[];
+        const reviewsData = (await getRestaurantReviews(
+          restaurantData.documentId
+        )) as Review[];
+
+        setReviews(reviewsData);
+
+        // Enriquecemos cada empleado con las propiedades calculadas
+        const enrichedEmployees: EnrichedEmployee[] = employeesData.map(
+          (employee: BasicEmployee) => {
+            // Filtrar reseñas para este empleado usando documentId
+            const employeeReviews = reviewsData.filter(
+              (review: Review) =>
+                review.employee?.documentId === employee.documentId
+            );
+            const reviewCount = employeeReviews.length;
+            const totalRating = employeeReviews.reduce(
+              (sum: number, review: Review) => sum + review.calification,
+              0
+            );
+            const averageRating =
+              reviewCount > 0 ? totalRating / reviewCount : 0;
+            const sortedReviews = [...employeeReviews].sort(
+              (a: Review, b: Review) =>
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime()
+            );
+            const lastReviewDate =
+              sortedReviews.length > 0 ? sortedReviews[0].createdAt : null;
+            const daysWithoutReview = lastReviewDate
+              ? Math.floor(
+                  (new Date().getTime() - new Date(lastReviewDate).getTime()) /
+                    (1000 * 60 * 60 * 24)
+                )
+              : null;
+            return {
+              ...employee,
+              reviewCount,
+              averageRating,
+              reviews: employeeReviews,
+              lastReviewDate,
+              daysWithoutReview,
+            };
+          }
         );
-        setEmployees(employeesData);
+        setEmployees(enrichedEmployees);
       } catch (error) {
-        console.error('Error fetching employees:', error);
+        console.error('Error fetching data:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'No se pudieron cargar los datos del equipo',
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchEmployees();
-  }, []);
+    fetchEmployeesAndReviews();
+  }, [toast]);
+
+  // Ordenar empleados según la opción seleccionada
+  const sortedEmployees: EnrichedEmployee[] = [...employees].sort((a, b) => {
+    switch (sortOption) {
+      case 'name':
+        return `${a.firstName} ${a.lastName}`.localeCompare(
+          `${b.firstName} ${b.lastName}`
+        );
+      case 'rating':
+        return (b.averageRating || 0) - (a.averageRating || 0);
+      case 'reviews':
+        return (b.reviewCount || 0) - (a.reviewCount || 0);
+      case 'lastReview':
+        if (!a.lastReviewDate) return 1;
+        if (!b.lastReviewDate) return -1;
+        return (
+          new Date(b.lastReviewDate).getTime() -
+          new Date(a.lastReviewDate).getTime()
+        );
+      default:
+        return 0;
+    }
+  });
+
+  const filteredEmployees: EnrichedEmployee[] = sortedEmployees.filter(
+    (employee: EnrichedEmployee): boolean => {
+      const fullName =
+        `${employee.firstName} ${employee.lastName}`.toLowerCase();
+      return (
+        fullName.includes(filterText.toLowerCase()) ||
+        employee.position.toLowerCase().includes(filterText.toLowerCase())
+      );
+    }
+  );
+
+  // Obtener el empleado del mes (con más reseñas positivas en el último mes)
+  const getEmployeeOfTheMonth = (): EmployeeOfMonthResult => {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    let bestEmployee: EnrichedEmployee | null = null;
+    let highestScore = -1;
+
+    employees.forEach((employee: EnrichedEmployee) => {
+      if (!employee.reviews) return;
+      const lastMonthReviews = employee.reviews.filter((review: Review) => {
+        const reviewDate = new Date(review.createdAt);
+        return reviewDate >= oneMonthAgo && review.calification >= 4;
+      });
+      const score = lastMonthReviews.length;
+      if (score > highestScore) {
+        highestScore = score;
+        bestEmployee = employee;
+      }
+    });
+
+    return { employee: bestEmployee, score: highestScore };
+  };
+
+  // Obtener empleados que necesitan atención (sin reseñas recientes)
+  const getEmployeesNeedingAttention = (): EnrichedEmployee[] => {
+    return employees
+      .filter(
+        (employee: EnrichedEmployee) => (employee.daysWithoutReview || 30) > 14
+      )
+      .sort(
+        (a: EnrichedEmployee, b: EnrichedEmployee) =>
+          (b.daysWithoutReview || 0) - (a.daysWithoutReview || 0)
+      )
+      .slice(0, 3);
+  };
+
+  // Obtener top 3 empleados por calificación (con al menos 3 reseñas)
+  const getTopRatedEmployees = (): EnrichedEmployee[] => {
+    return employees
+      .filter((employee: EnrichedEmployee) => (employee.reviewCount || 0) >= 3)
+      .sort(
+        (a: EnrichedEmployee, b: EnrichedEmployee) =>
+          (b.averageRating || 0) - (a.averageRating || 0)
+      )
+      .slice(0, 3);
+  };
 
   const handleAddEmployee = async (data: {
     firstName: string;
     lastName: string;
     position: string;
     photo: File | null;
-    scheduleIds: string[];
+    schedules: WorkSchedule[]; // Cambiado de scheduleIds a schedules
   }) => {
     try {
       if (!restaurantId) throw new Error('No restaurant ID');
@@ -95,16 +297,33 @@ export function TeamContent() {
         ...data,
         restaurantId,
       });
-
       // Vuelve a cargar la lista de empleados
-      const updatedEmployees = await getEmployeesByRestaurant(restaurantId);
-      setEmployees(updatedEmployees);
-      setIsAddingEmployee(false);
+      if (restaurantId) {
+        const updatedEmployees = (await getEmployeesByRestaurant(
+          restaurantId
+        )) as BasicEmployee[];
 
-      toast({
-        title: 'Éxito',
-        description: 'Empleado agregado correctamente',
-      });
+        // Enriquecer nuevamente los empleados
+        const enrichedEmployees: EnrichedEmployee[] = updatedEmployees.map(
+          (employee) => {
+            return {
+              ...employee,
+              reviewCount: 0,
+              averageRating: 0,
+              reviews: [],
+              lastReviewDate: null,
+              daysWithoutReview: null,
+            };
+          }
+        );
+        setEmployees(enrichedEmployees);
+        setIsAddingEmployee(false);
+
+        toast({
+          title: 'Éxito',
+          description: 'Empleado agregado correctamente',
+        });
+      }
     } catch (error) {
       console.error('Error adding employee:', error);
       toast({
@@ -121,23 +340,42 @@ export function TeamContent() {
     lastName: string;
     position: string;
     photo: File | null;
-    scheduleIds: string[];
+    schedules: WorkSchedule[]; // Cambiado de scheduleIds a schedules
   }) => {
     try {
       if (!editingEmployee) return;
 
+      // Actualiza el empleado con los nuevos horarios
       await updateEmployee(editingEmployee.documentId, {
         firstName: data.firstName,
         lastName: data.lastName,
         position: data.position,
-        scheduleIds: data.scheduleIds,
+        schedules: data.schedules, // Usa schedules directamente
         photo: data.photo,
       });
 
       // Actualizar la lista de empleados
       if (restaurantId) {
-        const updatedEmployees = await getEmployeesByRestaurant(restaurantId);
-        setEmployees(updatedEmployees);
+        const updatedEmployees = (await getEmployeesByRestaurant(
+          restaurantId
+        )) as BasicEmployee[];
+
+        const enrichedEmployees: EnrichedEmployee[] = updatedEmployees.map(
+          (employee) => {
+            const existingEmployee = employees.find(
+              (e: EnrichedEmployee) => e.documentId === employee.documentId
+            );
+            return {
+              ...employee,
+              reviewCount: existingEmployee?.reviewCount || 0,
+              averageRating: existingEmployee?.averageRating || 0,
+              reviews: existingEmployee?.reviews || [],
+              lastReviewDate: existingEmployee?.lastReviewDate || null,
+              daysWithoutReview: existingEmployee?.daysWithoutReview || null,
+            };
+          }
+        );
+        setEmployees(enrichedEmployees);
       }
 
       setEditingEmployee(null);
@@ -159,13 +397,13 @@ export function TeamContent() {
     if (!confirm('¿Estás seguro de que quieres eliminar este empleado?')) {
       return;
     }
-
     try {
       await deleteEmployee(employeeId);
-
-      // Actualizar la lista de empleados después de eliminar
-      setEmployees(employees.filter((emp) => emp.documentId !== employeeId));
-
+      setEmployees(
+        employees.filter(
+          (emp: EnrichedEmployee) => emp.documentId !== employeeId
+        )
+      );
       toast({
         title: 'Éxito',
         description: 'Empleado eliminado correctamente',
@@ -180,6 +418,58 @@ export function TeamContent() {
     }
   };
 
+  // Generar URL de código QR para el empleado
+  const generateEmployeeQRUrl = (employeeId: string) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/rating?local=${restaurantId}&employee=${employeeId}`;
+  };
+
+  // Generar y descargar códigos QR
+  const handleGenerateQR = (employee: EnrichedEmployee) => {
+    const url = generateEmployeeQRUrl(employee.documentId);
+    prompt(
+      `URL para escanear y dejar reseña para ${employee.firstName} ${employee.lastName}:`,
+      url
+    );
+  };
+
+  // Exportar datos de empleados a Excel
+  const handleExportEmployeesData = () => {
+    const exportData = employees.map((employee: EnrichedEmployee) => ({
+      Nombre: `${employee.firstName} ${employee.lastName}`,
+      Posición: employee.position,
+      Reseñas: employee.reviewCount || 0,
+      'Calificación Promedio': employee.averageRating
+        ? employee.averageRating.toFixed(1)
+        : 'N/A',
+      'Última Reseña': employee.lastReviewDate
+        ? new Date(employee.lastReviewDate).toLocaleDateString()
+        : 'N/A',
+      'Días Sin Reseña': employee.daysWithoutReview || 'N/A',
+      ID: employee.documentId,
+      'URL de Reseña': generateEmployeeQRUrl(employee.documentId),
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const columnWidths = [
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 10 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 25 },
+      { wch: 60 },
+    ];
+    ws['!cols'] = columnWidths;
+    XLSX.utils.book_append_sheet(wb, ws, 'Empleados');
+    XLSX.writeFile(
+      wb,
+      `empleados_${new Date().toISOString().split('T')[0]}.xlsx`
+    );
+  };
+
   if (loading) {
     return (
       <div className="p-8">
@@ -188,90 +478,981 @@ export function TeamContent() {
     );
   }
 
+  const { employee: employeeOfMonth, score: employeeOfMonthScore } =
+    getEmployeeOfTheMonth();
+  const employeesNeedingAttention = getEmployeesNeedingAttention();
+  const topRatedEmployees = getTopRatedEmployees();
+
   return (
     <div className="p-8">
-      {/* Encabezado */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Equipo</h1>
-        <Button
-          onClick={() => setIsAddingEmployee(true)}
-          className="bg-white text-black hover:bg-white/90"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Agregar miembro
-        </Button>
-      </div>
+      <Tabs defaultValue="overview">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-2">Equipo</h1>
+            <TabsList className="bg-white/10">
+              <TabsTrigger
+                value="overview"
+                className="data-[state=active]:bg-white/20"
+              >
+                Vista General
+              </TabsTrigger>
+              <TabsTrigger
+                value="employees"
+                className="data-[state=active]:bg-white/20"
+              >
+                Empleados
+              </TabsTrigger>
+              <TabsTrigger
+                value="stats"
+                className="data-[state=active]:bg-white/20"
+              >
+                Estadísticas
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              onClick={handleExportEmployeesData}
+              className="text-white border-white/20 hover:bg-white/10"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Datos
+            </Button>
+            <Button
+              onClick={() => setIsAddingEmployee(true)}
+              className="bg-white text-black hover:bg-white/90"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Agregar miembro
+            </Button>
+          </div>
+        </div>
 
-      {/* Lista de Empleados */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {employees.map((employee) => (
-          <Card key={employee.documentId} className="bg-white/10 border-0">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
-                    {employee.photo ? (
-                      <img
-                        src={`${import.meta.env.PUBLIC_API_URL}${
-                          employee.photo.formats.thumbnail.url
-                        }`}
-                        alt={`${employee.firstName} ${employee.lastName}`}
-                        className="h-12 w-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-6 w-6 text-white" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">
-                      {employee.firstName} {employee.lastName}
-                    </h3>
-                    <p className="text-sm text-white/60">{employee.position}</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setEditingEmployee(employee)}
-                    className="text-blue-400 hover:text-blue-500 hover:bg-blue-400/10"
-                  >
-                    <Edit2 className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteEmployee(employee.documentId)}
-                    className="text-red-400 hover:text-red-500 hover:bg-red-400/10"
-                  >
-                    <Trash className="h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Horarios */}
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-white mb-2">
-                  Horarios:
-                </h4>
-                <div className="space-y-1">
-                  {employee.schedules.map((schedule) => (
-                    <div
-                      key={schedule.documentId}
-                      className="text-sm text-white/60"
-                    >
-                      {schedule.day.charAt(0).toUpperCase() +
-                        schedule.day.slice(1)}
-                      : {schedule.startTime.slice(0, 5)} -{' '}
-                      {schedule.endTime.slice(0, 5)}
+        {/* Vista General */}
+        <TabsContent value="overview" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {/* Empleado del Mes */}
+            <Card className="bg-gradient-to-br from-purple-600/30 to-blue-600/30 border-0">
+              <CardHeader>
+                <CardTitle className="text-white">Empleado del Mes</CardTitle>
+                <CardDescription className="text-white/70">
+                  Basado en reseñas positivas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {employeeOfMonth ? (
+                  <div className="flex items-center">
+                    <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center mr-4">
+                      {employeeOfMonth.photo ? (
+                        <img
+                          src={`${import.meta.env.PUBLIC_API_URL}${
+                            employeeOfMonth.photo?.formats.thumbnail.url
+                          }`}
+                          alt={`${employeeOfMonth.firstName} ${employeeOfMonth.lastName}`}
+                          className="h-16 w-16 rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-8 w-8 text-white" />
+                      )}
                     </div>
-                  ))}
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">
+                        {employeeOfMonth.firstName} {employeeOfMonth.lastName}
+                      </h3>
+                      <p className="text-white/70">
+                        {employeeOfMonth.position}
+                      </p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Award className="h-4 w-4 text-yellow-400" />
+                        <span className="text-white/80">
+                          {employeeOfMonthScore} reseñas positivas
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-white/70">
+                    No hay suficientes datos para determinar el empleado del
+                    mes.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Mejores Calificaciones */}
+            <Card className="bg-gradient-to-br from-green-600/30 to-emerald-600/30 border-0">
+              <CardHeader>
+                <CardTitle className="text-white">Top Calificaciones</CardTitle>
+                <CardDescription className="text-white/70">
+                  Empleados con mejores reseñas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {topRatedEmployees.length > 0 ? (
+                    topRatedEmployees.map(
+                      (employee: EnrichedEmployee, index: number) => (
+                        <div
+                          key={employee.documentId}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center">
+                            <div className="mr-2 w-5 text-center text-white/70">
+                              #{index + 1}
+                            </div>
+                            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2">
+                              {employee.photo ? (
+                                <img
+                                  src={`${import.meta.env.PUBLIC_API_URL}${
+                                    employee.photo?.formats.thumbnail.url
+                                  }`}
+                                  alt={`${employee.firstName} ${employee.lastName}`}
+                                  className="h-8 w-8 rounded-full object-cover"
+                                />
+                              ) : (
+                                <User className="h-4 w-4 text-white" />
+                              )}
+                            </div>
+                            <div className="text-white">
+                              {employee.firstName} {employee.lastName}
+                            </div>
+                          </div>
+                          <div className="flex items-center">
+                            <Star className="h-4 w-4 text-yellow-400 mr-1" />
+                            <span className="text-white">
+                              {employee.averageRating?.toFixed(1)}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    )
+                  ) : (
+                    <div className="text-white/70">
+                      No hay suficientes datos para determinar top
+                      calificaciones.
+                    </div>
+                  )}
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Necesitan Atención */}
+            <Card className="bg-gradient-to-br from-orange-600/30 to-red-600/30 border-0">
+              <CardHeader>
+                <CardTitle className="text-white">Necesitan Atención</CardTitle>
+                <CardDescription className="text-white/70">
+                  Empleados sin reseñas recientes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {getEmployeesNeedingAttention().length > 0 ? (
+                    getEmployeesNeedingAttention().map(
+                      (employee: EnrichedEmployee) => (
+                        <div
+                          key={employee.documentId}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center">
+                            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2">
+                              {employee.photo ? (
+                                <img
+                                  src={`${import.meta.env.PUBLIC_API_URL}${
+                                    employee.photo?.formats.thumbnail.url
+                                  }`}
+                                  alt={`${employee.firstName} ${employee.lastName}`}
+                                  className="h-8 w-8 rounded-full object-cover"
+                                />
+                              ) : (
+                                <User className="h-4 w-4 text-white" />
+                              )}
+                            </div>
+                            <div className="text-white">
+                              {employee.firstName} {employee.lastName}
+                            </div>
+                          </div>
+                          <div className="flex items-center">
+                            <AlertCircle className="h-4 w-4 text-orange-400 mr-1" />
+                            <span className="text-white/70">
+                              {employee.daysWithoutReview} días
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    )
+                  ) : (
+                    <div className="text-white/70">
+                      ¡Genial! Todos los empleados tienen reseñas recientes.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Resumen de Empleados */}
+          <Card className="bg-white/10 border-0">
+            <CardHeader>
+              <CardTitle className="text-white">Resumen de Equipo</CardTitle>
+              <CardDescription className="text-white/70">
+                Vista rápida de todos los empleados
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {employees.map((employee: EnrichedEmployee) => (
+                  <div
+                    key={employee.documentId}
+                    className="p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                    onClick={() => setSelectedEmployee(employee)}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+                        {employee.photo ? (
+                          <img
+                            src={`${import.meta.env.PUBLIC_API_URL}${
+                              employee.photo?.formats.thumbnail.url
+                            }`}
+                            alt={`${employee.firstName} ${employee.lastName}`}
+                            className="h-10 w-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <User className="h-5 w-5 text-white" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="text-white font-medium">
+                          {employee.firstName} {employee.lastName}
+                        </h3>
+                        <p className="text-white/60 text-sm">
+                          {employee.position}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="bg-white/5 p-2 rounded">
+                        <div className="text-white/60">Reseñas</div>
+                        <div className="text-white font-medium">
+                          {employee.reviewCount || 0}
+                        </div>
+                      </div>
+                      <div className="bg-white/5 p-2 rounded">
+                        <div className="text-white/60">Calificación</div>
+                        <div className="text-white font-medium flex items-center">
+                          {employee.averageRating ? (
+                            <>
+                              {employee.averageRating.toFixed(1)}
+                              <Star className="h-3 w-3 text-yellow-400 ml-1" />
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
+        </TabsContent>
+
+        {/* Vista de Empleados */}
+        <TabsContent value="employees" className="mt-0">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative">
+                <Search className="h-4 w-4 text-white/40 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                <Input
+                  placeholder="Buscar empleado..."
+                  className="pl-9 bg-white/5 border-white/10 text-white w-full md:w-64 h-10"
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                />
+              </div>
+              <Select onValueChange={(val: string) => setSortOption(val)}>
+                <SelectTrigger className="bg-white/5 border-white/20 text-white w-[160px] h-10">
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-white/10 text-white">
+                  <SelectItem value="name" className="py-2.5">
+                    Nombre
+                  </SelectItem>
+                  <SelectItem value="rating" className="py-2.5">
+                    Calificación
+                  </SelectItem>
+                  <SelectItem value="reviews" className="py-2.5">
+                    Cantidad de reseñas
+                  </SelectItem>
+                  <SelectItem value="lastReview" className="py-2.5">
+                    Última reseña
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex rounded-md overflow-hidden border border-white/20">
+                <Button
+                  variant="primary"
+                  className={
+                    viewMode === 'grid'
+                      ? 'bg-white text-black font-medium'
+                      : 'bg-transparent text-white/80 border-r border-white/20 hover:bg-white/10'
+                  }
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                >
+                  Grid
+                </Button>
+                <Button
+                  variant="primary"
+                  className={
+                    viewMode === 'leaderboard'
+                      ? 'bg-white text-black font-medium'
+                      : 'bg-transparent text-white/80 hover:bg-white/10'
+                  }
+                  size="sm"
+                  onClick={() => setViewMode('leaderboard')}
+                >
+                  Ranking
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Vista de grid */}
+          {viewMode === 'grid' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredEmployees.map((employee: EnrichedEmployee) => (
+                <Card
+                  key={employee.documentId}
+                  className="bg-white/10 border-0 overflow-hidden"
+                >
+                  <CardContent className="p-0">
+                    <div className="p-6">
+                      <div className="flex justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                          <div className="h-14 w-14 rounded-full bg-white/20 flex items-center justify-center">
+                            {employee.photo ? (
+                              <img
+                                src={`${import.meta.env.PUBLIC_API_URL}${
+                                  employee.photo?.formats.thumbnail.url
+                                }`}
+                                alt={`${employee.firstName} ${employee.lastName}`}
+                                className="h-14 w-14 rounded-full object-cover"
+                              />
+                            ) : (
+                              <User className="h-7 w-7 text-white" />
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-white">
+                              {employee.firstName} {employee.lastName}
+                            </h3>
+                            <p className="text-white/60">{employee.position}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingEmployee(employee);
+                            }}
+                            className="text-blue-400 hover:text-blue-500 hover:bg-blue-400/10 h-8 w-8"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteEmployee(employee.documentId);
+                            }}
+                            className="text-red-400 hover:text-red-500 hover:bg-red-400/10 h-8 w-8"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="bg-white/5 p-3 rounded">
+                          <p className="text-white/60 text-sm mb-1">Reseñas</p>
+                          <p className="text-white text-lg font-semibold">
+                            {employee.reviewCount || 0}
+                          </p>
+                        </div>
+                        <div className="bg-white/5 p-3 rounded">
+                          <p className="text-white/60 text-sm mb-1">
+                            Calificación
+                          </p>
+                          <div className="flex items-center">
+                            <p className="text-white text-lg font-semibold">
+                              {employee.averageRating
+                                ? employee.averageRating.toFixed(1)
+                                : '-'}
+                            </p>
+                            {employee.averageRating && (
+                              <Star className="h-4 w-4 text-yellow-400 ml-1" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-white/60">Última reseña</span>
+                          <span className="text-white">
+                            {employee.lastReviewDate
+                              ? new Date(
+                                  employee.lastReviewDate
+                                ).toLocaleDateString()
+                              : 'Sin reseñas'}
+                          </span>
+                        </div>
+                        {employee.daysWithoutReview !== null && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-white/60">
+                              Días sin reseñas
+                            </span>
+                            <span
+                              className={`${
+                                (employee.daysWithoutReview || 0) > 30
+                                  ? 'text-red-400'
+                                  : (employee.daysWithoutReview || 0) > 14
+                                  ? 'text-yellow-400'
+                                  : 'text-green-400'
+                              }`}
+                            >
+                              {employee.daysWithoutReview || 0}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex border-t border-white/10">
+                      <Button
+                        variant="ghost"
+                        className="flex-1 rounded-none border-r border-white/10 text-white/80 h-12"
+                        onClick={() => setSelectedEmployee(employee)}
+                      >
+                        Ver detalles
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex items-center justify-center space-x-2 rounded-none text-white/80 h-12 hover:bg-white/10 transition-colors"
+                        onClick={() =>
+                          selectedEmployee && handleGenerateQR(selectedEmployee)
+                        }
+                      >
+                        <QrCode className="h-4 w-4" />
+                        <span>Generar QR</span>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Vista de leaderboard */}
+          {viewMode === 'leaderboard' && (
+            <Card className="bg-white/10 border-0">
+              <CardContent className="p-0">
+                <div className="py-2">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-white/60 text-left border-b border-white/10">
+                        <th className="px-6 py-3">#</th>
+                        <th className="px-6 py-3">Empleado</th>
+                        <th className="px-6 py-3 text-center">Reseñas</th>
+                        <th className="px-6 py-3 text-center">Calificación</th>
+                        <th className="px-6 py-3 text-center">Última reseña</th>
+                        <th className="px-6 py-3 text-center">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredEmployees.map(
+                        (employee: EnrichedEmployee, index: number) => (
+                          <tr
+                            key={employee.documentId}
+                            className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                          >
+                            <td className="px-6 py-4 text-white/60">
+                              {index + 1}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+                                  {employee.photo ? (
+                                    <img
+                                      src={`${import.meta.env.PUBLIC_API_URL}${
+                                        employee.photo?.formats.thumbnail.url
+                                      }`}
+                                      alt={`${employee.firstName} ${employee.lastName}`}
+                                      className="h-10 w-10 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <User className="h-5 w-5 text-white" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="text-white font-medium">
+                                    {employee.firstName} {employee.lastName}
+                                  </div>
+                                  <div className="text-white/60 text-sm">
+                                    {employee.position}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <Badge
+                                variant="outline"
+                                className="bg-white/5 text-white"
+                              >
+                                {employee.reviewCount || 0}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <div className="flex items-center justify-center">
+                                {employee.averageRating ? (
+                                  <>
+                                    <span className="text-white mr-1">
+                                      {employee.averageRating.toFixed(1)}
+                                    </span>
+                                    <Star className="h-4 w-4 text-yellow-400" />
+                                  </>
+                                ) : (
+                                  <span className="text-white/40">-</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-center text-white/80">
+                              {employee.lastReviewDate
+                                ? new Date(
+                                    employee.lastReviewDate
+                                  ).toLocaleDateString()
+                                : 'Sin reseñas'}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex justify-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setSelectedEmployee(employee)}
+                                  className="text-white/80 hover:text-white hover:bg-white/10"
+                                >
+                                  Detalles
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    employee && handleGenerateQR(employee)
+                                  }
+                                  className="text-white/80 hover:text-white hover:bg-white/10"
+                                >
+                                  <QrCode className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingEmployee(employee)}
+                                  className="text-blue-400 hover:text-blue-500 hover:bg-blue-400/10"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleDeleteEmployee(employee.documentId)
+                                  }
+                                  className="text-red-400 hover:text-red-500 hover:bg-red-400/10"
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Vista de Estadísticas */}
+        <TabsContent value="stats" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Distribución por Calificación */}
+            <Card className="bg-white/10 border-0">
+              <CardHeader>
+                <CardTitle className="text-white">
+                  Distribución de Reseñas
+                </CardTitle>
+                <CardDescription className="text-white/70">
+                  Reseñas por calificación
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {[5, 4, 3, 2, 1].map((rating: number) => {
+                    const count = reviews.filter(
+                      (r: Review) => r.calification === rating
+                    ).length;
+                    const percentage = reviews.length
+                      ? (count / reviews.length) * 100
+                      : 0;
+                    return (
+                      <div key={rating} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <div className="flex items-center text-white">
+                            {rating}{' '}
+                            <Star className="h-3 w-3 text-yellow-400 mx-1" />
+                          </div>
+                          <div className="text-white/70">{count} reseñas</div>
+                        </div>
+                        <Progress
+                          value={percentage}
+                          className="h-2 bg-white/10"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Empleados por Número de Reseñas */}
+            <Card className="bg-white/10 border-0">
+              <CardHeader>
+                <CardTitle className="text-white">
+                  Reseñas por Empleado
+                </CardTitle>
+                <CardDescription className="text-white/70">
+                  Top 5 por número de reseñas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {[...employees]
+                    .sort(
+                      (a: EnrichedEmployee, b: EnrichedEmployee) =>
+                        (b.reviewCount || 0) - (a.reviewCount || 0)
+                    )
+                    .slice(0, 5)
+                    .map((employee: EnrichedEmployee, index: number) => {
+                      const maxReviews = employees.reduce(
+                        (max, e: EnrichedEmployee) =>
+                          Math.max(max, e.reviewCount || 0),
+                        0
+                      );
+                      const percentage = maxReviews
+                        ? ((employee.reviewCount || 0) / maxReviews) * 100
+                        : 0;
+                      return (
+                        <div key={employee.documentId} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <div className="text-white">
+                              {employee.firstName} {employee.lastName}
+                            </div>
+                            <div className="text-white/70">
+                              {employee.reviewCount || 0} reseñas
+                            </div>
+                          </div>
+                          <Progress
+                            value={percentage}
+                            className="h-2 bg-white/10"
+                          />
+                        </div>
+                      );
+                    })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Tabla de Métricas de Empleados */}
+          <Card className="bg-white/10 border-0">
+            <CardHeader>
+              <CardTitle className="text-white">Resumen de Métricas</CardTitle>
+              <CardDescription className="text-white/70">
+                Estadísticas completas del equipo
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <table className="w-full">
+                <thead>
+                  <tr className="text-white/60 text-left border-b border-white/10">
+                    <th className="px-4 py-2">Empleado</th>
+                    <th className="px-4 py-2 text-center">Total Reseñas</th>
+                    <th className="px-4 py-2 text-center">Promedio</th>
+                    <th className="px-4 py-2 text-center">5★</th>
+                    <th className="px-4 py-2 text-center">4★</th>
+                    <th className="px-4 py-2 text-center">3★</th>
+                    <th className="px-4 py-2 text-center">2★</th>
+                    <th className="px-4 py-2 text-center">1★</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.map((employee: EnrichedEmployee) => {
+                    const starCounts = [5, 4, 3, 2, 1].map(
+                      (rating: number) =>
+                        employee.reviews?.filter(
+                          (r: Review) => r.calification === rating
+                        ).length || 0
+                    );
+                    return (
+                      <tr
+                        key={employee.documentId}
+                        className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-white">
+                          {employee.firstName} {employee.lastName}
+                        </td>
+                        <td className="px-4 py-3 text-center text-white">
+                          {employee.reviewCount || 0}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center">
+                            {employee.averageRating ? (
+                              <>
+                                <span className="text-white mr-1">
+                                  {employee.averageRating.toFixed(1)}
+                                </span>
+                                <Star className="h-3 w-3 text-yellow-400" />
+                              </>
+                            ) : (
+                              <span className="text-white/40">-</span>
+                            )}
+                          </div>
+                        </td>
+                        {starCounts.map((count, index) => (
+                          <td
+                            key={index}
+                            className="px-4 py-3 text-center text-white/80"
+                          >
+                            {count}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Modal de detalles del empleado */}
+      {selectedEmployee && (
+        <Dialog
+          open={!!selectedEmployee}
+          onOpenChange={() => setSelectedEmployee(null)}
+        >
+          <DialogContent className="bg-gray-900 text-white max-h-[90vh] overflow-y-auto max-w-4xl">
+            <DialogTitle className="flex justify-between items-center">
+              <span>Detalles del Empleado</span>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    selectedEmployee && handleGenerateQR(selectedEmployee)
+                  }
+                  className="text-white/80 hover:text-white hover:bg-white/10"
+                >
+                  <QrCode className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditingEmployee(selectedEmployee);
+                    setSelectedEmployee(null);
+                  }}
+                  className="text-white border-white/20 hover:bg-white/10"
+                >
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              </div>
+            </DialogTitle>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Información del empleado */}
+              <div className="md:col-span-1">
+                <div className="flex flex-col items-center mb-4">
+                  <div className="h-32 w-32 rounded-full bg-white/20 flex items-center justify-center mb-3">
+                    {selectedEmployee.photo ? (
+                      <img
+                        src={`${import.meta.env.PUBLIC_API_URL}${
+                          selectedEmployee.photo?.formats.thumbnail.url
+                        }`}
+                        alt={`${selectedEmployee.firstName} ${selectedEmployee.lastName}`}
+                        className="h-32 w-32 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-16 w-16 text-white" />
+                    )}
+                  </div>
+                  <h2 className="text-xl font-bold text-white">
+                    {selectedEmployee.firstName} {selectedEmployee.lastName}
+                  </h2>
+                  <p className="text-white/60">{selectedEmployee.position}</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <h3 className="text-white/60 mb-2 text-sm">Métricas</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-white/60 text-sm">Total reseñas</p>
+                        <p className="text-white text-xl font-semibold">
+                          {selectedEmployee.reviewCount || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-white/60 text-sm">Calificación</p>
+                        <div className="flex items-center">
+                          <p className="text-white text-xl font-semibold">
+                            {selectedEmployee.averageRating?.toFixed(1) || '-'}
+                          </p>
+                          {selectedEmployee.averageRating && (
+                            <Star className="h-5 w-5 text-yellow-400 ml-1" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/5 rounded-lg p-4">
+                    <h3 className="text-white/60 mb-2 text-sm">Horarios</h3>
+                    <div className="space-y-1">
+                      {selectedEmployee.schedules.map((schedule) => (
+                        <div
+                          key={schedule.documentId}
+                          className="flex justify-between"
+                        >
+                          <span className="text-white capitalize">
+                            {schedule.day}
+                          </span>
+                          <span className="text-white/70">
+                            {schedule.startTime.slice(0, 5)} -{' '}
+                            {schedule.endTime.slice(0, 5)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reseñas del empleado */}
+              <div className="md:col-span-2 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium text-white">
+                    Reseñas recibidas
+                  </h3>
+                  <span className="text-white/60">
+                    {selectedEmployee.reviewCount || 0} total
+                  </span>
+                </div>
+
+                {selectedEmployee.reviews &&
+                selectedEmployee.reviews.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                    {selectedEmployee.reviews
+                      .sort(
+                        (a, b) =>
+                          new Date(b.createdAt).getTime() -
+                          new Date(a.createdAt).getTime()
+                      )
+                      .map((review) => (
+                        <div
+                          key={review.id}
+                          className="bg-white/5 p-4 rounded-lg"
+                        >
+                          <div className="flex justify-between mb-2">
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-4 w-4 ${
+                                    i < review.calification
+                                      ? 'text-yellow-400 fill-yellow-400'
+                                      : 'text-gray-400'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <div className="text-white/60 text-sm">
+                              {new Date(review.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <p className="text-white mb-2">{review.comment}</p>
+                          <div className="flex items-center text-sm text-white/60">
+                            <span className="bg-white/10 px-2 py-1 rounded">
+                              {review.typeImprovement}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-white/60 text-center py-8 bg-white/5 rounded-lg">
+                    Este empleado aún no tiene reseñas.
+                  </div>
+                )}
+
+                <div className="bg-white/5 p-4 rounded-lg">
+                  <h3 className="text-white/60 mb-3 text-sm">
+                    Distribución de calificaciones
+                  </h3>
+                  <div className="space-y-2">
+                    {[5, 4, 3, 2, 1].map((rating: number) => {
+                      if (!selectedEmployee.reviews) return null;
+                      const count = selectedEmployee.reviews.filter(
+                        (r: Review) => r.calification === rating
+                      ).length;
+                      const percentage = selectedEmployee.reviews.length
+                        ? (count / selectedEmployee.reviews.length) * 100
+                        : 0;
+                      return (
+                        <div key={rating} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <div className="flex items-center text-white">
+                              {rating}{' '}
+                              <Star className="h-3 w-3 text-yellow-400 mx-1" />
+                            </div>
+                            <div className="text-white/70">
+                              {count} reseña{count !== 1 ? 's' : ''} (
+                              {percentage.toFixed(0)}%)
+                            </div>
+                          </div>
+                          <Progress
+                            value={percentage}
+                            className="h-2 bg-white/10"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Formulario para agregar/editar empleado */}
       {restaurantId && (
@@ -283,9 +1464,22 @@ export function TeamContent() {
           }}
           onSubmit={editingEmployee ? handleEditEmployee : handleAddEmployee}
           restaurantId={restaurantId}
-          initialData={editingEmployee || undefined}
+          initialData={
+            editingEmployee
+              ? {
+                  ...editingEmployee,
+                  // Convertir id de schedules a string
+                  schedules: editingEmployee.schedules.map((s) => ({
+                    ...s,
+                    id: s.id.toString(),
+                  })),
+                }
+              : undefined
+          }
         />
       )}
     </div>
   );
 }
+
+export default TeamContent;
