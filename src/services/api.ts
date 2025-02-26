@@ -459,6 +459,9 @@ export async function getEmployeesByRestaurant(restaurantId: string) {
   }
 }
 
+// /Users/Mati/Desktop/yuppie-web/src/services/api.ts
+// Añadir o actualizar estas funciones en tu archivo api.ts
+
 interface WorkSchedule {
   day: string;
   startTime: string;
@@ -478,13 +481,84 @@ interface UpdateEmployeeData {
   firstName: string;
   lastName: string;
   position: string;
-  schedules: WorkSchedule[]; // Cambiado de scheduleIds a schedules
+  schedules: WorkSchedule[];
   photo: File | null;
+}
+
+// Función para convertir formato de hora HH:mm a HH:mm:ss.SSS
+function formatTimeForStrapi(time: string): string {
+  if (!time) return '';
+  // Si ya tiene el formato completo, devolverlo como está
+  if (/^\d{2}:\d{2}:\d{2}\.\d{3}$/.test(time)) {
+    return time;
+  }
+  // Si solo tiene horas y minutos, añadir segundos y milisegundos
+  if (/^\d{2}:\d{2}$/.test(time)) {
+    return `${time}:00.000`;
+  }
+  // Si tiene horas, minutos y segundos, añadir milisegundos
+  if (/^\d{2}:\d{2}:\d{2}$/.test(time)) {
+    return `${time}.000`;
+  }
+  // Si no coincide con ningún formato conocido, devolver vacío
+  console.error('Formato de hora no reconocido:', time);
+  return '';
 }
 
 export async function createEmployee(employeeData: CreateEmployeeInput) {
   try {
-    // Primero creamos el empleado
+    console.log('Creando empleado con datos:', {
+      ...employeeData,
+      photo: employeeData.photo ? 'Archivo presente' : 'Sin foto',
+      schedulesCount: employeeData.schedules.length,
+    });
+
+    // Paso 1: Obtener el ID numérico del restaurante
+    console.log(
+      `Obteniendo ID numérico para restaurante: ${employeeData.restaurantId}`
+    );
+    const restaurantResponse = await fetch(
+      `${import.meta.env.PUBLIC_API_URL}/restaurants?filters[documentId][$eq]=${
+        employeeData.restaurantId
+      }`
+    );
+
+    if (!restaurantResponse.ok) {
+      throw new Error('No se pudo obtener la información del restaurante');
+    }
+
+    const restaurantData = await restaurantResponse.json();
+    if (!restaurantData.data || restaurantData.data.length === 0) {
+      throw new Error('Restaurante no encontrado');
+    }
+
+    const restaurantNumericId = restaurantData.data[0].id;
+    console.log(`ID numérico del restaurante obtenido: ${restaurantNumericId}`);
+
+    // Paso 2: Formatear correctamente los horarios
+    const formattedSchedules = employeeData.schedules.map((schedule) => ({
+      day: schedule.day,
+      startTime: formatTimeForStrapi(schedule.startTime),
+      endTime: formatTimeForStrapi(schedule.endTime),
+    }));
+
+    // Paso 3: Crear el empleado con las relaciones a los horarios
+    const employeePayload = {
+      data: {
+        firstName: employeeData.firstName,
+        lastName: employeeData.lastName,
+        position: employeeData.position,
+        active: true,
+        restaurant: { id: restaurantNumericId },
+        schedules: formattedSchedules,
+      },
+    };
+
+    console.log(
+      'Payload para Strapi:',
+      JSON.stringify(employeePayload, null, 2)
+    );
+
     const response = await fetch(
       `${import.meta.env.PUBLIC_API_URL}/employees`,
       {
@@ -492,28 +566,31 @@ export async function createEmployee(employeeData: CreateEmployeeInput) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          data: {
-            firstName: employeeData.firstName,
-            lastName: employeeData.lastName,
-            position: employeeData.position,
-            active: true,
-            restaurant: employeeData.restaurantId,
-            schedules: employeeData.schedules,
-          },
-        }),
+        body: JSON.stringify(employeePayload),
       }
     );
 
+    // Para un mejor debugging, obtenemos el texto completo de la respuesta
+    const responseText = await response.text();
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Error creating employee');
+      console.error('Error creando empleado (respuesta):', responseText);
+      throw new Error('Error al crear empleado');
     }
 
-    const result = await response.json();
+    // Intentar parsear la respuesta como JSON
+    let result;
+    try {
+      result = JSON.parse(responseText);
+      console.log('Empleado creado:', result);
+    } catch (e) {
+      console.error('Error al parsear respuesta JSON:', e);
+      throw new Error('Error al procesar la respuesta del servidor');
+    }
 
-    // Si hay una foto, la subimos
-    if (employeeData.photo) {
+    // Subir foto si existe
+    if (employeeData.photo && result.data && result.data.id) {
+      console.log('Subiendo foto para empleado:', result.data.id);
       const photoFormData = new FormData();
       photoFormData.append('files', employeeData.photo);
       photoFormData.append('ref', 'api::employee.employee');
@@ -529,13 +606,114 @@ export async function createEmployee(employeeData: CreateEmployeeInput) {
       );
 
       if (!uploadResponse.ok) {
-        console.error('Error uploading photo');
+        console.error('Error al subir la foto');
       }
     }
 
     return result;
   } catch (error) {
-    console.error('Error in createEmployee:', error);
+    console.error('Error en createEmployee:', error);
+    throw error;
+  }
+}
+
+// También necesitamos actualizar la función updateEmployee para usar el mismo formato
+export async function updateEmployee(
+  documentId: string,
+  employeeData: UpdateEmployeeData
+): Promise<boolean> {
+  try {
+    console.log('Actualizando empleado:', documentId);
+    console.log('Datos:', {
+      ...employeeData,
+      photo: employeeData.photo ? 'Archivo presente' : 'Sin foto',
+      schedulesCount: employeeData.schedules.length,
+    });
+
+    // Formatear correctamente los horarios
+    const formattedSchedules = employeeData.schedules.map((schedule) => ({
+      day: schedule.day,
+      startTime: formatTimeForStrapi(schedule.startTime),
+      endTime: formatTimeForStrapi(schedule.endTime),
+    }));
+
+    // Actualizar datos del empleado incluyendo horarios
+    const response = await fetch(
+      `${import.meta.env.PUBLIC_API_URL}/employees/${documentId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: {
+            firstName: employeeData.firstName,
+            lastName: employeeData.lastName,
+            position: employeeData.position,
+            // Reemplazar completamente los horarios existentes con los formateados
+            schedules: formattedSchedules,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error actualizando empleado:', errorText);
+      throw new Error('Error al actualizar empleado');
+    }
+
+    console.log('Empleado actualizado correctamente');
+
+    // Si hay una nueva foto, subirla
+    if (employeeData.photo) {
+      console.log('Subiendo nueva foto para el empleado');
+
+      // Primero, obtener el ID numérico del empleado
+      const employeeResponse = await fetch(
+        `${
+          import.meta.env.PUBLIC_API_URL
+        }/employees?filters[documentId][$eq]=${documentId}`
+      );
+
+      if (!employeeResponse.ok) {
+        console.error('No se pudo obtener el ID numérico del empleado');
+        return true; // Continuamos, ya que el empleado se actualizó correctamente
+      }
+
+      const employeeData = await employeeResponse.json();
+      if (!employeeData.data || employeeData.data.length === 0) {
+        console.error('No se encontró el empleado');
+        return true;
+      }
+
+      const employeeId = employeeData.data[0].id;
+
+      // Subir la foto
+      const photoFormData = new FormData();
+      photoFormData.append('files', employeeData.photo);
+      photoFormData.append('ref', 'api::employee.employee');
+      photoFormData.append('refId', employeeId.toString());
+      photoFormData.append('field', 'photo');
+
+      const uploadResponse = await fetch(
+        `${import.meta.env.PUBLIC_API_URL}/upload`,
+        {
+          method: 'POST',
+          body: photoFormData,
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        console.error('Error al subir la foto');
+      } else {
+        console.log('Foto actualizada correctamente');
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error en updateEmployee:', error);
     throw error;
   }
 }
@@ -560,43 +738,6 @@ export async function deleteEmployee(documentId: string): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Error in deleteEmployee:', error);
-    throw error;
-  }
-}
-
-export async function updateEmployee(
-  documentId: string,
-  employeeData: UpdateEmployeeData
-): Promise<boolean> {
-  try {
-    // Actualizar solo los datos básicos del empleado
-    const response = await fetch(
-      `${import.meta.env.PUBLIC_API_URL}/employees/${documentId}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          data: {
-            firstName: employeeData.firstName,
-            lastName: employeeData.lastName,
-            position: employeeData.position,
-            schedules: employeeData.schedules,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error actualizando empleado:', errorText);
-      throw new Error('Error updating employee');
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error in updateEmployee:', error);
     throw error;
   }
 }
