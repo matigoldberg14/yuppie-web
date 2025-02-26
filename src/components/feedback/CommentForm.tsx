@@ -412,21 +412,21 @@ export function CommentForm({
       if (isSubmitting) return;
 
       try {
-        // Verificar si ya envió una opinión
+        // Set submitting state immediately to prevent multiple submissions
+        setIsSubmitting(true);
+
+        // Verify if already submitted review
         if (hasSubmittedReviewToday(restaurantDocumentId)) {
           throw new Error(
             'Ya has compartido tu opinión en las últimas 24 horas'
           );
         }
 
-        setIsSubmitting(true);
-
-        // Validar que el email no esté vacío
+        // Validate email
         if (!formData.email.trim()) {
           throw new Error('El email es obligatorio');
         }
 
-        // Validar formato de email
         try {
           z.string()
             .email('Por favor, ingresa un email válido')
@@ -437,7 +437,7 @@ export function CommentForm({
           }
         }
 
-        // Construir comentario final según el estado
+        // Build final comment based on state
         let finalComment = '';
         if (showTextArea) {
           finalComment = formData.comment;
@@ -454,43 +454,46 @@ export function CommentForm({
           );
         }
 
-        // Obtener calificación y otros datos existentes...
+        // Get existing data from localStorage
         const rating = Number(localStorage.getItem('yuppie_rating'));
         if (!rating) {
           throw new Error('No se encontró la calificación');
         }
 
-        // Verificar coincidencia de restaurante
+        // Verify restaurant ID match
         const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
         if (storedRestaurantId !== restaurantDocumentId) {
-          // Intento de recuperación: actualizar ID
           localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
         }
 
-        // Verificar si existe ID de empleado en localStorage
+        // Get employee ID if available
         const storedEmployeeId = localStorage.getItem('yuppie_employee');
         let employeeId: number | undefined;
 
         if (storedEmployeeId) {
-          // Obtener el ID numérico del empleado
-          const numericEmployeeId = await getEmployeeNumericId(
-            storedEmployeeId
-          );
-          if (numericEmployeeId) {
-            employeeId = numericEmployeeId;
+          try {
+            const numericEmployeeId = await getEmployeeNumericId(
+              storedEmployeeId
+            );
+            if (numericEmployeeId) {
+              employeeId = numericEmployeeId;
+            }
+          } catch (err) {
+            console.error('Error obteniendo ID numérico del empleado:', err);
+            // Continue without employee ID if there's an error
           }
         }
 
-        // Validar y convertir IDs
+        // Validate restaurant ID
         const restaurantIdNumber = parseInt(restaurantId, 10);
         if (isNaN(restaurantIdNumber)) {
           throw new Error('ID de restaurante inválido');
         }
 
-        // Guardar email
+        // Save email to localStorage
         localStorage.setItem('yuppie_email', formData.email.trim());
 
-        // Crear objeto de review
+        // Create review data object
         const reviewData = {
           restaurantId: restaurantIdNumber,
           calification: rating,
@@ -498,106 +501,114 @@ export function CommentForm({
           email: formData.email.trim(),
           comment: finalComment.trim(),
           googleSent: rating === 5,
-          employeeId: employeeId, // Añadir el ID del empleado si existe
+          employeeId: employeeId,
         };
 
-        // Registrar submission primero (para mejor percepción de velocidad)
+        // Record submission to prevent duplicates
         recordReviewSubmission(restaurantDocumentId);
 
-        // Iniciar creación de review (no esperamos a que termine)
-        const reviewPromise = createReview(reviewData);
+        // Prepare all async operations
+        const operations = [];
 
-        // Procesamiento paralelo: envío de email para calificaciones bajas
-        let emailPromise = Promise.resolve();
+        // Create review - add to operations
+        operations.push(createReview(reviewData));
+
+        // Send email for low ratings
         if (rating <= 2) {
-          emailPromise = (async () => {
-            try {
-              const apiUrl = import.meta.env.PUBLIC_API_URL;
-              if (!apiUrl) throw new Error('URL de API no configurada');
+          operations.push(
+            (async () => {
+              try {
+                const apiUrl = import.meta.env.PUBLIC_API_URL;
+                if (!apiUrl) return;
 
-              const fetchUrl = `${apiUrl}/restaurants?populate=owner&filters[id][$eq]=${restaurantId}`;
-              const response = await fetch(fetchUrl);
-              const data = await response.json();
-              const ownerEmail = data.data[0]?.owner?.email;
+                const fetchUrl = `${apiUrl}/restaurants?populate=owner&filters[id][$eq]=${restaurantId}`;
+                const response = await fetch(fetchUrl);
+                const data = await response.json();
+                const ownerEmail = data.data[0]?.owner?.email;
 
-              if (ownerEmail) {
-                await emailjs.send(
-                  import.meta.env.VITE_EMAILJS_SERVICE_ID,
-                  import.meta.env.VITE_EMAILJS_COMMENT_TEMPLATE_ID,
-                  {
-                    to_email: ownerEmail,
-                    comment: finalComment.trim(),
-                    rating: rating,
-                    improvement_type: improvementType || 'Otra',
-                    customer_email: formData.email,
-                  },
-                  import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-                );
+                if (ownerEmail) {
+                  await emailjs.send(
+                    import.meta.env.VITE_EMAILJS_SERVICE_ID,
+                    import.meta.env.VITE_EMAILJS_COMMENT_TEMPLATE_ID,
+                    {
+                      to_email: ownerEmail,
+                      comment: finalComment.trim(),
+                      rating: rating,
+                      improvement_type: improvementType || 'Otra',
+                      customer_email: formData.email,
+                    },
+                    import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+                  );
+                }
+              } catch (emailError) {
+                console.error('Error al enviar email:', emailError);
               }
-            } catch (emailError) {
-              console.error('Error al enviar email:', emailError);
-              // No bloqueamos el flujo por un error en el email
-            }
-          })();
+            })()
+          );
         }
 
-        // Mostrar toast de éxito inmediatamente para mejor UX
+        // Show success toast
         toast({
           title: '¡Gracias por tu comentario!',
-          description: 'Tu feedback nos ayuda a mejorar!',
+          description: 'Tu feedback nos ayuda a mejorar.',
           duration: 2000,
         });
 
-        // Limpieza optimizada
-        const cleanup = () => {
+        // Clear localStorage data that's no longer needed
+        const cleanupItems = [
+          'yuppie_improvement',
+          'yuppie_rating',
+          'yuppie_restaurant',
+        ];
+        cleanupItems.forEach((item) => {
           try {
-            localStorage.removeItem('yuppie_improvement');
-            localStorage.removeItem('yuppie_rating');
-            localStorage.removeItem('yuppie_restaurant');
-          } catch (cleanError) {
-            console.error('Error limpiando localStorage:', cleanError);
+            localStorage.removeItem(item);
+          } catch (e) {
+            console.error(`Error removing ${item} from localStorage:`, e);
           }
-        };
+        });
 
-        // Esperar a que terminen todas las operaciones asíncronas
-        // pero con un timeout máximo para no bloquear la navegación
-        Promise.race([
-          Promise.all([reviewPromise, emailPromise]),
-          new Promise((resolve) => setTimeout(resolve, 2000)), // Máximo 2 segundos de espera
-        ]).finally(() => {
-          cleanup();
+        try {
+          // Run operations with timeout
+          await Promise.race([
+            Promise.all(operations),
+            new Promise((resolve) => setTimeout(resolve, 3000)), // 3 seconds max wait
+          ]);
+        } catch (operationError) {
+          console.error('Error in background operations:', operationError);
+          // Continue with redirect even if operations fail
+        }
 
-          // Redirección optimizada
-          const link = document.createElement('link');
-          link.rel = 'prefetch';
-          link.href = '/thanks';
-          document.head.appendChild(link);
+        // Set a flag to prevent redirect loops
+        if (!window.localStorage.getItem('redirecting_from_comment')) {
+          window.localStorage.setItem('redirecting_from_comment', 'true');
 
+          // Use clean redirect approach for mobile
+          window.location.replace('/thanks');
+
+          // Fallback in case the redirect doesn't happen immediately
           setTimeout(() => {
             window.location.href = '/thanks';
-          }, 500); // Pequeño delay para mejor UX
-        });
+          }, 1000);
+        } else {
+          // If already redirecting, clear the flag
+          console.warn('Preventing redirect loop - already redirecting');
+          window.localStorage.removeItem('redirecting_from_comment');
+        }
       } catch (error) {
         const errorMessage = formatErrorMessage(error);
 
-        // Toast más visible y amigable
+        // Show error toast
         toast({
           variant: 'destructive',
           title: '¡Un momento!',
-          description: `😊 ${errorMessage}\n\nPuedes dejar una nueva opinión en 24 horas`,
-          duration: 10000,
+          description: `😊 ${errorMessage}`,
+          duration: 8000,
         });
 
+        // Reset submission state
         setIsSubmitting(false);
         setIsButtonDisabled(true);
-
-        // Scroll suave hacia arriba
-        if ('scrollBehavior' in document.documentElement.style) {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-          // Fallback para navegadores que no soportan scrollBehavior
-          window.scrollTo(0, 0);
-        }
       }
     },
     [

@@ -21,20 +21,6 @@ if (Astro.request.headers.get('sec-fetch-dest') !== 'document') {
   useCache = true;
 }
 
-try {
-  // Intentar obtener nombre del restaurante de localStorage (client-side)
-  if (useCache) {
-    // Este código solo se ejecuta en el cliente, no en SSR
-    const cachedData = localStorage.getItem(`restaurant_${documentId}`);
-    if (cachedData) {
-      const parsed = JSON.parse(cachedData);
-      cachedRestaurantName = parsed.name || '';
-    }
-  }
-} catch (e) {
-  // Ignorar errores de localStorage en SSR
-}
-
 // Obtener datos del restaurante (en paralelo con la renderización)
 const restaurantPromise = getRestaurant(documentId).catch(error => {
   console.error('Error obteniendo datos del restaurante:', error);
@@ -44,7 +30,7 @@ const restaurantPromise = getRestaurant(documentId).catch(error => {
 // Extraer ID numérico si ya tenemos el restaurante
 const restaurant = await restaurantPromise;
 const restaurantId = restaurant ? restaurant.id.toString() : '';
-const restaurantName = restaurant?.name || cachedRestaurantName || 'Restaurante';
+const restaurantName = restaurant?.name || 'Restaurante';
 ---
 
 <Layout title={`Deja tu comentario - ${restaurantName}`}>
@@ -57,22 +43,30 @@ const restaurantName = restaurant?.name || cachedRestaurantName || 'Restaurante'
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">Déjanos tu comentario</h2>
         <CommentForm 
-        restaurantId={restaurantId} 
-        restaurantDocumentId={documentId}
-        employeeDocumentId={employeeDocumentId || undefined}
-        client:load
-      />
+          restaurantId={restaurantId} 
+          restaurantDocumentId={documentId}
+          employeeDocumentId={employeeDocumentId || undefined}
+          client:load
+        />
       </div>
     </div>
   </div>
 </Layout>
 
-<script define:vars={{ documentId, restaurantPromise }}>
-  // Script optimizado para mejorar rendimiento
-  document.addEventListener('DOMContentLoaded', async () => {
+<script define:vars={{ documentId }}>
+  // Protegerse contra redirects infinitos
+  document.addEventListener('DOMContentLoaded', () => {
+    // Verificar si hay un redirect loop
+    const isRedirecting = localStorage.getItem('redirecting_from_comment');
+    if (isRedirecting) {
+      console.warn('Detectado posible bucle de redirección, limpiando flags');
+      localStorage.removeItem('redirecting_from_comment');
+    }
+
+    // Actualizar nombre del restaurante si es necesario
     const restaurantNameElement = document.getElementById('restaurantName');
-    
-    // Verificar si ya hay datos en localStorage para mostrar inmediatamente
+    if (!restaurantNameElement) return;
+      
     try {
       const cachedData = localStorage.getItem(`restaurant_${documentId}`);
       if (cachedData) {
@@ -101,32 +95,16 @@ const restaurantName = restaurant?.name || cachedRestaurantName || 'Restaurante'
           }
         }, 1000);
       };
-      preloadEmojis();
+      
+      // Usar requestIdleCallback para operaciones no críticas
+      if (window.requestIdleCallback) {
+        window.requestIdleCallback(preloadEmojis);
+      } else {
+        setTimeout(preloadEmojis, 1000);
+      }
       
     } catch (e) {
       console.error('Error al leer caché local:', e);
-    }
-    
-    // Obtener datos frescos del servidor en paralelo
-    try {
-      const restaurant = await restaurantPromise;
-      if (restaurant && restaurant.name && restaurantNameElement) {
-        // Actualizar UI solo si es necesario
-        if (restaurantNameElement.textContent !== restaurant.name) {
-          restaurantNameElement.textContent = restaurant.name;
-        }
-        
-        // Actualizar título de página
-        document.title = `Deja tu comentario - ${restaurant.name}`;
-        
-        // Actualizar caché
-        localStorage.setItem(`restaurant_${documentId}`, JSON.stringify({
-          name: restaurant.name,
-          timestamp: Date.now()
-        }));
-      }
-    } catch (error) {
-      console.error('Error cargando datos del restaurante:', error);
     }
   });
 </script>
@@ -136,6 +114,7 @@ const restaurantName = restaurant?.name || cachedRestaurantName || 'Restaurante'
     transition: transform 0.3s ease;
     will-change: transform;
   }
+  
   .card:hover {
     transform: translateY(-5px);
   }
@@ -149,4 +128,22 @@ const restaurantName = restaurant?.name || cachedRestaurantName || 'Restaurante'
       transform: none;
     }
   }
+  
+  /* Evitar saltos de contenido */
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: calc(var(--vh, 1vh) * 100);
+  }
 </style>
+
+<script>
+  // Ajustar altura en móviles
+  function setVh() {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+  }
+  
+  // Ejecutar al cargar y al cambiar tamaño
+  window.addEventListener('DOMContentLoaded', setVh);
+  window.addEventListener('resize', setVh);
+</script>

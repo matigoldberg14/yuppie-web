@@ -36,6 +36,29 @@ const title = "Gracias por tu feedback";
   </div>
 </Layout>
 
+<script>
+  // Clear any redirect flags to prevent loops
+  document.addEventListener('DOMContentLoaded', () => {
+    // Clear any redirect flags to prevent loops on future page loads
+    localStorage.removeItem('redirecting_from_comment');
+
+    // Clean up other review-related data that might be causing issues
+    const keysToClean = [
+      'yuppie_improvement',
+      'yuppie_rating', 
+      'yuppie_restaurant'
+    ];
+    
+    keysToClean.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.error(`Error removing ${key}:`, e);
+      }
+    });
+  });
+</script>
+
 <style>
   .bg-gradient {
     background: linear-gradient(135deg, var(--blue-primary), var(--blue-dark));
