@@ -412,21 +412,21 @@ export function CommentForm({
       if (isSubmitting) return;
 
       try {
-        // Set submitting state immediately to prevent multiple submissions
         setIsSubmitting(true);
 
-        // Verify if already submitted review
+        // Verificar si ya envió una opinión
         if (hasSubmittedReviewToday(restaurantDocumentId)) {
           throw new Error(
             'Ya has compartido tu opinión en las últimas 24 horas'
           );
         }
 
-        // Validate email
+        // Validar que el email no esté vacío
         if (!formData.email.trim()) {
           throw new Error('El email es obligatorio');
         }
 
+        // Validar formato de email
         try {
           z.string()
             .email('Por favor, ingresa un email válido')
@@ -437,7 +437,7 @@ export function CommentForm({
           }
         }
 
-        // Build final comment based on state
+        // Construir comentario final según el estado
         let finalComment = '';
         if (showTextArea) {
           finalComment = formData.comment;
@@ -454,24 +454,25 @@ export function CommentForm({
           );
         }
 
-        // Get existing data from localStorage
+        // Obtener calificación y otros datos existentes
         const rating = Number(localStorage.getItem('yuppie_rating'));
         if (!rating) {
           throw new Error('No se encontró la calificación');
         }
 
-        // Verify restaurant ID match
+        // Verificar coincidencia de restaurante
         const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
         if (storedRestaurantId !== restaurantDocumentId) {
           localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
         }
 
-        // Get employee ID if available
+        // Verificar si existe ID de empleado en localStorage
         const storedEmployeeId = localStorage.getItem('yuppie_employee');
         let employeeId: number | undefined;
 
         if (storedEmployeeId) {
           try {
+            // Obtener el ID numérico del empleado
             const numericEmployeeId = await getEmployeeNumericId(
               storedEmployeeId
             );
@@ -480,20 +481,19 @@ export function CommentForm({
             }
           } catch (err) {
             console.error('Error obteniendo ID numérico del empleado:', err);
-            // Continue without employee ID if there's an error
           }
         }
 
-        // Validate restaurant ID
+        // Validar y convertir IDs
         const restaurantIdNumber = parseInt(restaurantId, 10);
         if (isNaN(restaurantIdNumber)) {
           throw new Error('ID de restaurante inválido');
         }
 
-        // Save email to localStorage
+        // Guardar email
         localStorage.setItem('yuppie_email', formData.email.trim());
 
-        // Create review data object
+        // Crear objeto de review
         const reviewData = {
           restaurantId: restaurantIdNumber,
           calification: rating,
@@ -501,21 +501,51 @@ export function CommentForm({
           email: formData.email.trim(),
           comment: finalComment.trim(),
           googleSent: rating === 5,
-          employeeId: employeeId,
+          employeeId: employeeId, // Añadir el ID del empleado si existe
         };
 
-        // Record submission to prevent duplicates
+        // Registrar submission primero (para mejor percepción de velocidad)
         recordReviewSubmission(restaurantDocumentId);
 
-        // Prepare all async operations
-        const operations = [];
+        // Mostrar toast de éxito inmediatamente para mejor UX
+        toast({
+          title: '¡Gracias por tu comentario!',
+          description: 'Tu feedback nos ayuda a mejorar!',
+          duration: 2000,
+        });
 
-        // Create review - add to operations
-        operations.push(createReview(reviewData));
+        // IMPORTANTE: Limpiar localStorage ANTES de enviar la petición
+        // Esto evita problemas con redirecciones mientras se procesa la API
+        const keysToRemove = [
+          'yuppie_improvement',
+          'yuppie_rating',
+          'yuppie_restaurant',
+          'yuppie_employee', // Importante: eliminamos siempre el empleado aquí
+        ];
 
-        // Send email for low ratings
-        if (rating <= 2) {
-          operations.push(
+        keysToRemove.forEach((key) => {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {
+            console.error(`Error al eliminar ${key}:`, e);
+          }
+        });
+
+        // SOLUCIÓN PARA MÓVILES: Redirigir directamente sin esperar operaciones de fondo
+        // Esto evita el bucle de recarga en dispositivos móviles
+        window.location.href = '/thanks';
+
+        // Las siguientes operaciones se ejecutan en segundo plano
+        // pero no bloqueamos la redirección esperando que terminen
+
+        // Intenta crear la review en segundo plano
+        try {
+          createReview(reviewData).catch((err) =>
+            console.error('Error en segundo plano al crear review:', err)
+          );
+
+          // Email para calificaciones bajas (si aplica)
+          if (rating <= 2) {
             (async () => {
               try {
                 const apiUrl = import.meta.env.PUBLIC_API_URL;
@@ -541,64 +571,21 @@ export function CommentForm({
                   );
                 }
               } catch (emailError) {
-                console.error('Error al enviar email:', emailError);
+                console.error(
+                  'Error al enviar email en segundo plano:',
+                  emailError
+                );
               }
-            })()
-          );
-        }
-
-        // Show success toast
-        toast({
-          title: '¡Gracias por tu comentario!',
-          description: 'Tu feedback nos ayuda a mejorar.',
-          duration: 2000,
-        });
-
-        // Clear localStorage data that's no longer needed
-        const cleanupItems = [
-          'yuppie_improvement',
-          'yuppie_rating',
-          'yuppie_restaurant',
-        ];
-        cleanupItems.forEach((item) => {
-          try {
-            localStorage.removeItem(item);
-          } catch (e) {
-            console.error(`Error removing ${item} from localStorage:`, e);
+            })();
           }
-        });
-
-        try {
-          // Run operations with timeout
-          await Promise.race([
-            Promise.all(operations),
-            new Promise((resolve) => setTimeout(resolve, 3000)), // 3 seconds max wait
-          ]);
-        } catch (operationError) {
-          console.error('Error in background operations:', operationError);
-          // Continue with redirect even if operations fail
-        }
-
-        // Set a flag to prevent redirect loops
-        if (!window.localStorage.getItem('redirecting_from_comment')) {
-          window.localStorage.setItem('redirecting_from_comment', 'true');
-
-          // Use clean redirect approach for mobile
-          window.location.replace('/thanks');
-
-          // Fallback in case the redirect doesn't happen immediately
-          setTimeout(() => {
-            window.location.href = '/thanks';
-          }, 1000);
-        } else {
-          // If already redirecting, clear the flag
-          console.warn('Preventing redirect loop - already redirecting');
-          window.localStorage.removeItem('redirecting_from_comment');
+        } catch (bgError) {
+          console.error('Error en operaciones de segundo plano:', bgError);
+          // No hacemos nada aquí ya que el usuario ya fue redirigido
         }
       } catch (error) {
         const errorMessage = formatErrorMessage(error);
 
-        // Show error toast
+        // Toast más visible y amigable
         toast({
           variant: 'destructive',
           title: '¡Un momento!',
@@ -606,7 +593,6 @@ export function CommentForm({
           duration: 8000,
         });
 
-        // Reset submission state
         setIsSubmitting(false);
         setIsButtonDisabled(true);
       }

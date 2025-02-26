@@ -71,8 +71,6 @@ function ImprovementSelectorComponent({
         // Verificación optimizada
         const rating = localStorage.getItem('yuppie_rating');
         const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
-        // Verificar si hay ID de empleado en localStorage (ya guardado por RatingForm)
-        const storedEmployeeId = localStorage.getItem('yuppie_employee');
 
         if (!rating) {
           throw new Error('No se encontró la calificación');
@@ -87,38 +85,26 @@ function ImprovementSelectorComponent({
           localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
         }
 
-        // Actualizar el ID del empleado si es diferente o no existe
-        if (
-          employeeDocumentId &&
-          (!storedEmployeeId || storedEmployeeId !== employeeDocumentId)
-        ) {
-          localStorage.setItem('yuppie_employee', employeeDocumentId);
-        }
+        // SOLO propagar el ID del empleado a la siguiente página si está disponible
+        // IMPORTANTE: No guardamos en localStorage permanentemente, solo lo pasamos por URL
+        if (employeeDocumentId) {
+          // Solo usar el ID del empleado para la navegación
+          const fullNextUrl = `${nextUrl}${
+            nextUrl.includes('?') ? '&' : '?'
+          }employee=${employeeDocumentId}`;
 
-        // Guardar mejora seleccionada - No bloqueante
-        localStorage.setItem('yuppie_improvement', improvement);
+          // Guardar mejora seleccionada
+          localStorage.setItem('yuppie_improvement', improvement);
 
-        // Precargar siguiente página para reducir tiempo de carga
-        const preloadLink = document.createElement('link');
-        preloadLink.rel = 'preload';
-        preloadLink.href = nextUrl;
-        preloadLink.as = 'document';
-        document.head.appendChild(preloadLink);
+          // Redirigir con el ID del empleado en la URL
+          window.location.href = fullNextUrl;
+        } else {
+          // Guardar mejora seleccionada
+          localStorage.setItem('yuppie_improvement', improvement);
 
-        // Navegación optimizada sin usar import.meta
-        const navigationStart = performance.now();
-
-        // Simpler navigation approach
-        toast({
-          title: 'Seleccionado',
-          description: `Has seleccionado "${improvement}"`,
-          duration: 1000,
-        });
-
-        // Redirección directa con pequeño delay para permitir que los eventos se envíen
-        setTimeout(() => {
+          // Redirigir sin ID de empleado
           window.location.href = nextUrl;
-        }, 50);
+        }
       } catch (error) {
         console.error('Error al seleccionar mejora:', error);
         setIsSubmitting(false);
