@@ -5,15 +5,13 @@ interface ReviewRecord {
   date: string; // formato YYYY-MM-DD
 }
 
-export const hasSubmittedReviewToday = (restaurantId: string): boolean => {
-  // SOLUCIÓN DE EMERGENCIA: Siempre retornar false para evitar el bucle
-  // Al desactivar esta verificación, permitimos múltiples envíos mientras se soluciona
-  console.log(
-    '[BYPASS] Sistema de verificación de envíos desactivado temporalmente'
-  );
-  return false;
+// Clave única para almacenar el historial de reviews
+const REVIEW_HISTORY_KEY = 'yuppie_review_history';
 
-  /* CÓDIGO ORIGINAL COMENTADO
+/**
+ * Verifica si ya se ha enviado una review para este restaurante hoy
+ */
+export const hasSubmittedReviewToday = (restaurantId: string): boolean => {
   try {
     if (!restaurantId) {
       console.warn(
@@ -22,23 +20,48 @@ export const hasSubmittedReviewToday = (restaurantId: string): boolean => {
       return false;
     }
 
-    // Obtenemos la fecha actual en formato YYYY-MM-DD
-    const today = new Date().toISOString().split('T')[0];
-
-    const storedRecordsJson = localStorage.getItem('yuppie_review_history');
-    if (!storedRecordsJson) {
-      console.log('[DEBUG] No hay registros previos');
+    // Si estamos en la página de agradecimiento, no verificamos (ya enviamos)
+    if (window.location.pathname === '/thanks') {
+      console.log(
+        '[INFO] En página de agradecimiento, no verificamos envíos previos'
+      );
       return false;
     }
 
-    const storedRecords: ReviewRecord[] = JSON.parse(storedRecordsJson);
-    console.log('[DEBUG] Registros en localStorage:', storedRecords);
+    // Obtener la fecha actual en formato YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
+
+    // Verificar si existe historial de reviews
+    const storedRecordsJson = localStorage.getItem(REVIEW_HISTORY_KEY);
+    if (!storedRecordsJson) {
+      console.log('[DEBUG] No hay registros previos de reviews');
+      return false;
+    }
+
+    // Intentamos parsear los registros almacenados
+    let storedRecords: ReviewRecord[] = [];
+    try {
+      storedRecords = JSON.parse(storedRecordsJson);
+
+      // Validación para evitar errores con datos corruptos
+      if (!Array.isArray(storedRecords)) {
+        console.warn('[WARN] Formato inválido de registros, reiniciando');
+        localStorage.removeItem(REVIEW_HISTORY_KEY);
+        return false;
+      }
+    } catch (parseError) {
+      console.error(
+        '[ERROR] Error al parsear historial de reviews:',
+        parseError
+      );
+      localStorage.removeItem(REVIEW_HISTORY_KEY);
+      return false;
+    }
 
     // Filtramos los registros para el día de hoy
     const todayRecords = storedRecords.filter(
       (record) => record.date === today
     );
-    console.log('[DEBUG] Registros de hoy:', todayRecords);
 
     // Verificamos si hay alguna coincidencia exacta con el restaurantId
     const hasSentReview = todayRecords.some(
@@ -46,59 +69,48 @@ export const hasSubmittedReviewToday = (restaurantId: string): boolean => {
     );
 
     console.log(
-      `[DEBUG] ¿Ya enviaste review para restaurante ${restaurantId}?`,
-      hasSentReview
+      `[INFO] ¿Ya enviaste review para restaurante ${restaurantId}? ${hasSentReview}`
     );
     return hasSentReview;
   } catch (error) {
     console.error('[ERROR] Error verificando historial:', error);
-    return false;
+    return false; // En caso de error, permitimos enviar para no bloquear al usuario
   }
-  */
 };
 
+/**
+ * Registra que se ha enviado una review para este restaurante hoy
+ */
 export const recordReviewSubmission = (restaurantId: string): void => {
-  // SOLUCIÓN DE EMERGENCIA: LIMPIEZA AGRESIVA
-  // En lugar de registrar, limpiamos todos los datos de localStorage
-  try {
-    // Limpiar TODOS los datos relacionados con reviews
-    const keysToClean = [
-      'yuppie_review_history',
-      'emergency_review_data',
-      'yuppie_improvement',
-      'yuppie_rating',
-      'yuppie_restaurant',
-      'yuppie_employee',
-      'redirecting_from_comment',
-    ];
-
-    keysToClean.forEach((key) => {
-      try {
-        localStorage.removeItem(key);
-      } catch (e) {
-        console.error(`Error removing ${key}:`, e);
-      }
-    });
-
-    console.log('[EMERGENCY] Limpieza completa de localStorage realizada');
-  } catch (error) {
-    console.error('[ERROR] Error en limpieza de emergencia:', error);
-  }
-
-  /* CÓDIGO ORIGINAL COMENTADO
   try {
     if (!restaurantId) {
       console.error('[ERROR] No se puede registrar un restaurantId vacío');
       return;
     }
 
+    // Obtener la fecha actual en formato YYYY-MM-DD
     const today = new Date().toISOString().split('T')[0];
-    const storedRecordsJson = localStorage.getItem('yuppie_review_history');
-    let storedRecords: ReviewRecord[] = storedRecordsJson
-      ? JSON.parse(storedRecordsJson)
-      : [];
 
-    // Limpiamos registros antiguos (mantenemos solo registros de los últimos 7 días)
+    // Obtener el historial actual o iniciar uno nuevo
+    const storedRecordsJson = localStorage.getItem(REVIEW_HISTORY_KEY);
+    let storedRecords: ReviewRecord[] = [];
+
+    if (storedRecordsJson) {
+      try {
+        const parsed = JSON.parse(storedRecordsJson);
+        if (Array.isArray(parsed)) {
+          storedRecords = parsed;
+        } else {
+          console.warn('[WARN] Formato inválido de historial, reiniciando');
+        }
+      } catch (parseError) {
+        console.warn(
+          '[WARN] Error al parsear historial existente, reiniciando'
+        );
+      }
+    }
+
+    // Limpiar registros antiguos (conservar solo últimos 7 días)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
@@ -107,21 +119,52 @@ export const recordReviewSubmission = (restaurantId: string): void => {
       (record) => record.date >= sevenDaysAgoStr
     );
 
-    // Agregamos el nuevo registro
-    const newRecord: ReviewRecord = {
-      restaurantId,
-      date: today,
-    };
-
-    storedRecords.push(newRecord);
-    localStorage.setItem(
-      'yuppie_review_history',
-      JSON.stringify(storedRecords)
+    // Verificar si ya existe un registro para este restaurante hoy
+    const existingIndex = storedRecords.findIndex(
+      (record) => record.restaurantId === restaurantId && record.date === today
     );
-    console.log('[DEBUG] Registro guardado:', newRecord);
-    console.log('[DEBUG] Registros actualizados:', storedRecords);
+
+    // Si ya existe, no agregamos un duplicado
+    if (existingIndex === -1) {
+      // Agregar el nuevo registro
+      const newRecord: ReviewRecord = {
+        restaurantId,
+        date: today,
+      };
+
+      storedRecords.push(newRecord);
+      console.log('[INFO] Nuevo registro de review guardado:', newRecord);
+    } else {
+      console.log('[INFO] Ya existe un registro para este restaurante hoy');
+    }
+
+    // Guardar el historial actualizado
+    try {
+      localStorage.setItem(REVIEW_HISTORY_KEY, JSON.stringify(storedRecords));
+      console.log('[INFO] Historial de reviews actualizado correctamente');
+    } catch (storageError) {
+      console.error(
+        '[ERROR] Error al guardar historial en localStorage:',
+        storageError
+      );
+
+      // Intento de recuperación en caso de error de almacenamiento
+      try {
+        // Reducir el tamaño eliminando registros más antiguos
+        const reducedRecords = storedRecords.slice(-10); // Mantener solo los 10 más recientes
+        localStorage.setItem(
+          REVIEW_HISTORY_KEY,
+          JSON.stringify(reducedRecords)
+        );
+      } catch (retryError) {
+        // Si aún falla, limpiar completamente
+        localStorage.removeItem(REVIEW_HISTORY_KEY);
+      }
+    }
+
+    // Actualizar flag para la página de agradecimiento
+    localStorage.setItem('last_review_restaurant', restaurantId);
   } catch (error) {
-    console.error('[ERROR] Error guardando registro:', error);
+    console.error('[ERROR] Error registrando submission:', error);
   }
-  */
 };
