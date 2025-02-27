@@ -6,6 +6,14 @@ interface ReviewRecord {
 }
 
 export const hasSubmittedReviewToday = (restaurantId: string): boolean => {
+  // SOLUCIÓN DE EMERGENCIA: Siempre retornar false para evitar el bucle
+  // Al desactivar esta verificación, permitimos múltiples envíos mientras se soluciona
+  console.log(
+    '[BYPASS] Sistema de verificación de envíos desactivado temporalmente'
+  );
+  return false;
+
+  /* CÓDIGO ORIGINAL COMENTADO
   try {
     if (!restaurantId) {
       console.warn(
@@ -46,9 +54,38 @@ export const hasSubmittedReviewToday = (restaurantId: string): boolean => {
     console.error('[ERROR] Error verificando historial:', error);
     return false;
   }
+  */
 };
 
 export const recordReviewSubmission = (restaurantId: string): void => {
+  // SOLUCIÓN DE EMERGENCIA: LIMPIEZA AGRESIVA
+  // En lugar de registrar, limpiamos todos los datos de localStorage
+  try {
+    // Limpiar TODOS los datos relacionados con reviews
+    const keysToClean = [
+      'yuppie_review_history',
+      'emergency_review_data',
+      'yuppie_improvement',
+      'yuppie_rating',
+      'yuppie_restaurant',
+      'yuppie_employee',
+      'redirecting_from_comment',
+    ];
+
+    keysToClean.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.error(`Error removing ${key}:`, e);
+      }
+    });
+
+    console.log('[EMERGENCY] Limpieza completa de localStorage realizada');
+  } catch (error) {
+    console.error('[ERROR] Error en limpieza de emergencia:', error);
+  }
+
+  /* CÓDIGO ORIGINAL COMENTADO
   try {
     if (!restaurantId) {
       console.error('[ERROR] No se puede registrar un restaurantId vacío');
@@ -86,4 +123,5 @@ export const recordReviewSubmission = (restaurantId: string): void => {
   } catch (error) {
     console.error('[ERROR] Error guardando registro:', error);
   }
+  */
 };
