@@ -37,36 +37,80 @@ const title = "Gracias por tu feedback";
 </Layout>
 
 <script>
-  // Función más robusta para manejar la redirección
-  document.addEventListener('DOMContentLoaded', () => {
-    // Verificar si venimos de una redirección correcta
-    const isRedirecting = localStorage.getItem('redirecting_from_comment');
-    
-    // Limpiar bandera de redirección inmediatamente
-    localStorage.removeItem('redirecting_from_comment');
-    
-    // Si no venimos de una redirección válida y tenemos un historial, volver atrás
-    if (!isRedirecting && window.history.length > 1) {
-      console.warn('Acceso directo a página de agradecimiento sin envío previo');
-      // Opcional: Redirigir a inicio si se accede directamente
-      // window.location.href = '/';
-    }
-
-    // Limpiar toda la información relacionada con la review
-    const keysToClean = [
-      'yuppie_improvement',
-      'yuppie_rating', 
-      'yuppie_restaurant',
-      'yuppie_employee'
-    ];
-    
-    keysToClean.forEach(key => {
-      try {
-        localStorage.removeItem(key);
-      } catch (e) {
-        console.error(`Error removing ${key}:`, e);
+  // Función para procesar y enviar datos de emergencia
+  const processEmergencyData = async () => {
+    try {
+      const emergencyDataStr = localStorage.getItem('emergency_review_data');
+      if (!emergencyDataStr) return;
+      
+      // Parsear datos de emergencia
+      const data = JSON.parse(emergencyDataStr);
+      console.log('Procesando datos de emergencia:', data);
+      
+      // Crear objeto base para API
+      const apiPayload = {
+        data: {
+          restaurant: data.restaurantId,
+          calification: data.rating,
+          typeImprovement: data.typeImprovement,
+          email: data.email,
+          comment: data.comment,
+          googleSent: data.rating === 5,
+          date: new Date().toISOString(),
+        }
+      };
+      
+      // Añadir empleado si existe (usando sintaxis de objeto para evitar errores TypeScript)
+      if (data.employeeId) {
+        // Usar esta sintaxis para evitar problemas con TypeScript
+        (apiPayload.data as any).employee = data.employeeId;
       }
-    });
+      
+      // Intentar enviar
+      try {
+        const response = await fetch(`${import.meta.env.PUBLIC_API_URL}/reviews`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(apiPayload),
+        });
+        
+        if (response.ok) {
+          console.log('Review enviada con éxito desde la página de agradecimiento');
+        } else {
+          console.error('Error al enviar review:', await response.text());
+        }
+      } catch (apiError) {
+        console.error('Error en API de reviews:', apiError);
+      }
+    } catch (error) {
+      console.error('Error procesando datos de emergencia:', error);
+    } finally {
+      // Limpiar TODOS los datos relacionados con reviews
+      const keysToClean = [
+        'emergency_review_data',
+        'yuppie_improvement',
+        'yuppie_rating', 
+        'yuppie_restaurant',
+        'yuppie_employee',
+        'redirecting_from_comment'
+      ];
+      
+      keysToClean.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.error(`Error removing ${key}:`, e);
+        }
+      });
+    }
+  };
+
+  // Clean up any redirect flags to prevent loops
+  document.addEventListener('DOMContentLoaded', () => {
+    // Ejecutar el procesamiento de datos
+    processEmergencyData();
   });
 </script>
 

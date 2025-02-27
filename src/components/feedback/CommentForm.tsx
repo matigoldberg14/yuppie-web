@@ -414,27 +414,19 @@ export function CommentForm({
       try {
         setIsSubmitting(true);
 
-        // Verificar si ya envió una opinión
-        if (hasSubmittedReviewToday(restaurantDocumentId)) {
-          throw new Error(
-            'Ya has compartido tu opinión en las últimas 24 horas'
-          );
-        }
-
-        // Validar que el email no esté vacío
+        // Verificación básica de campos
         if (!formData.email.trim()) {
           throw new Error('El email es obligatorio');
         }
 
-        // Validar formato de email
-        try {
-          z.string()
-            .email('Por favor, ingresa un email válido')
-            .parse(formData.email);
-        } catch (error) {
-          if (error instanceof z.ZodError) {
-            throw new Error(error.errors[0].message);
-          }
+        if (showTextArea && !formData.comment.trim()) {
+          throw new Error('Por favor escribe un comentario');
+        }
+
+        // Obtener rating
+        const rating = Number(localStorage.getItem('yuppie_rating'));
+        if (!rating) {
+          throw new Error('No se encontró la calificación');
         }
 
         // Construir comentario final según el estado
@@ -452,12 +444,6 @@ export function CommentForm({
           throw new Error(
             'Por favor, selecciona una opción o escribe un comentario'
           );
-        }
-
-        // Obtener calificación y otros datos existentes
-        const rating = Number(localStorage.getItem('yuppie_rating'));
-        if (!rating) {
-          throw new Error('No se encontró la calificación');
         }
 
         // Verificar coincidencia de restaurante
@@ -493,82 +479,38 @@ export function CommentForm({
         // Guardar email
         localStorage.setItem('yuppie_email', formData.email.trim());
 
-        // Construir comentario final según el estado
-        if (showTextArea) {
-          finalComment = formData.comment;
-        } else if (selectedOption && improvementType) {
-          const selectedLabel = improvementOptions[
-            improvementType as keyof typeof improvementOptions
-          ]?.find((opt) => opt.id === selectedOption)?.label;
-          finalComment = `${improvementType} - ${selectedLabel}`;
-        }
-
-        // Crear objeto de review
-        const reviewData = {
+        // SOLUCION ROBUSTA: Guardar datos temporalmente
+        const emergencyData = {
           restaurantId: restaurantIdNumber,
-          calification: rating,
+          restaurantDocId: restaurantDocumentId,
+          rating: rating,
           typeImprovement: improvementType || 'Otra',
           email: formData.email.trim(),
           comment: finalComment.trim(),
-          googleSent: rating === 5,
-          employeeId: employeeId, // Añadir el ID del empleado si existe
+          employeeId: employeeId,
+          timestamp: new Date().toISOString(),
         };
+        localStorage.setItem(
+          'emergency_review_data',
+          JSON.stringify(emergencyData)
+        );
 
         // Registrar submission
         recordReviewSubmission(restaurantDocumentId);
 
-        // CAMBIO IMPORTANTE: Crear la review ANTES de mostrar toast y redireccionar
-        try {
-          // Esperar a que termine la creación de review
-          await createReview(reviewData);
+        // Mostrar toast inmediatamente para mejor UX
+        toast({
+          title: '¡Gracias por tu comentario!',
+          description: 'Tu feedback nos ayuda a mejorar!',
+          duration: 2000,
+        });
 
-          // Ahora que la operación principal ha terminado, limpiamos localStorage
-          const keysToRemove = [
-            'yuppie_improvement',
-            'yuppie_rating',
-            'yuppie_restaurant',
-            'yuppie_employee',
-          ];
-
-          keysToRemove.forEach((key) => {
-            try {
-              localStorage.removeItem(key);
-            } catch (e) {
-              console.error(`Error al eliminar ${key}:`, e);
-            }
-          });
-
-          // Mostrar toast y redireccionar
-          toast({
-            title: '¡Gracias por tu comentario!',
-            description: 'Tu feedback nos ayuda a mejorar!',
-            duration: 2000,
-          });
-
-          // IMPORTANTE: Marcar que estamos redireccionando para prevenir bucles
-          localStorage.setItem('redirecting_from_comment', 'true');
-
-          // Redireccionar después de completar operaciones críticas
-          window.location.href = '/thanks';
-        } catch (apiError) {
-          console.error('Error al crear review:', apiError);
-          throw new Error(
-            'No se pudo procesar tu comentario. Intenta más tarde.'
-          );
-        }
-
-        // Email para calificaciones bajas se ejecuta solo si no hemos redireccionado
-        if (rating <= 2) {
-          try {
-            // Resto del código de envío de email (opcional)
-          } catch (emailError) {
-            console.error('Error al enviar email:', emailError);
-            // No interrumpimos el flujo principal por un error en el email
-          }
-        }
+        // CAMINO RÁPIDO: Redirige inmediatamente sin esperar
+        window.location.href = '/thanks';
       } catch (error) {
         const errorMessage = formatErrorMessage(error);
 
+        // Toast más visible y amigable
         toast({
           variant: 'destructive',
           title: '¡Un momento!',
