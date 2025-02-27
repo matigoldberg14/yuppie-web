@@ -1,76 +1,33 @@
 // /Users/Mati/Desktop/yuppie-web/src/utils/reviewLimiter.ts
+// src/utils/reviewLimiter.ts
+import { checkEmailReviewStatus } from '../services/api';
 
-interface ReviewRecord {
-  restaurantId: string;
-  date: string; // formato YYYY-MM-DD
-}
-
+/**
+ * Check if a user has already submitted a review for this restaurant in the last 24 hours.
+ * This is a legacy function that now uses the API-based approach.
+ *
+ * @param restaurantId The restaurant's document ID
+ * @returns Always returns false to allow the application flow to continue
+ */
 export const hasSubmittedReviewToday = (restaurantId: string): boolean => {
-  // SOLUCIÓN DE EMERGENCIA: Siempre retornar false para evitar el bucle
-  // Al desactivar esta verificación, permitimos múltiples envíos mientras se soluciona
+  // This function now returns false to allow the application flow to continue
+  // The actual check is performed by checkEmailReviewStatus in the components
   console.log(
-    '[BYPASS] Sistema de verificación de envíos desactivado temporalmente'
+    '[INFO] Legacy function hasSubmittedReviewToday called, now using API-based approach'
   );
   return false;
-
-  /* CÓDIGO ORIGINAL COMENTADO
-  try {
-    if (!restaurantId) {
-      console.warn(
-        '[WARN] Se llamó a hasSubmittedReviewToday con restaurantId vacío'
-      );
-      return false;
-    }
-
-    // Obtenemos la fecha actual en formato YYYY-MM-DD
-    const today = new Date().toISOString().split('T')[0];
-
-    const storedRecordsJson = localStorage.getItem('yuppie_review_history');
-    if (!storedRecordsJson) {
-      console.log('[DEBUG] No hay registros previos');
-      return false;
-    }
-
-    const storedRecords: ReviewRecord[] = JSON.parse(storedRecordsJson);
-    console.log('[DEBUG] Registros en localStorage:', storedRecords);
-
-    // Filtramos los registros para el día de hoy
-    const todayRecords = storedRecords.filter(
-      (record) => record.date === today
-    );
-    console.log('[DEBUG] Registros de hoy:', todayRecords);
-
-    // Verificamos si hay alguna coincidencia exacta con el restaurantId
-    const hasSentReview = todayRecords.some(
-      (record) => record.restaurantId === restaurantId
-    );
-
-    console.log(
-      `[DEBUG] ¿Ya enviaste review para restaurante ${restaurantId}?`,
-      hasSentReview
-    );
-    return hasSentReview;
-  } catch (error) {
-    console.error('[ERROR] Error verificando historial:', error);
-    return false;
-  }
-  */
 };
 
+/**
+ * Legacy function that used to record a review submission in localStorage.
+ * Now it just cleans up any remaining localStorage entries.
+ *
+ * @param restaurantId The restaurant's document ID
+ */
 export const recordReviewSubmission = (restaurantId: string): void => {
-  // SOLUCIÓN DE EMERGENCIA: LIMPIEZA AGRESIVA
-  // En lugar de registrar, limpiamos todos los datos de localStorage
+  // Clean up any remaining entries that might be used by the old approach
   try {
-    // Limpiar TODOS los datos relacionados con reviews
-    const keysToClean = [
-      'yuppie_review_history',
-      'emergency_review_data',
-      'yuppie_improvement',
-      'yuppie_rating',
-      'yuppie_restaurant',
-      'yuppie_employee',
-      'redirecting_from_comment',
-    ];
+    const keysToClean = ['yuppie_review_history', 'redirecting_from_comment'];
 
     keysToClean.forEach((key) => {
       try {
@@ -80,48 +37,33 @@ export const recordReviewSubmission = (restaurantId: string): void => {
       }
     });
 
-    console.log('[EMERGENCY] Limpieza completa de localStorage realizada');
+    console.log('[INFO] Cleaned up legacy localStorage entries');
   } catch (error) {
-    console.error('[ERROR] Error en limpieza de emergencia:', error);
+    console.error('[ERROR] Error in cleanup:', error);
+  }
+};
+
+/**
+ * Async wrapper around checkEmailReviewStatus for components that need to check
+ * if a user has already submitted a review.
+ *
+ * @param restaurantDocumentId The restaurant's document ID
+ * @param email The user's email
+ * @returns True if the user has already submitted a review in the last 24 hours
+ */
+export const hasSubmittedReviewWithEmail = async (
+  restaurantDocumentId: string,
+  email: string
+): Promise<boolean> => {
+  if (!restaurantDocumentId || !email) {
+    return false;
   }
 
-  /* CÓDIGO ORIGINAL COMENTADO
   try {
-    if (!restaurantId) {
-      console.error('[ERROR] No se puede registrar un restaurantId vacío');
-      return;
-    }
-
-    const today = new Date().toISOString().split('T')[0];
-    const storedRecordsJson = localStorage.getItem('yuppie_review_history');
-    let storedRecords: ReviewRecord[] = storedRecordsJson
-      ? JSON.parse(storedRecordsJson)
-      : [];
-
-    // Limpiamos registros antiguos (mantenemos solo registros de los últimos 7 días)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-
-    storedRecords = storedRecords.filter(
-      (record) => record.date >= sevenDaysAgoStr
-    );
-
-    // Agregamos el nuevo registro
-    const newRecord: ReviewRecord = {
-      restaurantId,
-      date: today,
-    };
-
-    storedRecords.push(newRecord);
-    localStorage.setItem(
-      'yuppie_review_history',
-      JSON.stringify(storedRecords)
-    );
-    console.log('[DEBUG] Registro guardado:', newRecord);
-    console.log('[DEBUG] Registros actualizados:', storedRecords);
+    const result = await checkEmailReviewStatus(restaurantDocumentId, email);
+    return result.hasReviewed;
   } catch (error) {
-    console.error('[ERROR] Error guardando registro:', error);
+    console.error('Error checking review status:', error);
+    return false; // Fail open approach
   }
-  */
 };

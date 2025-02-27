@@ -128,3 +128,54 @@ const nextUrl = `/improvement?local=${documentId}${employeeDocumentId ? `&employ
     }, 1000);
   });
 </script>
+
+<script>
+  // Añadir este script al final de rating.astro
+  document.addEventListener('DOMContentLoaded', () => {
+    // Verificar si hay un email guardado
+    const emailGuardado = localStorage.getItem('yuppie_email');
+    const restaurantId = new URLSearchParams(window.location.search).get('local');
+    
+    if (emailGuardado && restaurantId) {
+      // Crear una función para verificar con la API
+      const verificarOpinionPrevia = async () => {
+        try {
+          // Construir la URL para la verificación
+          const url = `${import.meta.env.PUBLIC_API_URL}/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&filters[email][$eq]=${encodeURIComponent(emailGuardado)}`;
+          
+          // Calcular fecha de hace 24 horas
+          const ayer = new Date();
+          ayer.setHours(ayer.getHours() - 24);
+          const urlCompleta = `${url}&filters[createdAt][$gte]=${ayer.toISOString()}&sort=createdAt:desc`;
+          
+          // Hacer la petición a la API
+          const respuesta = await fetch(urlCompleta);
+          
+          if (!respuesta.ok) {
+            console.error(`Error en la verificación: ${respuesta.status}`);
+            return;
+          }
+          
+          const datos = await respuesta.json();
+          const reviews = datos.data || [];
+          
+          // Si hay al menos una review en las últimas 24 horas
+          if (reviews.length > 0) {
+            console.log('Usuario ya envió una opinión, redireccionando a thanks');
+            
+            // Guardar flag para página de thanks
+            localStorage.setItem('yuppie_already_reviewed', 'true');
+            
+            // Redireccionar a la página de agradecimiento
+            window.location.href = '/thanks';
+          }
+        } catch (error) {
+          console.error('Error verificando estado de opinión:', error);
+        }
+      };
+      
+      // Ejecutar la verificación
+      verificarOpinionPrevia();
+    }
+  });
+  </script>

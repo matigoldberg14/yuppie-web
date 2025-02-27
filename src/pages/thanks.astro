@@ -1,5 +1,5 @@
 ---
-// src/pages/thanks.astro
+// src/pages/thanks.astro - Actualizada para mostrar mensajes personalizados
 
 import Layout from '../layouts/Layout.astro';
 
@@ -11,11 +11,11 @@ const title = "Gracias por tu feedback";
     <div class="w-full max-w-md">
       <div class="card p-8 space-y-6">
         
-        <h1 class="text-3xl font-bold text-white">
+        <h1 id="titulo-gracias" class="text-3xl font-bold text-white">
           Gracias por ayudarnos a mejorar!
         </h1>
         
-        <p class="text-lg text-gray-200">
+        <p id="mensaje-gracias" class="text-lg text-gray-200">
           Tu opinión es muy valiosa para nosotros y nos ayuda a ofrecer una mejor experiencia.
         </p>
 
@@ -107,9 +107,29 @@ const title = "Gracias por tu feedback";
     }
   };
 
-  // Clean up any redirect flags to prevent loops
+  // Verificar si el usuario ya ha enviado una opinión y mostrar mensaje personalizado
   document.addEventListener('DOMContentLoaded', () => {
-    // Ejecutar el procesamiento de datos
+    // Verificar si viene de una redirección por opinión duplicada
+    const yaEnvioOpinion = localStorage.getItem('yuppie_already_reviewed');
+    
+    if (yaEnvioOpinion === 'true') {
+      // Cambiar el mensaje en la página
+      const tituloElement = document.getElementById('titulo-gracias');
+      const mensajeElement = document.getElementById('mensaje-gracias');
+      
+      if (tituloElement) {
+        tituloElement.textContent = '¡Ya has compartido tu opinión hoy!';
+      }
+      
+      if (mensajeElement) {
+        mensajeElement.textContent = 'Gracias por tu entusiasmo. Podrás compartir otra opinión para este restaurante en 24 horas.';
+      }
+      
+      // Limpiar el flag para futuras visitas
+      localStorage.removeItem('yuppie_already_reviewed');
+    }
+    
+    // Continuar con el procesamiento normal de datos de emergencia
     processEmergencyData();
   });
 </script>

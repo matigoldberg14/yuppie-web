@@ -2,6 +2,7 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect, useCallback, memo } from 'react';
 import { useToast } from '../ui/use-toast';
+import { checkEmailReviewStatus } from '../../services/api';
 
 // Memoized constantes para evitar recreaciones en cada render
 const improvementOptions = [
@@ -26,6 +27,44 @@ function ImprovementSelectorComponent({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emojisLoaded, setEmojisLoaded] = useState(true); // Optimista por defecto
   const { toast } = useToast();
+
+  useEffect(() => {
+    const verificarOpinionPrevia = async () => {
+      try {
+        // Verificar si hay un email guardado
+        const emailGuardado = localStorage.getItem('yuppie_email');
+
+        if (emailGuardado && restaurantDocumentId) {
+          // Mostrar indicador de carga o alguna UI para el usuario
+          // mientras se verifica
+
+          // Verificar si este email ya envió una review en las últimas 24 horas
+          const estadoEmail = await checkEmailReviewStatus(
+            restaurantDocumentId,
+            emailGuardado
+          );
+
+          if (estadoEmail.hasReviewed) {
+            console.log(
+              'Usuario ya envió una opinión, redireccionando a thanks con mensaje especial'
+            );
+
+            // Guardar un flag para indicar que debe mostrar mensaje de "ya has opinado"
+            localStorage.setItem('yuppie_already_reviewed', 'true');
+
+            // Redireccionar a la página de agradecimiento
+            window.location.href = '/thanks';
+          }
+        }
+      } catch (error) {
+        console.error('Error verificando estado de opinión:', error);
+        // No bloqueamos al usuario en caso de error
+      }
+    };
+
+    // Ejecutar la verificación cuando el componente se monta
+    verificarOpinionPrevia();
+  }, [restaurantDocumentId]); // Dependencia: restaurantDocumentId
 
   // Verificar soporte de emojis al montar
   useEffect(() => {
@@ -68,7 +107,7 @@ function ImprovementSelectorComponent({
       try {
         setIsSubmitting(true);
 
-        // Verificación optimizada
+        // Optimized verification
         const rating = localStorage.getItem('yuppie_rating');
         const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
 
@@ -77,36 +116,53 @@ function ImprovementSelectorComponent({
         }
 
         if (storedRestaurantId !== restaurantDocumentId) {
-          console.warn('Advertencia: IDs de restaurante no coinciden', {
+          console.warn('Warning: Restaurant IDs do not match', {
             stored: storedRestaurantId,
             current: restaurantDocumentId,
           });
-          // Intento de recuperación: actualizar el ID almacenado
+          // Recovery attempt: update the stored ID
           localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
         }
 
-        // SOLO propagar el ID del empleado a la siguiente página si está disponible
-        // IMPORTANTE: No guardamos en localStorage permanentemente, solo lo pasamos por URL
+        // For non-5-star reviews, we'll check for potential duplicate submissions
+        // using a stored email if available
+        const storedEmail = localStorage.getItem('yuppie_email');
+        if (storedEmail) {
+          // Check if this email has already submitted a review for this restaurant in the last 24 hours
+          const emailStatus = await checkEmailReviewStatus(
+            restaurantDocumentId,
+            storedEmail
+          );
+
+          if (emailStatus.hasReviewed) {
+            throw new Error(
+              'Ya has enviado una opinión para este restaurante en las últimas 24 horas. ¡Gracias por tu entusiasmo!'
+            );
+          }
+        }
+
+        // ONLY propagate the employee ID to the next page if available
+        // IMPORTANT: We don't permanently store in localStorage, just pass it via URL
         if (employeeDocumentId) {
-          // Solo usar el ID del empleado para la navegación
+          // Only use the employee ID for navigation
           const fullNextUrl = `${nextUrl}${
             nextUrl.includes('?') ? '&' : '?'
           }employee=${employeeDocumentId}`;
 
-          // Guardar mejora seleccionada
+          // Save selected improvement
           localStorage.setItem('yuppie_improvement', improvement);
 
-          // Redirigir con el ID del empleado en la URL
+          // Redirect with employee ID in URL
           window.location.href = fullNextUrl;
         } else {
-          // Guardar mejora seleccionada
+          // Save selected improvement
           localStorage.setItem('yuppie_improvement', improvement);
 
-          // Redirigir sin ID de empleado
+          // Redirect without employee ID
           window.location.href = nextUrl;
         }
       } catch (error) {
-        console.error('Error al seleccionar mejora:', error);
+        console.error('Error selecting improvement:', error);
         setIsSubmitting(false);
         toast({
           variant: 'destructive',

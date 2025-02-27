@@ -11,6 +11,7 @@ import {
   hasSubmittedReviewToday,
   recordReviewSubmission,
 } from '../../utils/reviewLimiter';
+import { checkEmailReviewStatus } from '../../services/api';
 
 // Resto del código sin cambios...
 // Schema para validación (optimizado para rendimiento con memoización)
@@ -414,7 +415,7 @@ export function CommentForm({
       try {
         setIsSubmitting(true);
 
-        // Verificación básica de campos
+        // Basic field validation
         if (!formData.email.trim()) {
           throw new Error('El email es obligatorio');
         }
@@ -423,13 +424,25 @@ export function CommentForm({
           throw new Error('Por favor escribe un comentario');
         }
 
-        // Obtener rating
+        // Get rating
         const rating = Number(localStorage.getItem('yuppie_rating'));
         if (!rating) {
           throw new Error('No se encontró la calificación');
         }
 
-        // Construir comentario final según el estado
+        // Check if this email has already submitted a review to this restaurant in the last 24 hours
+        const emailStatus = await checkEmailReviewStatus(
+          restaurantDocumentId,
+          formData.email.trim()
+        );
+
+        if (emailStatus.hasReviewed) {
+          throw new Error(
+            'Ya has enviado una opinión para este restaurante en las últimas 24 horas. ¡Gracias por tu entusiasmo!'
+          );
+        }
+
+        // Build final comment based on state
         let finalComment = '';
         if (showTextArea) {
           finalComment = formData.comment;
@@ -446,19 +459,19 @@ export function CommentForm({
           );
         }
 
-        // Verificar coincidencia de restaurante
+        // Check restaurant match
         const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
         if (storedRestaurantId !== restaurantDocumentId) {
           localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
         }
 
-        // Verificar si existe ID de empleado en localStorage
+        // Check for employee ID in localStorage
         const storedEmployeeId = localStorage.getItem('yuppie_employee');
         let employeeId: number | undefined;
 
         if (storedEmployeeId) {
           try {
-            // Obtener el ID numérico del empleado
+            // Get the employee's numeric ID
             const numericEmployeeId = await getEmployeeNumericId(
               storedEmployeeId
             );
@@ -466,20 +479,20 @@ export function CommentForm({
               employeeId = numericEmployeeId;
             }
           } catch (err) {
-            console.error('Error obteniendo ID numérico del empleado:', err);
+            console.error('Error getting employee numeric ID:', err);
           }
         }
 
-        // Validar y convertir IDs
+        // Validate and convert IDs
         const restaurantIdNumber = parseInt(restaurantId, 10);
         if (isNaN(restaurantIdNumber)) {
-          throw new Error('ID de restaurante inválido');
+          throw new Error('Invalid restaurant ID');
         }
 
-        // Guardar email
+        // Save email
         localStorage.setItem('yuppie_email', formData.email.trim());
 
-        // SOLUCION ROBUSTA: Guardar datos temporalmente
+        // ROBUST SOLUTION: Save data temporarily
         const emergencyData = {
           restaurantId: restaurantIdNumber,
           restaurantDocId: restaurantDocumentId,
@@ -495,22 +508,19 @@ export function CommentForm({
           JSON.stringify(emergencyData)
         );
 
-        // Registrar submission
-        recordReviewSubmission(restaurantDocumentId);
-
-        // Mostrar toast inmediatamente para mejor UX
+        // Show immediate toast for better UX
         toast({
           title: '¡Gracias por tu comentario!',
           description: 'Tu feedback nos ayuda a mejorar!',
           duration: 2000,
         });
 
-        // CAMINO RÁPIDO: Redirige inmediatamente sin esperar
+        // FAST PATH: Redirect immediately without waiting
         window.location.href = '/thanks';
       } catch (error) {
         const errorMessage = formatErrorMessage(error);
 
-        // Toast más visible y amigable
+        // More visible and friendly toast
         toast({
           variant: 'destructive',
           title: '¡Un momento!',

@@ -269,6 +269,56 @@ export async function createReview(
   }
 }
 
+// Función para verificar si un email ya ha enviado una review al restaurante en las últimas 24 horas
+export async function checkEmailReviewStatus(
+  restaurantDocumentId: string,
+  email: string
+): Promise<{ hasReviewed: boolean; lastReviewDate?: string }> {
+  try {
+    if (!restaurantDocumentId || !email) {
+      console.warn('Missing parameters for email review check');
+      return { hasReviewed: false };
+    }
+
+    // Calculate the date 24 hours ago
+    const yesterday = new Date();
+    yesterday.setHours(yesterday.getHours() - 24);
+
+    // Endpoint to search for reviews filtered by restaurant, email, and date
+    const url = `${
+      API_CONFIG.baseUrl
+    }/reviews?filters[restaurant][documentId][$eq]=${restaurantDocumentId}&filters[email][$eq]=${encodeURIComponent(
+      email
+    )}&filters[createdAt][$gte]=${yesterday.toISOString()}&sort=createdAt:desc`;
+
+    console.log('[API] Checking email review status:', url);
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Error checking email status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const reviews = data.data || [];
+
+    // If there's at least one review in the last 24 hours
+    if (reviews.length > 0) {
+      return {
+        hasReviewed: true,
+        lastReviewDate: reviews[0].createdAt,
+      };
+    }
+
+    // No recent reviews from this email
+    return { hasReviewed: false };
+  } catch (error) {
+    console.error('Error checking email review status:', error);
+    // In case of error, allow submission (fail open to prevent blocking)
+    return { hasReviewed: false };
+  }
+}
+
 export async function getRestaurant(documentId: string) {
   try {
     // En modo development, no se aplica el filtro publishedAt

@@ -11,6 +11,7 @@ import {
   hasSubmittedReviewToday,
   recordReviewSubmission,
 } from '../../utils/reviewLimiter';
+import { checkEmailReviewStatus } from '../../services/api';
 
 interface Props {
   restaurantId: string;
@@ -143,12 +144,13 @@ export function RatingForm({
 
       try {
         setIsSubmitting(true);
-        console.log(`===== Procesando calificación: ${rating} =====`);
+        console.log(`===== Processing rating: ${rating} =====`);
 
-        // Guardar en localStorage (operación síncrona rápida)
+        // Store in localStorage (quick sync operation)
         localStorage.setItem('yuppie_rating', rating.toString());
         localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
 
+        // For 5-star ratings only, we'll automatically submit to Google
         if (rating === 5) {
           localStorage.setItem('yuppie_improvement', 'Otra');
 
@@ -158,11 +160,11 @@ export function RatingForm({
             duration: 2000,
           });
 
-          // CRUCIAL: Obtenemos el ID real del restaurante y empleado (si existe) en Strapi
+          // CRITICAL: Get the real restaurant and employee (if exists) IDs in Strapi
           try {
-            // Obtener ID del restaurante
+            // Get restaurant ID
             console.log(
-              `Obteniendo ID numerico real para restaurante documentId: ${restaurantDocumentId}`
+              `Getting real numeric ID for restaurant documentId: ${restaurantDocumentId}`
             );
             const realRestaurantId = await getRestaurantNumericId(
               restaurantDocumentId
@@ -170,32 +172,44 @@ export function RatingForm({
 
             if (realRestaurantId) {
               console.log(
-                `ID numérico real del restaurante obtenido: ${realRestaurantId} (era ${numericRestaurantId})`
+                `Real restaurant numeric ID obtained: ${realRestaurantId} (was ${numericRestaurantId})`
               );
 
-              // Obtener ID del empleado (si existe)
+              // Get employee ID (if exists)
               let employeeRealId;
               if (employeeDocumentId) {
                 try {
                   console.log(
-                    `Obteniendo ID numerico real para empleado documentId: ${employeeDocumentId}`
+                    `Getting real numeric ID for employee documentId: ${employeeDocumentId}`
                   );
                   employeeRealId = await getEmployeeNumericId(
                     employeeDocumentId
                   );
                   console.log(
-                    `ID numérico real del empleado obtenido: ${employeeRealId}`
+                    `Real employee numeric ID obtained: ${employeeRealId}`
                   );
                 } catch (empError) {
-                  console.error('Error obteniendo ID del empleado:', empError);
+                  console.error('Error getting employee ID:', empError);
                 }
               }
 
-              // Registrar submission para mejor UX
-              recordReviewSubmission(restaurantDocumentId);
-              console.log('Review registrada en localStorage');
+              // For 5-star ratings, we use a default positive email that serves as a placeholder
+              const reviewEmail = 'prefirio-no-dar-su-email@nodiosuemail.com';
 
-              // Enviar reseña con IDs correctos
+              // Check if this email has already submitted a review for this restaurant in the last 24 hours
+              const emailStatus = await checkEmailReviewStatus(
+                restaurantDocumentId,
+                reviewEmail
+              );
+
+              if (emailStatus.hasReviewed) {
+                console.log(
+                  'This email already submitted a review in the last 24 hours.'
+                );
+                // For automated Google reviews, we still proceed but log the occurrence
+              }
+
+              // Send review with correct IDs
               try {
                 await createReviewWithData(
                   5,
@@ -204,30 +218,30 @@ export function RatingForm({
                 );
               } catch (error) {
                 console.error(
-                  'Error al crear reseña, intentando sin empleado:',
+                  'Error creating review, trying without employee:',
                   error
                 );
 
-                // Si falla con empleado, intentar sin él
+                // If it fails with employee, try without it
                 if (employeeRealId) {
                   await createReviewWithData(5, realRestaurantId);
                 }
               }
             } else {
-              console.error('No se pudo obtener el ID real del restaurante');
+              console.error('Could not get real restaurant ID');
             }
           } catch (idError) {
-            console.error('Error obteniendo IDs reales:', idError);
+            console.error('Error getting real IDs:', idError);
           }
 
-          // Redirigir a Google Maps después de procesar todo
-          console.log(`Redirigiendo a Google Maps: ${linkMaps}`);
+          // Redirect to Google Maps after processing everything
+          console.log(`Redirecting to Google Maps: ${linkMaps}`);
           setTimeout(() => {
             window.location.href = linkMaps;
-          }, 2000); // Incrementado a 2 segundos para dar más tiempo
+          }, 2000); // Increased to 2 seconds to give more time
         } else {
-          // Para calificaciones menores a 5 - Redirección a la siguiente página
-          // IMPORTANTE: Incluir el ID del empleado en la URL si existe
+          // For ratings less than 5 - Redirect to next page
+          // IMPORTANT: Include employee ID in URL if it exists
           if (employeeDocumentId) {
             const fullNextUrl = `${nextUrl}${
               nextUrl.includes('?') ? '&' : '?'
@@ -238,13 +252,12 @@ export function RatingForm({
           }
         }
       } catch (error) {
-        console.error('Error procesando calificación:', error);
+        console.error('Error processing rating:', error);
         setIsSubmitting(false);
         toast({
           variant: 'destructive',
           title: 'Error',
-          description:
-            error instanceof Error ? error.message : 'Error desconocido',
+          description: error instanceof Error ? error.message : 'Unknown error',
         });
       }
     },
