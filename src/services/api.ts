@@ -276,45 +276,47 @@ export async function checkEmailReviewStatus(
 ): Promise<{ hasReviewed: boolean; lastReviewDate?: string }> {
   try {
     if (!restaurantDocumentId || !email) {
-      console.warn('Missing parameters for email review check');
+      console.warn('Faltan parámetros para la verificación de email');
       return { hasReviewed: false };
     }
 
-    // Calculate the date 24 hours ago
-    const yesterday = new Date();
-    yesterday.setHours(yesterday.getHours() - 24);
+    // Calcular la fecha de hace 24 horas
+    const ayer = new Date();
+    ayer.setHours(ayer.getHours() - 24);
 
-    // Endpoint to search for reviews filtered by restaurant, email, and date
+    // Endpoint para buscar reviews filtradas por restaurante, email y fecha
     const url = `${
       API_CONFIG.baseUrl
     }/reviews?filters[restaurant][documentId][$eq]=${restaurantDocumentId}&filters[email][$eq]=${encodeURIComponent(
       email
-    )}&filters[createdAt][$gte]=${yesterday.toISOString()}&sort=createdAt:desc`;
+    )}&filters[createdAt][$gte]=${ayer.toISOString()}&sort=createdAt:desc`;
 
-    console.log('[API] Checking email review status:', url);
+    console.log('[API] Verificando reviews recientes:', url);
 
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`Error checking email status: ${response.status}`);
+      throw new Error(`Error en la verificación de email: ${response.status}`);
     }
 
     const data = await response.json();
     const reviews = data.data || [];
 
-    // If there's at least one review in the last 24 hours
+    // Si hay al menos una review en las últimas 24 horas
     if (reviews.length > 0) {
+      console.log('Se encontró una review reciente para este email');
       return {
         hasReviewed: true,
         lastReviewDate: reviews[0].createdAt,
       };
     }
 
-    // No recent reviews from this email
+    // No hay reviews recientes de este email
+    console.log('No se encontraron reviews recientes para este email');
     return { hasReviewed: false };
   } catch (error) {
-    console.error('Error checking email review status:', error);
-    // In case of error, allow submission (fail open to prevent blocking)
+    console.error('Error verificando estado de email:', error);
+    // En caso de error, permitimos el envío (política de apertura para evitar bloqueos)
     return { hasReviewed: false };
   }
 }

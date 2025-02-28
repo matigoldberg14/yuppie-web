@@ -1,8 +1,9 @@
-// /Users/Mati/Desktop/yuppie-web/src/components/feedback/ImprovementSelector.tsx
+// src/components/feedback/ImprovementSelector.tsx
+// VERSIÓN CORREGIDA - SIN VERIFICACIÓN
+
 import { motion } from 'framer-motion';
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { useToast } from '../ui/use-toast';
-import { checkEmailReviewStatus } from '../../services/api';
 
 // Memoized constantes para evitar recreaciones en cada render
 const improvementOptions = [
@@ -28,141 +29,38 @@ function ImprovementSelectorComponent({
   const [emojisLoaded, setEmojisLoaded] = useState(true); // Optimista por defecto
   const { toast } = useToast();
 
-  useEffect(() => {
-    const verificarOpinionPrevia = async () => {
-      try {
-        // Verificar si hay un email guardado
-        const emailGuardado = localStorage.getItem('yuppie_email');
-
-        if (emailGuardado && restaurantDocumentId) {
-          // Mostrar indicador de carga o alguna UI para el usuario
-          // mientras se verifica
-
-          // Verificar si este email ya envió una review en las últimas 24 horas
-          const estadoEmail = await checkEmailReviewStatus(
-            restaurantDocumentId,
-            emailGuardado
-          );
-
-          if (estadoEmail.hasReviewed) {
-            console.log(
-              'Usuario ya envió una opinión, redireccionando a thanks con mensaje especial'
-            );
-
-            // Guardar un flag para indicar que debe mostrar mensaje de "ya has opinado"
-            localStorage.setItem('yuppie_already_reviewed', 'true');
-
-            // Redireccionar a la página de agradecimiento
-            window.location.href = '/thanks';
-          }
-        }
-      } catch (error) {
-        console.error('Error verificando estado de opinión:', error);
-        // No bloqueamos al usuario en caso de error
-      }
-    };
-
-    // Ejecutar la verificación cuando el componente se monta
-    verificarOpinionPrevia();
-  }, [restaurantDocumentId]); // Dependencia: restaurantDocumentId
-
-  // Verificar soporte de emojis al montar
-  useEffect(() => {
-    const checkEmojiSupport = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      // Dibujar emoji de prueba
-      ctx.fillText('🤝', -10, -10);
-      const support = ctx.getImageData(0, 0, 1, 1).data[3] !== 0;
-      setEmojisLoaded(support);
-    };
-
-    // Ejecutar de forma no bloqueante
-    if (window.requestIdleCallback) {
-      window.requestIdleCallback(checkEmojiSupport);
-    } else {
-      setTimeout(checkEmojiSupport, 100);
-    }
-
-    // Precarga de siguiente URL
-    const link = document.createElement('link');
-    link.rel = 'prefetch';
-    link.href = nextUrl;
-    document.head.appendChild(link);
-
-    return () => {
-      if (document.head.contains(link)) {
-        document.head.removeChild(link);
-      }
-    };
-  }, [nextUrl]);
-
-  // Optimización: Memoized handler para evitar recreaciones
+  // Manejador simplificado - SIN verificación
   const handleSelect = useCallback(
-    async (improvement: string) => {
+    (improvement: string) => {
       if (isSubmitting) return;
 
       try {
         setIsSubmitting(true);
 
-        // Optimized verification
+        // Verificación básica de rating
         const rating = localStorage.getItem('yuppie_rating');
-        const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
-
         if (!rating) {
           throw new Error('No se encontró la calificación');
         }
 
-        if (storedRestaurantId !== restaurantDocumentId) {
-          console.warn('Warning: Restaurant IDs do not match', {
-            stored: storedRestaurantId,
-            current: restaurantDocumentId,
-          });
-          // Recovery attempt: update the stored ID
-          localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
-        }
+        // Guardar mejora seleccionada
+        localStorage.setItem('yuppie_improvement', improvement);
 
-        // For non-5-star reviews, we'll check for potential duplicate submissions
-        // using a stored email if available
-        const storedEmail = localStorage.getItem('yuppie_email');
-        if (storedEmail) {
-          // Check if this email has already submitted a review for this restaurant in the last 24 hours
-          const emailStatus = await checkEmailReviewStatus(
-            restaurantDocumentId,
-            storedEmail
-          );
+        // Guardar restaurantId para referencia
+        localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
 
-          if (emailStatus.hasReviewed) {
-            throw new Error(
-              'Ya has enviado una opinión para este restaurante en las últimas 24 horas. ¡Gracias por tu entusiasmo!'
-            );
-          }
-        }
-
-        // ONLY propagate the employee ID to the next page if available
-        // IMPORTANT: We don't permanently store in localStorage, just pass it via URL
+        // Construir URL con empleado si existe
+        let targetUrl = nextUrl;
         if (employeeDocumentId) {
-          // Only use the employee ID for navigation
-          const fullNextUrl = `${nextUrl}${
+          targetUrl = `${nextUrl}${
             nextUrl.includes('?') ? '&' : '?'
           }employee=${employeeDocumentId}`;
-
-          // Save selected improvement
-          localStorage.setItem('yuppie_improvement', improvement);
-
-          // Redirect with employee ID in URL
-          window.location.href = fullNextUrl;
-        } else {
-          // Save selected improvement
-          localStorage.setItem('yuppie_improvement', improvement);
-
-          // Redirect without employee ID
-          window.location.href = nextUrl;
         }
+
+        // Redirigir sin verificación
+        window.location.href = targetUrl;
       } catch (error) {
-        console.error('Error selecting improvement:', error);
+        console.error('Error seleccionando mejora:', error);
         setIsSubmitting(false);
         toast({
           variant: 'destructive',
@@ -192,15 +90,15 @@ function ImprovementSelectorComponent({
                 : 'bg-white/5 hover:bg-white/10 transition-colors'
             } 
             text-white`}
-          whileHover={{ scale: 1.01 }} // Reducido de 1.02 a 1.01
-          whileTap={{ scale: 0.99 }} // Menos agresivo, de 0.98 a 0.99
-          initial={{ opacity: 0, x: -10 }} // Reducido el desplazamiento inicial
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          initial={{ opacity: 0, x: -10 }}
           animate={{
             opacity: 1,
             x: 0,
             transition: {
-              delay: Math.min(0.05 * index, 0.2), // Capped max delay
-              duration: 0.2, // Velocidad aumentada
+              delay: Math.min(0.05 * index, 0.2),
+              duration: 0.2,
             },
           }}
         >

@@ -103,7 +103,39 @@ const nextUrl = `/improvement?local=${documentId}${employeeDocumentId ? `&employ
     padding-bottom: 1.5rem;
   }
 </style>
-
+<script>
+  // Añadir este script al principio del archivo rating.astro
+  document.addEventListener('DOMContentLoaded', () => {
+    // Obtener los parámetros actuales de la URL
+    const params = new URLSearchParams(window.location.search);
+    const currentRestaurantId = params.get('local');
+    const currentEmployeeId = params.get('employee');
+    
+    // Eliminar datos de empleado si no está presente en la URL actual
+    if (!currentEmployeeId) {
+      localStorage.removeItem('yuppie_employee');
+      console.log('URL sin empleado - datos de empleado eliminados de localStorage');
+    }
+    
+    // Siempre actualizar el restaurante y limpiar datos de reviews anteriores
+    if (currentRestaurantId) {
+      const previousRestaurantId = localStorage.getItem('yuppie_restaurant');
+      
+      // Si es un restaurante diferente, limpiar datos previos
+      if (previousRestaurantId !== currentRestaurantId) {
+        // Limpiar datos específicos de reviews anteriores
+        localStorage.removeItem('yuppie_rating');
+        localStorage.removeItem('yuppie_improvement');
+        localStorage.removeItem('emergency_review_data');
+        
+        console.log('Nuevo restaurante detectado - limpiando datos anteriores');
+      }
+      
+      // Actualizar ID del restaurante actual
+      localStorage.setItem('yuppie_restaurant', currentRestaurantId);
+    }
+  });
+  </script>
 <script>
   // Script para precarga de emojis y assets críticos
   document.addEventListener('DOMContentLoaded', () => {
@@ -129,53 +161,3 @@ const nextUrl = `/improvement?local=${documentId}${employeeDocumentId ? `&employ
   });
 </script>
 
-<script>
-  // Añadir este script al final de rating.astro
-  document.addEventListener('DOMContentLoaded', () => {
-    // Verificar si hay un email guardado
-    const emailGuardado = localStorage.getItem('yuppie_email');
-    const restaurantId = new URLSearchParams(window.location.search).get('local');
-    
-    if (emailGuardado && restaurantId) {
-      // Crear una función para verificar con la API
-      const verificarOpinionPrevia = async () => {
-        try {
-          // Construir la URL para la verificación
-          const url = `${import.meta.env.PUBLIC_API_URL}/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&filters[email][$eq]=${encodeURIComponent(emailGuardado)}`;
-          
-          // Calcular fecha de hace 24 horas
-          const ayer = new Date();
-          ayer.setHours(ayer.getHours() - 24);
-          const urlCompleta = `${url}&filters[createdAt][$gte]=${ayer.toISOString()}&sort=createdAt:desc`;
-          
-          // Hacer la petición a la API
-          const respuesta = await fetch(urlCompleta);
-          
-          if (!respuesta.ok) {
-            console.error(`Error en la verificación: ${respuesta.status}`);
-            return;
-          }
-          
-          const datos = await respuesta.json();
-          const reviews = datos.data || [];
-          
-          // Si hay al menos una review en las últimas 24 horas
-          if (reviews.length > 0) {
-            console.log('Usuario ya envió una opinión, redireccionando a thanks');
-            
-            // Guardar flag para página de thanks
-            localStorage.setItem('yuppie_already_reviewed', 'true');
-            
-            // Redireccionar a la página de agradecimiento
-            window.location.href = '/thanks';
-          }
-        } catch (error) {
-          console.error('Error verificando estado de opinión:', error);
-        }
-      };
-      
-      // Ejecutar la verificación
-      verificarOpinionPrevia();
-    }
-  });
-  </script>

@@ -56,6 +56,19 @@ export function RatingForm({
     linkMaps,
   });
 
+  useEffect(() => {
+    // IMPORTANTE: Si la URL actual no tiene employee, limpiamos cualquier
+    // empleado guardado en localStorage para evitar que se reutilice
+    if (!employeeDocumentId) {
+      localStorage.removeItem('yuppie_employee');
+      console.log('URL sin empleado - eliminando empleado de localStorage');
+    } else {
+      // Si la URL actual tiene un empleado, lo guardamos
+      localStorage.setItem('yuppie_employee', employeeDocumentId);
+      console.log('Guardando empleado en localStorage:', employeeDocumentId);
+    }
+  }, [employeeDocumentId]);
+
   // Verificación de review enviada optimizada
   useEffect(() => {
     if (!restaurantDocumentId) return;

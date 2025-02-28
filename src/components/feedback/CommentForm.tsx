@@ -120,6 +120,37 @@ export function CommentForm({
     []
   );
 
+  const cleanupAfterSubmit = () => {
+    try {
+      // Conservamos solo el email para comodidad del usuario
+      const userEmail = formData.email.trim();
+
+      // Limpiamos todos los demás datos
+      const keysToClean = [
+        'yuppie_rating',
+        'yuppie_improvement',
+        'yuppie_employee',
+        'emergency_review_data',
+      ];
+
+      keysToClean.forEach((key) => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.error(`Error al eliminar ${key}:`, e);
+        }
+      });
+
+      // Guardamos solo el email para futuras reviews
+      localStorage.setItem('yuppie_email', userEmail);
+
+      console.log('Datos de review limpiados correctamente después del envío');
+    } catch (error) {
+      console.error('Error al limpiar datos después del envío:', error);
+      // No fallamos si hay error en la limpieza
+    }
+  };
+
   // Verificar si hay una discrepancia entre el estado y el valor del input
   useEffect(() => {
     // Este efecto se ejecuta para garantizar que el DOM refleje correctamente el estado
@@ -415,7 +446,7 @@ export function CommentForm({
       try {
         setIsSubmitting(true);
 
-        // Basic field validation
+        // Validación básica de campos
         if (!formData.email.trim()) {
           throw new Error('El email es obligatorio');
         }
@@ -424,25 +455,13 @@ export function CommentForm({
           throw new Error('Por favor escribe un comentario');
         }
 
-        // Get rating
+        // Obtener rating
         const rating = Number(localStorage.getItem('yuppie_rating'));
         if (!rating) {
           throw new Error('No se encontró la calificación');
         }
 
-        // Check if this email has already submitted a review to this restaurant in the last 24 hours
-        const emailStatus = await checkEmailReviewStatus(
-          restaurantDocumentId,
-          formData.email.trim()
-        );
-
-        if (emailStatus.hasReviewed) {
-          throw new Error(
-            'Ya has enviado una opinión para este restaurante en las últimas 24 horas. ¡Gracias por tu entusiasmo!'
-          );
-        }
-
-        // Build final comment based on state
+        // Construir comentario final según el estado
         let finalComment = '';
         if (showTextArea) {
           finalComment = formData.comment;
@@ -459,19 +478,35 @@ export function CommentForm({
           );
         }
 
-        // Check restaurant match
-        const storedRestaurantId = localStorage.getItem('yuppie_restaurant');
-        if (storedRestaurantId !== restaurantDocumentId) {
-          localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
+        // VERIFICACIÓN CRUCIAL: Consultar a la BDD si este email ya envió una review hoy
+        const emailStatus = await checkEmailReviewStatus(
+          restaurantDocumentId,
+          formData.email.trim()
+        );
+
+        if (emailStatus.hasReviewed) {
+          console.log(
+            'El email ya envió una review, redirigiendo a página de gracias'
+          );
+          cleanupAfterSubmit();
+          // Redirigir a thanks con parámetro para mostrar mensaje de "ya opinaste"
+          window.location.href = '/thanks?already=true';
+          return;
         }
 
-        // Check for employee ID in localStorage
+        // Validar y convertir IDs
+        const restaurantIdNumber = parseInt(restaurantId, 10);
+        if (isNaN(restaurantIdNumber)) {
+          throw new Error('ID de restaurante inválido');
+        }
+
+        // Verificar si existe ID de empleado en localStorage
         const storedEmployeeId = localStorage.getItem('yuppie_employee');
         let employeeId: number | undefined;
 
         if (storedEmployeeId) {
           try {
-            // Get the employee's numeric ID
+            // Obtener el ID numérico del empleado
             const numericEmployeeId = await getEmployeeNumericId(
               storedEmployeeId
             );
@@ -479,48 +514,67 @@ export function CommentForm({
               employeeId = numericEmployeeId;
             }
           } catch (err) {
-            console.error('Error getting employee numeric ID:', err);
+            console.error('Error obteniendo ID numérico del empleado:', err);
           }
         }
 
-        // Validate and convert IDs
-        const restaurantIdNumber = parseInt(restaurantId, 10);
-        if (isNaN(restaurantIdNumber)) {
-          throw new Error('Invalid restaurant ID');
+        // Crear objeto para enviar a la API
+        const reviewData = {
+          data: {
+            restaurant: restaurantIdNumber,
+            calification: rating,
+            typeImprovement: improvementType || 'Otra',
+            email: formData.email.trim(),
+            comment: finalComment.trim(),
+            googleSent: rating === 5,
+            date: new Date().toISOString(),
+          },
+        };
+
+        // Añadir empleado si existe
+        if (employeeId) {
+          (reviewData.data as any).employee = employeeId;
         }
 
-        // Save email
-        localStorage.setItem('yuppie_email', formData.email.trim());
+        console.log('Enviando review a la API:', reviewData);
 
-        // ROBUST SOLUTION: Save data temporarily
-        const emergencyData = {
-          restaurantId: restaurantIdNumber,
-          restaurantDocId: restaurantDocumentId,
-          rating: rating,
-          typeImprovement: improvementType || 'Otra',
-          email: formData.email.trim(),
-          comment: finalComment.trim(),
-          employeeId: employeeId,
-          timestamp: new Date().toISOString(),
-        };
-        localStorage.setItem(
-          'emergency_review_data',
-          JSON.stringify(emergencyData)
+        // Enviar review directamente a la API
+        const responseApi = await fetch(
+          `${import.meta.env.PUBLIC_API_URL}/reviews`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(reviewData),
+          }
         );
 
-        // Show immediate toast for better UX
+        if (!responseApi.ok) {
+          console.error(
+            'Error al enviar review a la API:',
+            await responseApi.text()
+          );
+          throw new Error('Error al enviar tu opinión');
+        }
+
+        console.log('Review enviada exitosamente a la API');
+
+        // Guardar email para futura referencia
+        localStorage.setItem('yuppie_email', formData.email.trim());
+
         toast({
           title: '¡Gracias por tu comentario!',
           description: 'Tu feedback nos ayuda a mejorar!',
           duration: 2000,
         });
-
-        // FAST PATH: Redirect immediately without waiting
+        cleanupAfterSubmit();
+        // Redirigir a página de agradecimiento
         window.location.href = '/thanks';
       } catch (error) {
         const errorMessage = formatErrorMessage(error);
 
-        // More visible and friendly toast
+        // Toast más visible y amigable
         toast({
           variant: 'destructive',
           title: '¡Un momento!',
@@ -540,7 +594,6 @@ export function CommentForm({
       improvementType,
       restaurantId,
       restaurantDocumentId,
-      employeeDocumentId,
       toast,
     ]
   );

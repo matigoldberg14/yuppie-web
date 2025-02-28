@@ -1,55 +1,27 @@
-// /Users/Mati/Desktop/yuppie-web/src/utils/reviewLimiter.ts
-// src/utils/reviewLimiter.ts
+// src/utils/reviewLimiter.ts - Versión mínima
 import { checkEmailReviewStatus } from '../services/api';
 
 /**
- * Check if a user has already submitted a review for this restaurant in the last 24 hours.
- * This is a legacy function that now uses the API-based approach.
- *
- * @param restaurantId The restaurant's document ID
- * @returns Always returns false to allow the application flow to continue
+ * Funciones de compatibilidad para mantener el código existente funcionando
+ * mientras migramos al nuevo enfoque.
  */
+
+// Función mantenida por retrocompatibilidad
 export const hasSubmittedReviewToday = (restaurantId: string): boolean => {
-  // This function now returns false to allow the application flow to continue
-  // The actual check is performed by checkEmailReviewStatus in the components
-  console.log(
-    '[INFO] Legacy function hasSubmittedReviewToday called, now using API-based approach'
+  console.warn(
+    'Esta función está obsoleta, usar checkEmailReviewStatus directamente'
   );
   return false;
 };
 
-/**
- * Legacy function that used to record a review submission in localStorage.
- * Now it just cleans up any remaining localStorage entries.
- *
- * @param restaurantId The restaurant's document ID
- */
+// Función mantenida por retrocompatibilidad
 export const recordReviewSubmission = (restaurantId: string): void => {
-  // Clean up any remaining entries that might be used by the old approach
-  try {
-    const keysToClean = ['yuppie_review_history', 'redirecting_from_comment'];
-
-    keysToClean.forEach((key) => {
-      try {
-        localStorage.removeItem(key);
-      } catch (e) {
-        console.error(`Error removing ${key}:`, e);
-      }
-    });
-
-    console.log('[INFO] Cleaned up legacy localStorage entries');
-  } catch (error) {
-    console.error('[ERROR] Error in cleanup:', error);
-  }
+  console.warn('Esta función está obsoleta, ya no es necesaria');
 };
 
 /**
- * Async wrapper around checkEmailReviewStatus for components that need to check
- * if a user has already submitted a review.
- *
- * @param restaurantDocumentId The restaurant's document ID
- * @param email The user's email
- * @returns True if the user has already submitted a review in the last 24 hours
+ * Comprueba si un email ya ha enviado una opinión para un restaurante en las últimas 24 horas
+ * Esta es la única función que debe usarse en la implementación nueva
  */
 export const hasSubmittedReviewWithEmail = async (
   restaurantDocumentId: string,
@@ -63,7 +35,7 @@ export const hasSubmittedReviewWithEmail = async (
     const result = await checkEmailReviewStatus(restaurantDocumentId, email);
     return result.hasReviewed;
   } catch (error) {
-    console.error('Error checking review status:', error);
-    return false; // Fail open approach
+    console.error('Error verificando estado de opinión:', error);
+    return false; // En caso de error, permitir el envío
   }
 };
