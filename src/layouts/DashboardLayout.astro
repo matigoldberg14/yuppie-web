@@ -1,19 +1,19 @@
 ---
 // src/layouts/DashboardLayout.astro
+// Versión original restaurada con todos los estilos y funcionalidades,
+// actualizada para agregar un margen extra (1rem) entre el sidebar y el contenido.
 import { ViewTransitions } from 'astro:transitions';
 import Head from '../components/common/Head.astro';
 import '../styles/globals.css';
-import Analytics from '@vercel/analytics/astro'
+import Analytics from '@vercel/analytics/astro';
 
-interface Props {
+export interface Props {
   title: string;
   description?: string;
+  showRestaurantHeader?: boolean;
 }
 
-const { 
-  title, 
-  description = "Dashboard | Yuppie" 
-} = Astro.props;
+const { title, description = "Dashboard | Yuppie", showRestaurantHeader = true } = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -32,12 +32,43 @@ const {
         background: linear-gradient(135deg, var(--blue-primary), var(--blue-dark));
       }
 
+      /* Necesitamos definir las clases para el main basadas en el estado del sidebar */
       main {
         transition: padding-left 0.3s ease;
       }
+      
+      /* Clase para cuando el sidebar está desplegado */
+      main.sidebar-expanded {
+        padding-left: 17rem; /* Se agrega 1rem extra: antes 16rem */
+      }
+      
+      /* Clase para cuando el sidebar está colapsado */
+      main.sidebar-collapsed {
+        padding-left: 5rem; /* Se agrega 1rem extra: antes 4rem */
+      }
     </style>
+    <script>
+      // Script para escuchar cambios en el estado del sidebar
+      document.addEventListener('DOMContentLoaded', () => {
+        const main = document.querySelector('main');
+        if (main) {
+          // Inicialmente establecemos la clase basada en localStorage o valor por defecto
+          const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+          main.className = isCollapsed ? 'sidebar-collapsed p-6' : 'sidebar-expanded p-6';
+          
+          // Escuchamos eventos personalizados del sidebar
+          window.addEventListener('sidebarStateChange', (e: Event) => {
+            // Se fuerza a tratar 'e' como CustomEvent<{ isCollapsed: boolean }>
+            const customEvent = e as unknown as CustomEvent<{ isCollapsed: boolean }>;
+            main.className = customEvent.detail.isCollapsed ? 'sidebar-collapsed p-6' : 'sidebar-expanded p-6';
+          });
+        }
+      });
+    </script>
   </head>
   <body class="min-h-screen bg-gradient font-['Poppins',sans-serif] text-white">
     <slot />
+    {showRestaurantHeader && <slot name="restaurantHeader" />}
+    <Analytics />
   </body>
 </html>

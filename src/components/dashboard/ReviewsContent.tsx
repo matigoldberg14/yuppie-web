@@ -15,6 +15,7 @@ import emailjs from '@emailjs/browser';
 import * as XLSX from 'xlsx';
 import { formatDateBuenosAires } from '../../utils/formatDate';
 import process from 'process/browser';
+import { getSelectedRestaurant } from '../../lib/restaurantStore';
 
 interface Employee {
   id: number;
@@ -99,26 +100,66 @@ export function ReviewsContent() {
     emailjs.init(import.meta.env.PUBLIC_EMAILJS_PUBLIC_KEY);
   }, []);
 
+  const [selectedRestaurant, setSelectedRestaurant] = useState(
+    getSelectedRestaurant()
+  );
+
+  useEffect(() => {
+    const handleRestaurantChange = (e: CustomEvent) => {
+      console.log(
+        'Cambio de restaurante detectado en ReviewsContent:',
+        e.detail
+      );
+      setSelectedRestaurant(e.detail);
+    };
+
+    window.addEventListener(
+      'restaurantChange',
+      handleRestaurantChange as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        'restaurantChange',
+        handleRestaurantChange as EventListener
+      );
+    };
+  }, []);
+
+  // Modifica el useEffect de carga de reseñas para usar el restaurante seleccionado
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        if (!auth?.currentUser?.uid) {
-          console.log('No hay usuario autenticado');
+        setLoading(true);
+
+        // Usar el restaurante seleccionado si existe, si no, obtenerlo por UID
+        let restaurantData;
+
+        if (selectedRestaurant) {
+          restaurantData = selectedRestaurant;
+          console.log('Usando restaurante seleccionado:', restaurantData);
+        } else if (auth?.currentUser?.uid) {
+          console.log('Obteniendo restaurante por UID:', auth.currentUser.uid);
+          restaurantData = await getRestaurantByFirebaseUID(
+            auth.currentUser.uid
+          );
+          if (!restaurantData) {
+            throw new Error('No se encontró el restaurante');
+          }
+        } else {
+          console.log('No hay usuario autenticado ni restaurante seleccionado');
+          setLoading(false);
           return;
         }
-        const restaurantData = await getRestaurantByFirebaseUID(
-          auth.currentUser.uid
-        );
-        if (!restaurantData) {
-          throw new Error('No se encontró el restaurante');
-        }
+
         setRestaurantName(restaurantData.name || 'Yuppie');
 
         // Obtener reseñas con información de empleados
+        console.log('Obteniendo reseñas para:', restaurantData.documentId);
         const reviewsData = await getRestaurantReviews(
           restaurantData.documentId
         );
-        console.log('Reviews data:', reviewsData); // Para debug
+        console.log('Reviews data:', reviewsData);
         setReviews(reviewsData);
       } catch (error) {
         console.error('Error fetching reviews:', error);
@@ -128,7 +169,7 @@ export function ReviewsContent() {
     };
 
     fetchReviews();
-  }, []);
+  }, [selectedRestaurant]);
 
   // Función para generar un cupón aleatorio de 10 caracteres alfanuméricos
   const generateCouponCode = (length: number): string => {

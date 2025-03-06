@@ -48,8 +48,8 @@ import {
   SelectValue,
 } from '../ui/select';
 import * as XLSX from 'xlsx';
-// Importamos el tipo de Employee de forma type-only desde el archivo de tipos
 import type { Employee as BasicEmployee } from '../../types/employee';
+import { getSelectedRestaurant } from '../../lib/restaurantStore';
 
 interface Schedule {
   id: number;
@@ -66,7 +66,6 @@ interface WorkSchedule {
   endTime: string;
 }
 
-// Definimos la interfaz para Review
 interface Review {
   id: number;
   documentId: string;
@@ -83,7 +82,6 @@ interface Review {
   };
 }
 
-// Extendemos el tipo básico para incluir propiedades calculadas
 interface EnrichedEmployee extends BasicEmployee {
   reviewCount?: number;
   averageRating?: number;
@@ -97,7 +95,7 @@ interface CreateEmployeeInput {
   lastName: string;
   position: string;
   photo: File | null;
-  scheduleIds: string[]; // aquí son strings
+  scheduleIds: string[];
   restaurantId: string;
 }
 
@@ -121,6 +119,27 @@ export function TeamContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'leaderboard'>('grid');
   const { toast } = useToast();
 
+  // Usar el restaurante seleccionado del store
+  const [selectedRestaurant, setSelectedRestaurant] = useState(
+    getSelectedRestaurant()
+  );
+
+  useEffect(() => {
+    const handleRestaurantChange = (e: CustomEvent) => {
+      setSelectedRestaurant(e.detail);
+    };
+    window.addEventListener(
+      'restaurantChange',
+      handleRestaurantChange as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        'restaurantChange',
+        handleRestaurantChange as EventListener
+      );
+    };
+  }, []);
+
   useEffect(() => {
     const fetchEmployeesAndReviews = async () => {
       try {
@@ -128,16 +147,19 @@ export function TeamContent() {
           console.log('No hay usuario autenticado');
           return;
         }
-
-        const restaurantData = await getRestaurantByFirebaseUID(
-          auth.currentUser.uid
-        );
+        let restaurantData;
+        if (selectedRestaurant) {
+          restaurantData = selectedRestaurant;
+        } else {
+          restaurantData = await getRestaurantByFirebaseUID(
+            auth.currentUser.uid
+          );
+        }
         if (!restaurantData) {
           throw new Error('No se encontró el restaurante');
         }
         setRestaurantId(restaurantData.documentId);
 
-        // Obtenemos los datos y forzamos el tipado
         const employeesData = (await getEmployeesByRestaurant(
           restaurantData.documentId
         )) as BasicEmployee[];
@@ -147,10 +169,8 @@ export function TeamContent() {
 
         setReviews(reviewsData);
 
-        // Enriquecemos cada empleado con las propiedades calculadas
         const enrichedEmployees: EnrichedEmployee[] = employeesData.map(
           (employee: BasicEmployee) => {
-            // Filtrar reseñas para este empleado usando documentId
             const employeeReviews = reviewsData.filter(
               (review: Review) =>
                 review.employee?.documentId === employee.documentId
@@ -182,6 +202,7 @@ export function TeamContent() {
               reviews: employeeReviews,
               lastReviewDate,
               daysWithoutReview,
+              schedules: employee.schedules || [],
             };
           }
         );
@@ -199,9 +220,8 @@ export function TeamContent() {
     };
 
     fetchEmployeesAndReviews();
-  }, [toast]);
+  }, [toast, selectedRestaurant]);
 
-  // Ordenar empleados según la opción seleccionada
   const sortedEmployees: EnrichedEmployee[] = [...employees].sort((a, b) => {
     switch (sortOption) {
       case 'name':
@@ -235,7 +255,6 @@ export function TeamContent() {
     }
   );
 
-  // Obtener el empleado del mes (con más reseñas positivas en el último mes)
   const getEmployeeOfTheMonth = (): EmployeeOfMonthResult => {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
@@ -259,7 +278,6 @@ export function TeamContent() {
     return { employee: bestEmployee, score: highestScore };
   };
 
-  // Obtener empleados que necesitan atención (sin reseñas recientes)
   const getEmployeesNeedingAttention = (): EnrichedEmployee[] => {
     return employees
       .filter(
@@ -272,7 +290,6 @@ export function TeamContent() {
       .slice(0, 3);
   };
 
-  // Obtener top 3 empleados por calificación (con al menos 3 reseñas)
   const getTopRatedEmployees = (): EnrichedEmployee[] => {
     return employees
       .filter((employee: EnrichedEmployee) => (employee.reviewCount || 0) >= 3)
@@ -288,7 +305,7 @@ export function TeamContent() {
     lastName: string;
     position: string;
     photo: File | null;
-    schedules: WorkSchedule[]; // Cambiado de scheduleIds a schedules
+    schedules: WorkSchedule[];
   }) => {
     try {
       if (!restaurantId) throw new Error('No restaurant ID');
@@ -297,13 +314,11 @@ export function TeamContent() {
         ...data,
         restaurantId,
       });
-      // Vuelve a cargar la lista de empleados
       if (restaurantId) {
         const updatedEmployees = (await getEmployeesByRestaurant(
           restaurantId
         )) as BasicEmployee[];
 
-        // Enriquecer nuevamente los empleados
         const enrichedEmployees: EnrichedEmployee[] = updatedEmployees.map(
           (employee) => {
             return {
@@ -313,6 +328,7 @@ export function TeamContent() {
               reviews: [],
               lastReviewDate: null,
               daysWithoutReview: null,
+              schedules: employee.schedules || [],
             };
           }
         );
@@ -340,21 +356,19 @@ export function TeamContent() {
     lastName: string;
     position: string;
     photo: File | null;
-    schedules: WorkSchedule[]; // Cambiado de scheduleIds a schedules
+    schedules: WorkSchedule[];
   }) => {
     try {
       if (!editingEmployee) return;
 
-      // Actualiza el empleado con los nuevos horarios
       await updateEmployee(editingEmployee.documentId, {
         firstName: data.firstName,
         lastName: data.lastName,
         position: data.position,
-        schedules: data.schedules, // Usa schedules directamente
+        schedules: data.schedules,
         photo: data.photo,
       });
 
-      // Actualizar la lista de empleados
       if (restaurantId) {
         const updatedEmployees = (await getEmployeesByRestaurant(
           restaurantId
@@ -372,6 +386,7 @@ export function TeamContent() {
               reviews: existingEmployee?.reviews || [],
               lastReviewDate: existingEmployee?.lastReviewDate || null,
               daysWithoutReview: existingEmployee?.daysWithoutReview || null,
+              schedules: employee.schedules || [],
             };
           }
         );
@@ -418,13 +433,11 @@ export function TeamContent() {
     }
   };
 
-  // Generar URL de código QR para el empleado
   const generateEmployeeQRUrl = (employeeId: string) => {
     const baseUrl = window.location.origin;
     return `${baseUrl}/rating?local=${restaurantId}&employee=${employeeId}`;
   };
 
-  // Generar y descargar códigos QR
   const handleGenerateQR = (employee: EnrichedEmployee) => {
     const url = generateEmployeeQRUrl(employee.documentId);
     prompt(
@@ -433,7 +446,6 @@ export function TeamContent() {
     );
   };
 
-  // Exportar datos de empleados a Excel
   const handleExportEmployeesData = () => {
     const exportData = employees.map((employee: EnrichedEmployee) => ({
       Nombre: `${employee.firstName} ${employee.lastName}`,
@@ -529,10 +541,8 @@ export function TeamContent() {
           </div>
         </div>
 
-        {/* Vista General */}
         <TabsContent value="overview" className="mt-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {/* Empleado del Mes */}
             <Card className="bg-gradient-to-br from-purple-600/30 to-blue-600/30 border-0">
               <CardHeader>
                 <CardTitle className="text-white">Empleado del Mes</CardTitle>
@@ -580,7 +590,6 @@ export function TeamContent() {
               </CardContent>
             </Card>
 
-            {/* Mejores Calificaciones */}
             <Card className="bg-gradient-to-br from-green-600/30 to-emerald-600/30 border-0">
               <CardHeader>
                 <CardTitle className="text-white">Top Calificaciones</CardTitle>
@@ -637,7 +646,6 @@ export function TeamContent() {
               </CardContent>
             </Card>
 
-            {/* Necesitan Atención */}
             <Card className="bg-gradient-to-br from-orange-600/30 to-red-600/30 border-0">
               <CardHeader>
                 <CardTitle className="text-white">Necesitan Atención</CardTitle>
@@ -691,7 +699,6 @@ export function TeamContent() {
             </Card>
           </div>
 
-          {/* Resumen de Empleados */}
           <Card className="bg-white/10 border-0">
             <CardHeader>
               <CardTitle className="text-white">Resumen de Equipo</CardTitle>
@@ -743,7 +750,7 @@ export function TeamContent() {
                           {employee.averageRating ? (
                             <>
                               {employee.averageRating.toFixed(1)}
-                              <Star className="h-3 w-3 text-yellow-400 ml-1" />
+                              <Star className="h-4 w-4 text-yellow-400 ml-1" />
                             </>
                           ) : (
                             '-'
@@ -758,7 +765,6 @@ export function TeamContent() {
           </Card>
         </TabsContent>
 
-        {/* Vista de Empleados */}
         <TabsContent value="employees" className="mt-0">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div className="flex flex-wrap items-center gap-3">
@@ -819,7 +825,6 @@ export function TeamContent() {
             </div>
           </div>
 
-          {/* Vista de grid */}
           {viewMode === 'grid' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredEmployees.map((employee: EnrichedEmployee) => (
@@ -900,37 +905,6 @@ export function TeamContent() {
                           </div>
                         </div>
                       </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-white/60">Última reseña</span>
-                          <span className="text-white">
-                            {employee.lastReviewDate
-                              ? new Date(
-                                  employee.lastReviewDate
-                                ).toLocaleDateString()
-                              : 'Sin reseñas'}
-                          </span>
-                        </div>
-                        {employee.daysWithoutReview !== null && (
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-white/60">
-                              Días sin reseñas
-                            </span>
-                            <span
-                              className={`${
-                                (employee.daysWithoutReview || 0) > 30
-                                  ? 'text-red-400'
-                                  : (employee.daysWithoutReview || 0) > 14
-                                  ? 'text-yellow-400'
-                                  : 'text-green-400'
-                              }`}
-                            >
-                              {employee.daysWithoutReview || 0}
-                            </span>
-                          </div>
-                        )}
-                      </div>
                     </div>
 
                     <div className="flex border-t border-white/10">
@@ -958,7 +932,6 @@ export function TeamContent() {
             </div>
           )}
 
-          {/* Vista de leaderboard */}
           {viewMode === 'leaderboard' && (
             <Card className="bg-white/10 border-0">
               <CardContent className="p-0">
@@ -1088,172 +1061,8 @@ export function TeamContent() {
             </Card>
           )}
         </TabsContent>
-
-        {/* Vista de Estadísticas */}
-        <TabsContent value="stats" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {/* Distribución por Calificación */}
-            <Card className="bg-white/10 border-0">
-              <CardHeader>
-                <CardTitle className="text-white">
-                  Distribución de Reseñas
-                </CardTitle>
-                <CardDescription className="text-white/70">
-                  Reseñas por calificación
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {[5, 4, 3, 2, 1].map((rating: number) => {
-                    const count = reviews.filter(
-                      (r: Review) => r.calification === rating
-                    ).length;
-                    const percentage = reviews.length
-                      ? (count / reviews.length) * 100
-                      : 0;
-                    return (
-                      <div key={rating} className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <div className="flex items-center text-white">
-                            {rating}{' '}
-                            <Star className="h-3 w-3 text-yellow-400 mx-1" />
-                          </div>
-                          <div className="text-white/70">{count} reseñas</div>
-                        </div>
-                        <Progress
-                          value={percentage}
-                          className="h-2 bg-white/10"
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Empleados por Número de Reseñas */}
-            <Card className="bg-white/10 border-0">
-              <CardHeader>
-                <CardTitle className="text-white">
-                  Reseñas por Empleado
-                </CardTitle>
-                <CardDescription className="text-white/70">
-                  Top 5 por número de reseñas
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {[...employees]
-                    .sort(
-                      (a: EnrichedEmployee, b: EnrichedEmployee) =>
-                        (b.reviewCount || 0) - (a.reviewCount || 0)
-                    )
-                    .slice(0, 5)
-                    .map((employee: EnrichedEmployee, index: number) => {
-                      const maxReviews = employees.reduce(
-                        (max, e: EnrichedEmployee) =>
-                          Math.max(max, e.reviewCount || 0),
-                        0
-                      );
-                      const percentage = maxReviews
-                        ? ((employee.reviewCount || 0) / maxReviews) * 100
-                        : 0;
-                      return (
-                        <div key={employee.documentId} className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <div className="text-white">
-                              {employee.firstName} {employee.lastName}
-                            </div>
-                            <div className="text-white/70">
-                              {employee.reviewCount || 0} reseñas
-                            </div>
-                          </div>
-                          <Progress
-                            value={percentage}
-                            className="h-2 bg-white/10"
-                          />
-                        </div>
-                      );
-                    })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Tabla de Métricas de Empleados */}
-          <Card className="bg-white/10 border-0">
-            <CardHeader>
-              <CardTitle className="text-white">Resumen de Métricas</CardTitle>
-              <CardDescription className="text-white/70">
-                Estadísticas completas del equipo
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <table className="w-full">
-                <thead>
-                  <tr className="text-white/60 text-left border-b border-white/10">
-                    <th className="px-4 py-2">Empleado</th>
-                    <th className="px-4 py-2 text-center">Total Reseñas</th>
-                    <th className="px-4 py-2 text-center">Promedio</th>
-                    <th className="px-4 py-2 text-center">5★</th>
-                    <th className="px-4 py-2 text-center">4★</th>
-                    <th className="px-4 py-2 text-center">3★</th>
-                    <th className="px-4 py-2 text-center">2★</th>
-                    <th className="px-4 py-2 text-center">1★</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {employees.map((employee: EnrichedEmployee) => {
-                    const starCounts = [5, 4, 3, 2, 1].map(
-                      (rating: number) =>
-                        employee.reviews?.filter(
-                          (r: Review) => r.calification === rating
-                        ).length || 0
-                    );
-                    return (
-                      <tr
-                        key={employee.documentId}
-                        className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                      >
-                        <td className="px-4 py-3 text-white">
-                          {employee.firstName} {employee.lastName}
-                        </td>
-                        <td className="px-4 py-3 text-center text-white">
-                          {employee.reviewCount || 0}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex items-center justify-center">
-                            {employee.averageRating ? (
-                              <>
-                                <span className="text-white mr-1">
-                                  {employee.averageRating.toFixed(1)}
-                                </span>
-                                <Star className="h-3 w-3 text-yellow-400" />
-                              </>
-                            ) : (
-                              <span className="text-white/40">-</span>
-                            )}
-                          </div>
-                        </td>
-                        {starCounts.map((count, index) => (
-                          <td
-                            key={index}
-                            className="px-4 py-3 text-center text-white/80"
-                          >
-                            {count}
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
-      {/* Modal de detalles del empleado */}
       {selectedEmployee && (
         <Dialog
           open={!!selectedEmployee}
@@ -1289,7 +1098,6 @@ export function TeamContent() {
             </DialogTitle>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Información del empleado */}
               <div className="md:col-span-1">
                 <div className="flex flex-col items-center mb-4">
                   <div className="h-32 w-32 rounded-full bg-white/20 flex items-center justify-center mb-3">
@@ -1325,7 +1133,9 @@ export function TeamContent() {
                         <p className="text-white/60 text-sm">Calificación</p>
                         <div className="flex items-center">
                           <p className="text-white text-xl font-semibold">
-                            {selectedEmployee.averageRating?.toFixed(1) || '-'}
+                            {selectedEmployee.averageRating
+                              ? selectedEmployee.averageRating.toFixed(1)
+                              : '-'}
                           </p>
                           {selectedEmployee.averageRating && (
                             <Star className="h-5 w-5 text-yellow-400 ml-1" />
@@ -1357,7 +1167,6 @@ export function TeamContent() {
                 </div>
               </div>
 
-              {/* Reseñas del empleado */}
               <div className="md:col-span-2 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium text-white">
@@ -1422,7 +1231,7 @@ export function TeamContent() {
                     {[5, 4, 3, 2, 1].map((rating: number) => {
                       if (!selectedEmployee.reviews) return null;
                       const count = selectedEmployee.reviews.filter(
-                        (r: Review) => r.calification === rating
+                        (r) => r.calification === rating
                       ).length;
                       const percentage = selectedEmployee.reviews.length
                         ? (count / selectedEmployee.reviews.length) * 100
@@ -1454,7 +1263,6 @@ export function TeamContent() {
         </Dialog>
       )}
 
-      {/* Formulario para agregar/editar empleado */}
       {restaurantId && (
         <AddEmployeeForm
           isOpen={isAddingEmployee || !!editingEmployee}
@@ -1468,7 +1276,6 @@ export function TeamContent() {
             editingEmployee
               ? {
                   ...editingEmployee,
-                  // Convertir id de schedules a string
                   schedules: editingEmployee.schedules.map((s) => ({
                     ...s,
                     id: s.id.toString(),

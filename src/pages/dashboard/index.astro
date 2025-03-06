@@ -1,15 +1,17 @@
 ---
+// src/pages/dashboard/index.astro
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { Sidebar } from '../../components/dashboard/Sidebar';
 import { DashboardContent } from '../../components/dashboard/DashboardContent';
 import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
+import SelectedRestaurantHeader from '../../components/dashboard/SelectedRestaurantHeader';
 ---
-
 <DashboardLayout title="Dashboard | Yuppie">
   <ProtectedRoute client:load>
-    <div class="min-h-screen">
+    <div class="min-h-screen flex">
       <Sidebar client:load />
-      <main class="transition-all duration-300 p-4 md:pl-64">
+      <main class="transition-all duration-300 p-4 md:pl-64 w-full">
+        <SelectedRestaurantHeader client:load />
         <DashboardContent client:load />
       </main>
     </div>
@@ -17,15 +19,11 @@ import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 </DashboardLayout>
 
 <script>
-  // Script del lado del cliente para verificar auth
   import { auth } from '../../lib/firebase';
   import { onAuthStateChanged } from 'firebase/auth';
-
   if (auth) {
     onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = '/login';
-      }
+      if (!user) window.location.href = '/login';
     });
   } else {
     window.location.href = '/login';
