@@ -69,11 +69,12 @@ export function AnalyticsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Estado para el restaurante seleccionado
+  // Estado para el restaurante seleccionado (se inicializa con lo guardado)
   const [selectedRestaurant, setSelectedRestaurant] = useState(
     getSelectedRestaurant()
   );
 
+  // Escucha del evento "restaurantChange" para actualizar el restaurante seleccionado
   useEffect(() => {
     const handleRestaurantChange = (e: CustomEvent) => {
       console.log(
@@ -99,40 +100,34 @@ export function AnalyticsContent() {
     const fetchData = async () => {
       try {
         if (!auth?.currentUser?.uid) return;
-
-        // Intentar obtener datos del caché
-        const cacheKey = `${auth.currentUser.uid}_${timeFilter}`;
+        // Generar clave de caché que incluye el documentId del restaurante seleccionado
+        const cacheKey = `${auth.currentUser.uid}_${
+          selectedRestaurant?.documentId || 'default'
+        }_${timeFilter}`;
         const cachedData = getCachedMetrics(cacheKey);
-
         if (cachedData) {
           setMetrics(cachedData.metrics);
           setHistory(cachedData.history);
           setLoading(false);
           return;
         }
-
         // Usar el restaurante seleccionado si existe; de lo contrario, obtenerlo por UID
         const restaurantData = selectedRestaurant
           ? selectedRestaurant
           : await getRestaurantByFirebaseUID(auth.currentUser.uid);
-
         if (!restaurantData) throw new Error('No restaurant found');
-
         const [metricsData, historyData] = await Promise.all([
           getRestaurantMetrics(restaurantData.documentId, timeFilter),
           getMetricsHistory(restaurantData.documentId, timeFilter),
         ]);
-
         const responseRate =
           restaurantData.taps > 0
             ? (metricsData.totalReviews / parseInt(restaurantData.taps)) * 100
             : 0;
-
         const updatedMetrics = {
           ...metricsData,
           responseRate,
         };
-
         if (isMounted) {
           setMetrics(updatedMetrics);
           setHistory(historyData);
@@ -154,9 +149,7 @@ export function AnalyticsContent() {
         }
       }
     };
-
     fetchData();
-
     return () => {
       isMounted = false;
     };
