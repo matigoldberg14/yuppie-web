@@ -1,8 +1,8 @@
-//src/components/dashboard/Sidebar.tsx
+// src/components/dashboard/Sidebar.tsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { auth } from '../../lib/firebase';
-import { signOut, type Auth } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { Button } from '../ui/Button';
 import {
   Home,
@@ -17,43 +17,75 @@ import {
   ChevronRight,
   Menu,
   X,
+  ShoppingBag,
 } from 'lucide-react';
+import { getOwnerRestaurants } from '../../services/api';
+import {
+  getRestaurantsList,
+  setRestaurantsList,
+} from '../../lib/restaurantStore';
 
 export function Sidebar() {
   const { user } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sidebarCollapsed') === 'true';
+    }
+    return false;
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [hasMultipleRestaurants, setHasMultipleRestaurants] = useState(false);
+
+  useEffect(() => {
+    async function loadRestaurants() {
+      try {
+        let list = getRestaurantsList();
+        if (!list || list.length === 0) {
+          const uid = auth?.currentUser?.uid;
+          if (!uid) return;
+          list = await getOwnerRestaurants(uid);
+          setRestaurantsList(list);
+        }
+        setHasMultipleRestaurants(list.length > 1);
+      } catch (error) {
+        console.error('Error al cargar restaurantes para el sidebar:', error);
+      }
+    }
+    loadRestaurants();
+  }, []);
 
   // Actualizar el padding del contenido principal cuando cambia el estado del sidebar
   useEffect(() => {
     const mainContent = document.querySelector('main');
     if (mainContent) {
-      // Solo aplicamos padding en desktop
       if (window.innerWidth > 768) {
-        mainContent.style.paddingLeft = isCollapsed ? '4rem' : '16rem';
+        // Se agrega 1rem extra: 17rem en lugar de 16rem y 5rem en lugar de 4rem
+        mainContent.style.paddingLeft = isCollapsed ? '5rem' : '17rem';
       } else {
         mainContent.style.paddingLeft = '1rem';
       }
     }
+    // Guardar el estado en localStorage y notificar mediante evento
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sidebarCollapsed', isCollapsed.toString());
+      window.dispatchEvent(
+        new CustomEvent('sidebarStateChange', { detail: { isCollapsed } })
+      );
+    }
   }, [isCollapsed, isMobileMenuOpen]);
 
-  // Cerrar menú móvil cuando se cambia el tamaño de la ventana a desktop
+  // Cerrar menú móvil al pasar a desktop
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth > 768) {
-        setIsMobileMenuOpen(false);
-      }
+      if (window.innerWidth > 768) setIsMobileMenuOpen(false);
     };
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const handleLogout = async () => {
     try {
-      if (!auth) {
-        throw new Error('Firebase not initialized');
-      }
+      if (!auth) throw new Error('Firebase not initialized');
       await signOut(auth);
       window.location.href = '/login';
     } catch (error) {
@@ -77,11 +109,56 @@ export function Sidebar() {
     </Button>
   );
 
+  const navItems = [
+    {
+      icon: <Home className="h-4 w-4" />,
+      text: 'Dashboard',
+      href: '/dashboard',
+    },
+    {
+      icon: <MessageSquare className="h-4 w-4" />,
+      text: 'Reseñas',
+      href: '/dashboard/reviews',
+    },
+    {
+      icon: <Users2 className="h-4 w-4" />,
+      text: 'Equipo',
+      href: '/dashboard/team',
+    },
+    {
+      icon: <BarChart3 className="h-4 w-4" />,
+      text: 'Analytics',
+      href: '/dashboard/analytics',
+    },
+    {
+      icon: <Calendar className="h-4 w-4" />,
+      text: 'Calendario',
+      href: '/dashboard/calendar',
+    },
+    ...(hasMultipleRestaurants
+      ? [
+          {
+            icon: <ShoppingBag className="h-4 w-4" />,
+            text: 'Restaurantes',
+            href: '/dashboard/restaurants',
+          },
+        ]
+      : []),
+    {
+      icon: <Target className="h-4 w-4" />,
+      text: 'Proximamente...',
+      href: '/dashboard/objectives',
+    },
+    {
+      icon: <Lightbulb className="h-4 w-4" />,
+      text: 'Proximamente...',
+      href: '/dashboard/improvements',
+    },
+  ];
+
   return (
     <>
       <MobileMenuButton />
-
-      {/* Overlay para móvil */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -89,18 +166,17 @@ export function Sidebar() {
         />
       )}
       <div
-        className={`fixed left-0 top-0 h-full bg-white/10 backdrop-blur-xl flex flex-col z-50
-          md:translate-x-0 transition-all duration-300
-          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-          ${isCollapsed ? 'md:w-16' : 'md:w-64'}
-          w-64`}
+        className={`fixed left-0 top-0 h-full bg-white/10 backdrop-blur-xl flex flex-col z-50 transition-all duration-300 ${
+          isMobileMenuOpen
+            ? 'translate-x-0'
+            : '-translate-x-full md:translate-x-0'
+        } ${isCollapsed ? 'md:w-16' : 'md:w-64'} w-64`}
       >
-        {/* Botón para colapsar (solo visible en desktop) */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-6 h-6 w-6 rounded-full bg-white/10 text-white hover:bg-white/20 items-center justify-center hidden md:flex"
+          className="absolute -right-3 top-6 h-6 w-6 rounded-full bg-white/10 text-white hover:bg-white/20 hidden md:flex items-center justify-center"
         >
           {isCollapsed ? (
             <ChevronRight className="h-3 w-3" />
@@ -108,8 +184,6 @@ export function Sidebar() {
             <ChevronLeft className="h-3 w-3" />
           )}
         </Button>
-
-        {/* Logo */}
         <div className="px-2 pt-4 flex items-center">
           {isCollapsed && !isMobileMenuOpen ? (
             <div className="w-full flex justify-center items-center">
@@ -129,46 +203,9 @@ export function Sidebar() {
             </div>
           )}
         </div>
-        {/* Navegación */}
         <div className="flex flex-col flex-1 justify-between mt-8">
           <nav className="space-y-4">
-            {[
-              {
-                icon: <Home className="h-4 w-4" />,
-                text: 'Dashboard',
-                href: '/dashboard',
-              },
-              {
-                icon: <MessageSquare className="h-4 w-4" />,
-                text: 'Reseñas',
-                href: '/dashboard/reviews',
-              },
-              {
-                icon: <Users2 className="h-4 w-4" />,
-                text: 'Equipo',
-                href: '/dashboard/team',
-              },
-              {
-                icon: <BarChart3 className="h-4 w-4" />,
-                text: 'Analytics',
-                href: '/dashboard/analytics',
-              },
-              {
-                icon: <Calendar className="h-4 w-4" />,
-                text: 'Calendario',
-                href: '/dashboard/calendar',
-              },
-              {
-                icon: <Target className="h-4 w-4" />,
-                text: 'Proximamente...',
-                href: '/dashboard/objectives',
-              },
-              {
-                icon: <Lightbulb className="h-4 w-4" />,
-                text: 'Proximamente...',
-                href: '/dashboard/improvements',
-              },
-            ].map((item) => (
+            {navItems.map((item) => (
               <a key={item.href} href={item.href}>
                 <Button
                   variant="ghost"
@@ -185,8 +222,6 @@ export function Sidebar() {
               </a>
             ))}
           </nav>
-
-          {/* Botón de cerrar sesión */}
           <div className="mt-auto pt-4 border-t border-white/10">
             <Button
               variant="ghost"

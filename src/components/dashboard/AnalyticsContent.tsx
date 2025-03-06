@@ -17,8 +17,8 @@ import {
   MetricsPieChart,
 } from './charts/ChartComponents';
 import { getCachedMetrics, setCachedMetrics } from './metricsCache';
+import { getSelectedRestaurant } from '../../lib/restaurantStore';
 
-// Componentes Memoizados
 const MetricCard = React.memo(({ title, value, trend, icon }: any) => (
   <Card className="bg-white/10 border-0">
     <CardHeader className="pb-2">
@@ -47,7 +47,6 @@ const MetricCard = React.memo(({ title, value, trend, icon }: any) => (
   </Card>
 ));
 
-// Componente de carga
 const LoadingState = () => (
   <div className="p-6">
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
@@ -70,6 +69,31 @@ export function AnalyticsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Estado para el restaurante seleccionado
+  const [selectedRestaurant, setSelectedRestaurant] = useState(
+    getSelectedRestaurant()
+  );
+
+  useEffect(() => {
+    const handleRestaurantChange = (e: CustomEvent) => {
+      console.log(
+        'AnalyticsContent: restaurantChange event received:',
+        e.detail
+      );
+      setSelectedRestaurant(e.detail);
+    };
+    window.addEventListener(
+      'restaurantChange',
+      handleRestaurantChange as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        'restaurantChange',
+        handleRestaurantChange as EventListener
+      );
+    };
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     const fetchData = async () => {
@@ -87,9 +111,10 @@ export function AnalyticsContent() {
           return;
         }
 
-        const restaurantData = await getRestaurantByFirebaseUID(
-          auth.currentUser.uid
-        );
+        // Usar el restaurante seleccionado si existe; de lo contrario, obtenerlo por UID
+        const restaurantData = selectedRestaurant
+          ? selectedRestaurant
+          : await getRestaurantByFirebaseUID(auth.currentUser.uid);
 
         if (!restaurantData) throw new Error('No restaurant found');
 
@@ -111,7 +136,6 @@ export function AnalyticsContent() {
         if (isMounted) {
           setMetrics(updatedMetrics);
           setHistory(historyData);
-          // Guardar en caché
           setCachedMetrics(cacheKey, {
             metrics: updatedMetrics,
             history: historyData,
@@ -136,9 +160,8 @@ export function AnalyticsContent() {
     return () => {
       isMounted = false;
     };
-  }, [timeFilter]);
+  }, [timeFilter, selectedRestaurant]);
 
-  // Datos procesados memorizados
   const processedHistoryData = useMemo(() => {
     if (!history?.dates) return [];
     return history.dates.map((date: string, i: number) => ({
@@ -182,7 +205,6 @@ export function AnalyticsContent() {
           value={metrics.totalReviews}
           trend={metrics.trends.volumeTrend}
         />
-
         <MetricCard
           title="Rating promedio"
           value={metrics.averageRating.toFixed(1)}
@@ -201,13 +223,11 @@ export function AnalyticsContent() {
             </div>
           }
         />
-
         <MetricCard
           title="Tasa de respuesta"
           value={`${metrics.responseRate.toFixed(1)}%`}
           icon={<Progress value={metrics.responseRate} className="h-2" />}
         />
-
         <MetricCard
           title="Envíos a Google"
           value={`${metrics.googleSentRate.toFixed(1)}%`}
@@ -231,7 +251,6 @@ export function AnalyticsContent() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="bg-white/10 border-0">
           <CardHeader>
             <CardTitle className="text-white">
@@ -248,7 +267,6 @@ export function AnalyticsContent() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="bg-white/10 border-0">
           <CardHeader>
             <CardTitle className="text-white">Tipos de mejora</CardTitle>
@@ -263,7 +281,6 @@ export function AnalyticsContent() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="bg-white/10 border-0">
           <CardHeader>
             <CardTitle className="text-white">Análisis por día</CardTitle>

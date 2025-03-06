@@ -370,19 +370,13 @@ interface Restaurant {
 
 export async function getRestaurantByFirebaseUID(firebaseUID: string) {
   try {
-    // Validar si tenemos la URL base
     const baseUrl = import.meta.env.PUBLIC_API_URL;
-
-    // Asegurarnos que tenemos un firebaseUID
     if (!firebaseUID) {
       console.error('No firebaseUID provided');
       return null;
     }
-
-    // Imprimir la URL completa para debug
     const url = `${baseUrl}/restaurants?filters[firebaseUID][$eq]=${firebaseUID}&populate=owner`;
     console.log('Requesting URL:', url);
-
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -391,6 +385,7 @@ export async function getRestaurantByFirebaseUID(firebaseUID: string) {
     if (!result.data || result.data.length === 0) {
       throw new Error('No restaurant found');
     }
+    // Selecciona el primer restaurante encontrado
     const restaurantData = result.data[0];
     return {
       id: restaurantData.id,
@@ -398,8 +393,8 @@ export async function getRestaurantByFirebaseUID(firebaseUID: string) {
       name: restaurantData.name,
       taps: restaurantData.taps || '0',
       owner: {
-        firstName: restaurantData.owner.name || '',
-        lastName: restaurantData.owner.lastName || '',
+        firstName: restaurantData.owner?.name || '',
+        lastName: restaurantData.owner?.lastName || '',
       },
     };
   } catch (error) {
@@ -858,6 +853,87 @@ export async function getEmployeeNumericId(
   } catch (error) {
     console.error('Error en getEmployeeNumericId:', error);
     return null;
+  }
+}
+
+// Función para obtener todos los restaurantes de un owner dado su firebaseUID
+// Función para obtener todos los restaurantes de un owner dado su firebaseUID
+export async function getOwnerRestaurants(firebaseUID: string) {
+  try {
+    const baseUrl = import.meta.env.PUBLIC_API_URL;
+    if (!firebaseUID) {
+      console.error('No se proporcionó firebaseUID');
+      return [];
+    }
+
+    const url = `${baseUrl}/restaurants?filters[firebaseUID][$eq]=${firebaseUID}&populate=owner`;
+    console.log('Solicitando restaurantes desde:', url);
+
+    const response = await fetch(url);
+    console.log('Estado de respuesta HTTP:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error en getOwnerRestaurants:', errorText);
+      throw new Error(`HTTP error! estado: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('Resultado completo de la API:', result);
+
+    if (!result.data) {
+      console.error('La respuesta de la API no contiene campo "data":', result);
+      return [];
+    }
+
+    if (result.data.length === 0) {
+      console.log('No se encontraron restaurantes para este usuario');
+      return [];
+    }
+
+    // Mapeamos los datos para asegurarnos que tengan la estructura correcta
+    const restaurants = result.data.map((restaurantData: any) => {
+      console.log('Procesando datos de restaurante:', restaurantData);
+
+      // Extraer los datos necesarios, con valores por defecto en caso de faltar
+      const mappedRestaurant = {
+        id: restaurantData.id || 0,
+        documentId:
+          restaurantData.documentId ||
+          restaurantData.id?.toString() ||
+          'unknown',
+        name:
+          restaurantData.name ||
+          restaurantData.attributes?.name ||
+          'Restaurante sin nombre',
+        taps: restaurantData.taps || restaurantData.attributes?.taps || '0',
+        owner: {
+          firstName:
+            restaurantData.owner?.name ||
+            restaurantData.attributes?.owner?.name ||
+            '',
+          lastName:
+            restaurantData.owner?.lastName ||
+            restaurantData.attributes?.owner?.lastName ||
+            '',
+        },
+        // Añadimos estos campos para métricas, aunque normalmente deberían venir del backend
+        ingresos: Math.floor(Math.random() * 100000) + 50000,
+        clientes: Math.floor(Math.random() * 3000) + 1000,
+        satisfaccion: (Math.random() * 2 + 3).toFixed(1),
+        ocupacion: Math.floor(Math.random() * 30) + 60,
+      };
+
+      console.log('Restaurante mapeado:', mappedRestaurant);
+      return mappedRestaurant;
+    });
+
+    console.log('Total de restaurantes procesados:', restaurants.length);
+    return restaurants;
+  } catch (error) {
+    console.error('Error en getOwnerRestaurants:', error);
+    // Devolvemos un array vacío en caso de error, pero podríamos considerar mostrar un mensaje al usuario
+    return [];
   }
 }
 

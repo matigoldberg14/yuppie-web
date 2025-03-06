@@ -3,13 +3,15 @@
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { Sidebar } from '../../components/dashboard/Sidebar';
 import { AnalyticsContent } from '../../components/dashboard/AnalyticsContent';
+import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 ---
-
 <DashboardLayout title="Analytics | Yuppie">
-  <div class="min-h-screen">
-    <Sidebar client:load />
-    <main class="pl-64">
-      <AnalyticsContent client:load />
-    </main>
-  </div>
+  <ProtectedRoute client:load>
+    <div class="min-h-screen flex">
+      <Sidebar client:load />
+      <main class="transition-all duration-300 p-4 md:pl-64 w-full">
+        <AnalyticsContent client:load />
+      </main>
+    </div>
+  </ProtectedRoute>
 </DashboardLayout>

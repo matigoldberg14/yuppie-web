@@ -1,13 +1,11 @@
 // src/components/dashboard/DashboardContent.tsx
 import React, { useState, useEffect } from 'react';
 import { auth } from '../../lib/firebase';
-import {
-  getRestaurantByFirebaseUID,
-  getRestaurantReviews,
-} from '../../services/api';
-import { Star } from 'lucide-react';
+import { getRestaurantReviews } from '../../services/api';
+import { Star, Building2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Progress } from '../ui/progress';
+import { Button } from '../ui/Button';
 import {
   LineChart,
   Line,
@@ -19,94 +17,7 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-
-// Interfaces
-
-interface ApiWrapper<T> {
-  data: T[];
-  meta: {
-    pagination: {
-      page: number;
-      pageSize: number;
-      pageCount: number;
-      total: number;
-    };
-  };
-}
-
-interface RawRestaurantData {
-  id: number;
-  documentId: string;
-  name: string;
-  taps: string;
-  createdAt: string;
-  updatedAt: string;
-  publishedAt: string;
-  linkMaps: string;
-  firebaseUID: string;
-  owner: {
-    id: number;
-    documentId: string;
-    name: string;
-    lastName: string;
-    email: string;
-    createdAt: string;
-    updatedAt: string;
-    publishedAt: string;
-  };
-}
-
-interface RestaurantData {
-  id: number;
-  documentId: string;
-  name: string;
-  taps: string;
-  owner: {
-    name: string;
-    lastName: string;
-  };
-}
-
-interface RestaurantApiResponse {
-  id: number;
-  documentId: string;
-  name: string;
-  taps: string;
-  createdAt: string;
-  updatedAt: string;
-  publishedAt: string;
-  linkMaps: string;
-  firebaseUID: string;
-  owner: {
-    id: number;
-    documentId: string;
-    name: string;
-    lastName: string;
-    email: string;
-    createdAt: string;
-    updatedAt: string;
-    publishedAt: string;
-  };
-}
-
-interface RestaurantResponse {
-  id: number;
-  documentId: string;
-  name: string;
-  taps: string;
-  createdAt: string;
-  updatedAt: string;
-  publishedAt: string;
-  linkMaps: string;
-  firebaseUID: string;
-  owner: {
-    id: number;
-    documentId: string;
-    name: string;
-    lastName: string;
-    email: string;
-  };
-}
+import { getSelectedRestaurant } from '../../lib/restaurantStore';
 
 interface Stats {
   totalReviews: number;
@@ -118,8 +29,8 @@ interface Stats {
 }
 
 export function DashboardContent() {
-  const [restaurantData, setRestaurantData] = useState<RestaurantData | null>(
-    null
+  const [currentRestaurant, setCurrentRestaurant] = useState(
+    getSelectedRestaurant()
   );
   const [stats, setStats] = useState<Stats>({
     totalReviews: 0,
@@ -131,6 +42,25 @@ export function DashboardContent() {
   });
   const [loading, setLoading] = useState(true);
 
+  // Escuchar cambios en el restaurante seleccionado
+  useEffect(() => {
+    const handleRestaurantChange = (e: CustomEvent) => {
+      setCurrentRestaurant(e.detail);
+    };
+
+    window.addEventListener(
+      'restaurantChange',
+      handleRestaurantChange as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        'restaurantChange',
+        handleRestaurantChange as EventListener
+      );
+    };
+  }, []);
+
   const handleChartClick = () => {
     window.location.href = '/dashboard/analytics';
   };
@@ -138,31 +68,15 @@ export function DashboardContent() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (!auth?.currentUser?.uid) return;
+        if (!currentRestaurant) {
+          setLoading(false);
+          return;
+        }
 
-        const response = await getRestaurantByFirebaseUID(auth.currentUser.uid);
-
-        console.log('Raw API Response:', response);
-
-        if (!response) throw new Error('No restaurant found');
-
-        const restaurant: RestaurantData = {
-          id: response.id,
-          documentId: response.documentId,
-          name: response.name,
-          taps: response.taps || '0',
-          owner: {
-            name: response.owner.firstName,
-            lastName: response.owner.lastName,
-          },
-        };
-
-        setRestaurantData(restaurant);
-
+        const restaurant = currentRestaurant;
         const reviews = await getRestaurantReviews(restaurant.documentId);
         const totalReviews = reviews.length;
 
-        // Agrupar reseñas por calificación para el gráfico de distribución
         const ratingDistribution = reviews.reduce(
           (acc: Record<number, number>, review: any) => {
             acc[review.calification] = (acc[review.calification] || 0) + 1;
@@ -171,7 +85,6 @@ export function DashboardContent() {
           {}
         );
 
-        // Agrupar reseñas por fecha para el gráfico de evolución
         const reviewsByDate = reviews.reduce(
           (acc: Record<string, number>, review: any) => {
             const date = new Date(review.createdAt).toLocaleDateString();
@@ -221,28 +134,41 @@ export function DashboardContent() {
     };
 
     fetchData();
-  }, []);
+  }, [currentRestaurant]);
 
-  if (loading || !restaurantData) {
+  if (loading) {
+    return <div className="animate-pulse text-white">Cargando datos...</div>;
+  }
+
+  if (!currentRestaurant) {
     return (
-      <div className="p-4">
-        <div className="animate-pulse text-white">Cargando datos...</div>
+      <div className="p-4 text-center">
+        <h2 className="text-xl font-bold text-white mb-4">
+          No hay restaurante seleccionado
+        </h2>
+        <p className="text-white/60 mb-6">
+          Por favor, selecciona un restaurante para ver su dashboard
+        </p>
+        <Button
+          variant="primary"
+          onClick={() => (window.location.href = '/dashboard/restaurants')}
+        >
+          Ir a seleccionar restaurante
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="p-4">
-      {/* Header */}
+    <div>
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-white">
-          ¡Bienvenido {restaurantData.owner.name}{' '}
-          {restaurantData.owner.lastName}!
+          ¡Bienvenido {currentRestaurant.owner.firstName}{' '}
+          {currentRestaurant.owner.lastName}!
         </h1>
-        <p className="text-white/60">Restaurante: {restaurantData.name}</p>
+        <p className="text-white/60">Restaurante: {currentRestaurant.name}</p>
       </header>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card className="bg-white/10 border-0">
           <CardHeader className="pb-2">
@@ -306,9 +232,7 @@ export function DashboardContent() {
         </Card>
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Evolución de reseñas */}
         <Card
           className="bg-white/10 border-0 cursor-pointer hover:bg-white/20 transition-colors"
           onClick={handleChartClick}
@@ -343,7 +267,6 @@ export function DashboardContent() {
           </CardContent>
         </Card>
 
-        {/* Distribución de calificaciones */}
         <Card
           className="bg-white/10 border-0 cursor-pointer hover:bg-white/20 transition-colors"
           onClick={handleChartClick}

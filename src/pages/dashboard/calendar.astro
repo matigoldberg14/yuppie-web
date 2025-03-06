@@ -3,13 +3,15 @@
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
 import { Sidebar } from '../../components/dashboard/Sidebar';
 import { CalendarContent } from '../../components/dashboard/CalendarContent';
+import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 ---
-
 <DashboardLayout title="Calendario | Yuppie">
-  <div class="min-h-screen">
-    <Sidebar client:load />
-    <main class="pl-64">
-      <CalendarContent client:load />
-    </main>
-  </div>
+  <ProtectedRoute client:load>
+    <div class="min-h-screen flex">
+      <Sidebar client:load />
+      <main class="transition-all duration-300 p-4 md:pl-64 w-full">
+        <CalendarContent client:load />
+      </main>
+    </div>
+  </ProtectedRoute>
 </DashboardLayout>
