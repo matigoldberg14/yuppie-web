@@ -69,12 +69,12 @@ export function AnalyticsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Estado para el restaurante seleccionado (se inicializa con lo guardado)
+  // Estado para el restaurante seleccionado
   const [selectedRestaurant, setSelectedRestaurant] = useState(
     getSelectedRestaurant()
   );
 
-  // Escucha del evento "restaurantChange" para actualizar el restaurante seleccionado
+  // Escuchar el evento "restaurantChange" para actualizar el restaurante seleccionado
   useEffect(() => {
     const handleRestaurantChange = (e: CustomEvent) => {
       console.log(
@@ -100,7 +100,7 @@ export function AnalyticsContent() {
     const fetchData = async () => {
       try {
         if (!auth?.currentUser?.uid) return;
-        // Generar clave de caché que incluye el documentId del restaurante seleccionado
+        // Generar clave de caché que incluya el documentId del restaurante seleccionado
         const cacheKey = `${auth.currentUser.uid}_${
           selectedRestaurant?.documentId || 'default'
         }_${timeFilter}`;
@@ -111,7 +111,7 @@ export function AnalyticsContent() {
           setLoading(false);
           return;
         }
-        // Usar el restaurante seleccionado si existe; de lo contrario, obtenerlo por UID
+        // Usar el restaurante seleccionado si existe; de lo contrario, obtenerlo
         const restaurantData = selectedRestaurant
           ? selectedRestaurant
           : await getRestaurantByFirebaseUID(auth.currentUser.uid);

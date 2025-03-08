@@ -7,6 +7,18 @@ export interface Schedule {
   endTime: string;
 }
 
+export interface Review {
+  id: number;
+  documentId: string;
+  googleSent: boolean;
+  typeImprovement: 'Atención' | 'Comidas' | 'Bebidas' | 'Ambiente' | 'Otra';
+  email: string;
+  date: string;
+  comment: string;
+  calification: number;
+  restaurant: Restaurant;
+  createdAt: string;
+}
 export interface Employee {
   id: number;
   documentId: string;
@@ -47,19 +59,6 @@ export type WeekDay =
   | 'friday'
   | 'saturday'
   | 'sunday';
-
-export interface Review {
-  id: number;
-  documentId: string;
-  googleSent: boolean;
-  typeImprovement: 'Atención' | 'Comidas' | 'Bebidas' | 'Ambiente' | 'Otra';
-  email: string;
-  date: string;
-  comment: string;
-  calification: number;
-  restaurant: Restaurant;
-  createdAt: string;
-}
 
 export interface EmployeeFormInput {
   firstName: string;
