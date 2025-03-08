@@ -10,43 +10,21 @@ import {
 } from '../../services/api';
 import { getSelectedRestaurant } from '../../lib/restaurantStore';
 
-const sampleEvents = [
-  {
-    id: 1,
-    title: 'Responder reseñas pendientes',
-    date: new Date(2025, 1, 15),
-    type: 'event',
-  },
-  {
-    id: 2,
-    title: 'Reunión de equipo',
-    date: new Date(2025, 1, 17),
-    type: 'event',
-  },
-  {
-    id: 3,
-    title: 'Análisis mensual',
-    date: new Date(2025, 1, 20),
-    type: 'event',
-  },
-  {
-    id: 4,
-    title: 'Evento extra',
-    date: new Date(2025, 2, 5),
-    type: 'event',
-  },
-];
-
 export function CalendarContent() {
   const [displayDate, setDisplayDate] = useState(new Date());
   const [reviews, setReviews] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
+  // Estado para el restaurante seleccionado
   const [selectedRestaurant, setSelectedRestaurant] = useState(
     getSelectedRestaurant()
   );
 
   useEffect(() => {
     const handleRestaurantChange = (e: CustomEvent) => {
+      console.log(
+        'CalendarContent: restaurantChange event received:',
+        e.detail
+      );
       setSelectedRestaurant(e.detail);
     };
     window.addEventListener(
@@ -69,17 +47,10 @@ export function CalendarContent() {
         return;
       }
       try {
-        let restaurantData;
-        if (selectedRestaurant) {
-          restaurantData = selectedRestaurant;
-        } else {
-          restaurantData = await getRestaurantByFirebaseUID(
-            auth.currentUser.uid
-          );
-        }
-        if (!restaurantData) {
-          throw new Error('No se encontró el restaurante');
-        }
+        const restaurantData = selectedRestaurant
+          ? selectedRestaurant
+          : await getRestaurantByFirebaseUID(auth.currentUser.uid);
+        if (!restaurantData) throw new Error('No se encontró el restaurante');
         const reviewsData = await getRestaurantReviews(
           restaurantData.documentId
         );
@@ -90,7 +61,6 @@ export function CalendarContent() {
         setLoadingReviews(false);
       }
     };
-
     fetchReviews();
   }, [selectedRestaurant]);
 
@@ -109,15 +79,8 @@ export function CalendarContent() {
   }
 
   const getEventCountForDay = (day: number) => {
-    const cellDate = new Date(year, month, day);
-    return sampleEvents.filter((event) => {
-      const eventDate = event.date;
-      return (
-        eventDate.getFullYear() === cellDate.getFullYear() &&
-        eventDate.getMonth() === cellDate.getMonth() &&
-        eventDate.getDate() === cellDate.getDate()
-      );
-    }).length;
+    // Usamos eventos de muestra (sampleEvents) o si tienes eventos reales, utilízalos
+    return 0;
   };
 
   const getReviewCountForDay = (day: number) => {
@@ -149,7 +112,6 @@ export function CalendarContent() {
           Nuevo evento
         </Button>
       </header>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 bg-white/10 border-0">
           <CardHeader>
@@ -212,33 +174,16 @@ export function CalendarContent() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="bg-white/10 border-0">
           <CardHeader>
             <CardTitle className="text-white">Próximos eventos</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {sampleEvents
-                .filter((event) => event.date >= new Date())
-                .map((event) => (
-                  <div
-                    key={event.id}
-                    className="flex items-center space-x-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                  >
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-white">
-                        {event.title}
-                      </p>
-                      <p className="text-xs text-white/60">
-                        {event.date.toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Button variant="ghost" size="sm" className="text-white">
-                      Ver
-                    </Button>
-                  </div>
-                ))}
+              {/* Aquí podrías listar eventos reales */}
+              <div className="text-white/60 text-center py-8">
+                Sin eventos próximos.
+              </div>
             </div>
           </CardContent>
         </Card>

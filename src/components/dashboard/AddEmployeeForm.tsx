@@ -1,16 +1,15 @@
-// /Users/Mati/Desktop/yuppie-web/src/components/dashboard/AddEmployeeForm.tsx
+// src/components/dashboard/AddEmployeeForm.tsx
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { User, Upload, X } from 'lucide-react';
+import { User, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 import { EmployeeSchedule } from './EmployeeSchedule';
-import type { DaySchedule, TimeBlock } from './EmployeeSchedule';
+import type { DaySchedule } from './EmployeeSchedule';
 
-// Convertir el nuevo formato de horario al formato esperado por la API
 interface WorkSchedule {
   day: string;
   startTime: string;
@@ -24,28 +23,19 @@ interface AddEmployeeFormProps {
     firstName: string;
     lastName: string;
     position: string;
-    photo: File | null;
     schedules: WorkSchedule[];
-  }) => void;
+  }) => Promise<void>;
   restaurantId: string;
   initialData?: {
     documentId: string;
     firstName: string;
     lastName: string;
     position: string;
-    photo?: {
-      url: string;
-      formats: {
-        thumbnail: {
-          url: string;
-        };
-      };
-    };
     schedules: WorkSchedule[];
   };
 }
 
-export function AddEmployeeForm({
+export default function AddEmployeeForm({
   isOpen,
   onClose,
   onSubmit,
@@ -55,31 +45,17 @@ export function AddEmployeeForm({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [position, setPosition] = useState('');
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<DaySchedule>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  // Cargar datos iniciales si estamos editando
   useEffect(() => {
     if (initialData) {
       setFirstName(initialData.firstName || '');
       setLastName(initialData.lastName || '');
       setPosition(initialData.position || '');
-
-      if (initialData.photo?.url) {
-        setPhotoPreview(
-          `${import.meta.env.PUBLIC_API_URL}${
-            initialData.photo.formats.thumbnail.url
-          }`
-        );
-      }
-
-      // Convertir schedules del formato API al formato de componente
       if (initialData.schedules && initialData.schedules.length > 0) {
         const newSchedule: DaySchedule = {};
-
-        // Inicializar todos los días
         [
           'monday',
           'tuesday',
@@ -91,21 +67,17 @@ export function AddEmployeeForm({
         ].forEach((day) => {
           newSchedule[day] = [];
         });
-
-        // Añadir bloques existentes
-        initialData.schedules.forEach((schedule) => {
-          if (newSchedule[schedule.day]) {
-            newSchedule[schedule.day].push({
+        initialData.schedules.forEach((sch) => {
+          if (newSchedule[sch.day]) {
+            newSchedule[sch.day].push({
               id: Math.random().toString(36).substring(2, 11),
-              startTime: schedule.startTime,
-              endTime: schedule.endTime,
+              startTime: sch.startTime,
+              endTime: sch.endTime,
             });
           }
         });
-
         setSchedule(newSchedule);
       } else {
-        // Inicializar schedule vacío
         const emptySchedule: DaySchedule = {};
         [
           'monday',
@@ -121,14 +93,9 @@ export function AddEmployeeForm({
         setSchedule(emptySchedule);
       }
     } else {
-      // Reset form al abrir nuevo
       setFirstName('');
       setLastName('');
       setPosition('');
-      setPhoto(null);
-      setPhotoPreview(null);
-
-      // Inicializar schedule vacío
       const emptySchedule: DaySchedule = {};
       [
         'monday',
@@ -145,30 +112,7 @@ export function AddEmployeeForm({
     }
   }, [initialData, isOpen]);
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      setPhoto(selectedFile);
-
-      // Mostrar preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setPhotoPreview(e.target.result as string);
-        }
-      };
-      reader.readAsDataURL(selectedFile);
-    }
-  };
-
-  const handleRemovePhoto = () => {
-    setPhoto(null);
-    setPhotoPreview(null);
-  };
-
-  // Función para validar los horarios
   const validateSchedules = (): boolean => {
-    // Verificar que al menos un día tenga horario
     const hasAnySchedule = Object.values(schedule).some(
       (blocks) => blocks.length > 0
     );
@@ -180,14 +124,9 @@ export function AddEmployeeForm({
       });
       return false;
     }
-
-    // Verificar superposiciones o errores en cada día
     for (const [day, blocks] of Object.entries(schedule)) {
-      // Verificar que no haya superposiciones
       for (let i = 0; i < blocks.length; i++) {
         const blockA = blocks[i];
-
-        // Verificar que la hora de fin sea posterior a la de inicio
         if (blockA.startTime >= blockA.endTime) {
           toast({
             title: 'Horario inválido',
@@ -196,11 +135,8 @@ export function AddEmployeeForm({
           });
           return false;
         }
-
-        // Verificar superposiciones entre bloques
         for (let j = i + 1; j < blocks.length; j++) {
           const blockB = blocks[j];
-
           if (
             (blockA.startTime < blockB.endTime &&
               blockA.endTime > blockB.startTime) ||
@@ -217,15 +153,11 @@ export function AddEmployeeForm({
         }
       }
     }
-
     return true;
   };
 
-  // Validar y enviar el formulario
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validación de campos básicos
     if (!firstName.trim() || !lastName.trim() || !position.trim()) {
       toast({
         title: 'Campos requeridos',
@@ -234,15 +166,8 @@ export function AddEmployeeForm({
       });
       return;
     }
-
-    // Validar horarios
-    if (!validateSchedules()) {
-      return;
-    }
-
-    // Convertir del formato de componente al formato API
+    if (!validateSchedules()) return;
     const apiSchedules: WorkSchedule[] = [];
-
     Object.entries(schedule).forEach(([day, timeBlocks]) => {
       timeBlocks.forEach((block) => {
         apiSchedules.push({
@@ -252,15 +177,19 @@ export function AddEmployeeForm({
         });
       });
     });
-
-    // Enviar datos
-    onSubmit({
-      firstName,
-      lastName,
-      position,
-      photo,
-      schedules: apiSchedules,
-    });
+    try {
+      setIsSubmitting(true);
+      await onSubmit({
+        firstName,
+        lastName,
+        position,
+        schedules: apiSchedules,
+      });
+    } catch (err) {
+      // Error handling in onSubmit
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -271,51 +200,16 @@ export function AddEmployeeForm({
         <DialogTitle>
           {initialData ? 'Editar Empleado' : 'Agregar Nuevo Empleado'}
         </DialogTitle>
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Columna izquierda: Información básica */}
             <div className="space-y-6">
-              {/* Foto de perfil */}
               <div className="flex justify-center">
                 <div className="relative">
                   <div className="h-24 w-24 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
-                    {photoPreview ? (
-                      <img
-                        src={photoPreview}
-                        alt="Preview"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-12 w-12 text-white" />
-                    )}
-                  </div>
-
-                  <div className="absolute bottom-0 right-0 flex gap-1">
-                    <label className="cursor-pointer bg-white text-black rounded-full p-1 h-8 w-8 flex items-center justify-center">
-                      <Upload className="h-4 w-4" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handlePhotoChange}
-                      />
-                    </label>
-
-                    {photoPreview && (
-                      <button
-                        type="button"
-                        onClick={handleRemovePhoto}
-                        className="bg-red-500 text-white rounded-full p-1 h-8 w-8 flex items-center justify-center"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
+                    <User className="h-12 w-12 text-white" />
                   </div>
                 </div>
               </div>
-
-              {/* Nombre y apellido */}
               <div>
                 <Label htmlFor="firstName" className="text-white">
                   Nombre *
@@ -328,7 +222,6 @@ export function AddEmployeeForm({
                   required
                 />
               </div>
-
               <div>
                 <Label htmlFor="lastName" className="text-white">
                   Apellido *
@@ -341,7 +234,6 @@ export function AddEmployeeForm({
                   required
                 />
               </div>
-
               <div>
                 <Label htmlFor="position" className="text-white">
                   Cargo *
@@ -355,8 +247,6 @@ export function AddEmployeeForm({
                 />
               </div>
             </div>
-
-            {/* Columnas derecha: Horarios (ocupa 2/3) */}
             <div className="md:col-span-2 space-y-4">
               <div className="flex justify-between items-center">
                 <Label className="text-white font-medium">
@@ -366,28 +256,31 @@ export function AddEmployeeForm({
                   Añade horarios para cada día de la semana
                 </div>
               </div>
-
               <div className="bg-white/5 rounded-lg p-4">
                 <EmployeeSchedule schedule={schedule} onChange={setSchedule} />
               </div>
             </div>
           </div>
-
-          {/* Botones de acción */}
           <div className="flex justify-end gap-2 pt-2">
             <Button
               type="button"
               variant="ghost"
               onClick={onClose}
               className="text-white border-white/20 hover:bg-white/10"
+              disabled={isSubmitting}
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               className="bg-white text-black hover:bg-white/90"
+              disabled={isSubmitting}
             >
-              {initialData ? 'Guardar Cambios' : 'Agregar Empleado'}
+              {isSubmitting
+                ? 'Enviando...'
+                : initialData
+                ? 'Guardar Cambios'
+                : 'Agregar Empleado'}
             </Button>
           </div>
         </form>

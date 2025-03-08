@@ -2,12 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../../lib/firebase';
 import {
-  getRestaurantByFirebaseUID,
+  getOwnerRestaurants,
   getEmployeesByRestaurant,
   getRestaurantReviews,
   createEmployee,
   deleteEmployee,
   updateEmployee,
+  getRestaurantByFirebaseUID,
 } from '../../services/api';
 import {
   Plus,
@@ -15,12 +16,8 @@ import {
   Trash,
   Edit2,
   Star,
-  TrendingUp,
   Award,
   AlertCircle,
-  BarChart2,
-  Calendar,
-  ChevronRight,
   Download,
   QrCode,
   Search,
@@ -31,9 +28,10 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from '../ui/card';
 import { Button } from '../ui/Button';
-import { AddEmployeeForm } from './AddEmployeeForm';
+import AddEmployeeForm from './AddEmployeeForm';
 import { useToast } from '../ui/use-toast';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
@@ -48,15 +46,40 @@ import {
   SelectValue,
 } from '../ui/select';
 import * as XLSX from 'xlsx';
-import type { Employee as BasicEmployee } from '../../types/employee';
-import { getSelectedRestaurant } from '../../lib/restaurantStore';
+import type {
+  Restaurant,
+  Employee as BasicEmployee,
+  Schedule,
+  Review,
+} from '../../types/index';
+import {
+  getSelectedRestaurant,
+  setSelectedRestaurant,
+  getCompareRestaurants,
+  toggleCompareRestaurant as toggleCompare,
+  setRestaurantsList,
+} from '../../lib/restaurantStore';
 
-interface Schedule {
-  id: number;
-  documentId: string;
-  day: string;
-  startTime: string;
-  endTime: string;
+// Definimos ReviewExt para incluir la propiedad opcional "employee"
+type ReviewExt = Review & {
+  employee?: {
+    documentId: string;
+    firstName?: string;
+    lastName?: string;
+    position?: string;
+  };
+};
+
+// --- Tipos locales para este componente ---
+interface LocalSchedule extends Schedule {}
+
+export interface EnrichedEmployee extends BasicEmployee {
+  reviewCount?: number;
+  averageRating?: number;
+  reviews?: ReviewExt[];
+  lastReviewDate?: string | null;
+  daysWithoutReview?: number | null;
+  schedules: LocalSchedule[];
 }
 
 interface WorkSchedule {
@@ -66,47 +89,32 @@ interface WorkSchedule {
   endTime: string;
 }
 
-interface Review {
-  id: number;
-  documentId: string;
-  calification: number;
-  typeImprovement: string;
-  comment: string;
-  email: string;
-  date: string;
-  createdAt: string;
-  employee?: {
-    documentId: string;
-    firstName?: string;
-    lastName?: string;
-  };
-}
-
-interface EnrichedEmployee extends BasicEmployee {
-  reviewCount?: number;
-  averageRating?: number;
-  reviews?: Review[];
-  lastReviewDate?: string | null;
-  daysWithoutReview?: number | null;
-  schedules: Schedule[];
-}
-interface CreateEmployeeInput {
-  firstName: string;
-  lastName: string;
-  position: string;
-  photo: File | null;
-  scheduleIds: string[];
-  restaurantId: string;
-}
-
 interface EmployeeOfMonthResult {
   employee: EnrichedEmployee | null;
   score: number;
 }
 
+// Para obtener el restaurante seleccionado correctamente, verificamos que tenga las propiedades de un Restaurant
+const getInitialRestaurant = (): Restaurant | null => {
+  const r = getSelectedRestaurant();
+  if (
+    r &&
+    typeof (r as any).name === 'string' &&
+    typeof (r as any).taps === 'string' &&
+    (r as any).owner
+  ) {
+    return r as Restaurant;
+  }
+  return null;
+};
+
 export function TeamContent() {
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [currentRestaurant, setCurrentRestaurant] = useState<Restaurant | null>(
+    null
+  );
   const [employees, setEmployees] = useState<EnrichedEmployee[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<ReviewExt[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] =
@@ -119,14 +127,15 @@ export function TeamContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'leaderboard'>('grid');
   const { toast } = useToast();
 
-  // Usar el restaurante seleccionado del store
-  const [selectedRestaurant, setSelectedRestaurant] = useState(
-    getSelectedRestaurant()
-  );
+  // El restaurante seleccionado se obtiene del store, forzándolo a tipo Restaurant
+  const [selectedRestaurant, setSelectedRestaurantState] =
+    useState<Restaurant | null>(getInitialRestaurant());
 
+  // Escuchar el evento "restaurantChange" para actualizar el restaurante seleccionado
   useEffect(() => {
     const handleRestaurantChange = (e: CustomEvent) => {
-      setSelectedRestaurant(e.detail);
+      console.log('TeamContent: restaurantChange event received:', e.detail);
+      setSelectedRestaurantState(e.detail as Restaurant);
     };
     window.addEventListener(
       'restaurantChange',
@@ -140,50 +149,63 @@ export function TeamContent() {
     };
   }, []);
 
+  // Obtener la lista de restaurantes del dueño
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      if (auth?.currentUser?.uid) {
+        const ownerRestaurants = await getOwnerRestaurants(
+          auth.currentUser.uid
+        );
+        setRestaurants(ownerRestaurants);
+        if (ownerRestaurants.length === 1) {
+          setCurrentRestaurant(ownerRestaurants[0]);
+          setRestaurantId(ownerRestaurants[0].documentId);
+          setSelectedRestaurant(ownerRestaurants[0]);
+        }
+      }
+    };
+    fetchRestaurants();
+  }, []);
+
+  // Si hay más de un restaurante, se usa el dropdown para elegir
+  const handleRestaurantSelect = (documentId: string) => {
+    const selected = restaurants.find((r) => r.documentId === documentId);
+    if (selected) {
+      setCurrentRestaurant(selected);
+      setRestaurantId(selected.documentId);
+      setSelectedRestaurant(selected);
+    }
+  };
+
+  // Obtener empleados y reseñas según el restaurante seleccionado
   useEffect(() => {
     const fetchEmployeesAndReviews = async () => {
       try {
-        if (!auth?.currentUser?.uid) {
-          console.log('No hay usuario autenticado');
+        if (!auth?.currentUser?.uid || !restaurantId) {
+          console.log('Usuario no autenticado o restaurantId no definido');
           return;
         }
-        let restaurantData;
-        if (selectedRestaurant) {
-          restaurantData = selectedRestaurant;
-        } else {
-          restaurantData = await getRestaurantByFirebaseUID(
-            auth.currentUser.uid
-          );
-        }
-        if (!restaurantData) {
-          throw new Error('No se encontró el restaurante');
-        }
-        setRestaurantId(restaurantData.documentId);
-
-        const employeesData = (await getEmployeesByRestaurant(
-          restaurantData.documentId
-        )) as BasicEmployee[];
+        const employeesData = await getEmployeesByRestaurant(restaurantId);
         const reviewsData = (await getRestaurantReviews(
-          restaurantData.documentId
-        )) as Review[];
-
+          restaurantId
+        )) as ReviewExt[];
         setReviews(reviewsData);
 
         const enrichedEmployees: EnrichedEmployee[] = employeesData.map(
-          (employee: BasicEmployee) => {
+          (employee: any): EnrichedEmployee => {
             const employeeReviews = reviewsData.filter(
-              (review: Review) =>
+              (review: ReviewExt) =>
                 review.employee?.documentId === employee.documentId
             );
             const reviewCount = employeeReviews.length;
             const totalRating = employeeReviews.reduce(
-              (sum: number, review: Review) => sum + review.calification,
+              (sum: number, review: ReviewExt) => sum + review.calification,
               0
             );
             const averageRating =
               reviewCount > 0 ? totalRating / reviewCount : 0;
             const sortedReviews = [...employeeReviews].sort(
-              (a: Review, b: Review) =>
+              (a: ReviewExt, b: ReviewExt) =>
                 new Date(b.createdAt).getTime() -
                 new Date(a.createdAt).getTime()
             );
@@ -208,7 +230,7 @@ export function TeamContent() {
         );
         setEmployees(enrichedEmployees);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching employees and reviews:', error);
         toast({
           variant: 'destructive',
           title: 'Error',
@@ -218,34 +240,38 @@ export function TeamContent() {
         setLoading(false);
       }
     };
-
-    fetchEmployeesAndReviews();
-  }, [toast, selectedRestaurant]);
-
-  const sortedEmployees: EnrichedEmployee[] = [...employees].sort((a, b) => {
-    switch (sortOption) {
-      case 'name':
-        return `${a.firstName} ${a.lastName}`.localeCompare(
-          `${b.firstName} ${b.lastName}`
-        );
-      case 'rating':
-        return (b.averageRating || 0) - (a.averageRating || 0);
-      case 'reviews':
-        return (b.reviewCount || 0) - (a.reviewCount || 0);
-      case 'lastReview':
-        if (!a.lastReviewDate) return 1;
-        if (!b.lastReviewDate) return -1;
-        return (
-          new Date(b.lastReviewDate).getTime() -
-          new Date(a.lastReviewDate).getTime()
-        );
-      default:
-        return 0;
+    if (restaurantId) {
+      fetchEmployeesAndReviews();
     }
-  });
+  }, [toast, restaurantId]);
+
+  // Ordenar empleados
+  const sortedEmployees: EnrichedEmployee[] = [...employees].sort(
+    (a, b): number => {
+      switch (sortOption) {
+        case 'name':
+          return `${a.firstName} ${a.lastName}`.localeCompare(
+            `${b.firstName} ${b.lastName}`
+          );
+        case 'rating':
+          return (b.averageRating || 0) - (a.averageRating || 0);
+        case 'reviews':
+          return (b.reviewCount || 0) - (a.reviewCount || 0);
+        case 'lastReview':
+          if (!a.lastReviewDate) return 1;
+          if (!b.lastReviewDate) return -1;
+          return (
+            new Date(b.lastReviewDate).getTime() -
+            new Date(a.lastReviewDate).getTime()
+          );
+        default:
+          return 0;
+      }
+    }
+  );
 
   const filteredEmployees: EnrichedEmployee[] = sortedEmployees.filter(
-    (employee: EnrichedEmployee): boolean => {
+    (employee: EnrichedEmployee) => {
       const fullName =
         `${employee.firstName} ${employee.lastName}`.toLowerCase();
       return (
@@ -258,13 +284,11 @@ export function TeamContent() {
   const getEmployeeOfTheMonth = (): EmployeeOfMonthResult => {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
     let bestEmployee: EnrichedEmployee | null = null;
     let highestScore = -1;
-
-    employees.forEach((employee: EnrichedEmployee) => {
+    sortedEmployees.forEach((employee: EnrichedEmployee) => {
       if (!employee.reviews) return;
-      const lastMonthReviews = employee.reviews.filter((review: Review) => {
+      const lastMonthReviews = employee.reviews.filter((review: ReviewExt) => {
         const reviewDate = new Date(review.createdAt);
         return reviewDate >= oneMonthAgo && review.calification >= 4;
       });
@@ -274,12 +298,11 @@ export function TeamContent() {
         bestEmployee = employee;
       }
     });
-
     return { employee: bestEmployee, score: highestScore };
   };
 
   const getEmployeesNeedingAttention = (): EnrichedEmployee[] => {
-    return employees
+    return sortedEmployees
       .filter(
         (employee: EnrichedEmployee) => (employee.daysWithoutReview || 30) > 14
       )
@@ -291,7 +314,7 @@ export function TeamContent() {
   };
 
   const getTopRatedEmployees = (): EnrichedEmployee[] => {
-    return employees
+    return sortedEmployees
       .filter((employee: EnrichedEmployee) => (employee.reviewCount || 0) >= 3)
       .sort(
         (a: EnrichedEmployee, b: EnrichedEmployee) =>
@@ -300,41 +323,34 @@ export function TeamContent() {
       .slice(0, 3);
   };
 
+  const topRatedEmployees = getTopRatedEmployees();
+
+  // Para agregar un empleado (forzamos photo a null)
   const handleAddEmployee = async (data: {
     firstName: string;
     lastName: string;
     position: string;
-    photo: File | null;
     schedules: WorkSchedule[];
+    photo?: File | null;
   }) => {
     try {
       if (!restaurantId) throw new Error('No restaurant ID');
-
-      await createEmployee({
-        ...data,
-        restaurantId,
-      });
+      await createEmployee({ ...data, photo: null, restaurantId });
       if (restaurantId) {
-        const updatedEmployees = (await getEmployeesByRestaurant(
-          restaurantId
-        )) as BasicEmployee[];
-
+        const updatedEmployees = await getEmployeesByRestaurant(restaurantId);
         const enrichedEmployees: EnrichedEmployee[] = updatedEmployees.map(
-          (employee) => {
-            return {
-              ...employee,
-              reviewCount: 0,
-              averageRating: 0,
-              reviews: [],
-              lastReviewDate: null,
-              daysWithoutReview: null,
-              schedules: employee.schedules || [],
-            };
-          }
+          (employee: any) => ({
+            ...employee,
+            reviewCount: 0,
+            averageRating: 0,
+            reviews: [],
+            lastReviewDate: null,
+            daysWithoutReview: null,
+            schedules: employee.schedules || [],
+          })
         );
         setEmployees(enrichedEmployees);
         setIsAddingEmployee(false);
-
         toast({
           title: 'Éxito',
           description: 'Empleado agregado correctamente',
@@ -351,33 +367,29 @@ export function TeamContent() {
     }
   };
 
+  // Para editar un empleado (forzamos photo a null)
   const handleEditEmployee = async (data: {
     firstName: string;
     lastName: string;
     position: string;
-    photo: File | null;
     schedules: WorkSchedule[];
+    photo?: File | null;
   }) => {
     try {
       if (!editingEmployee) return;
-
       await updateEmployee(editingEmployee.documentId, {
         firstName: data.firstName,
         lastName: data.lastName,
         position: data.position,
         schedules: data.schedules,
-        photo: data.photo,
+        photo: null,
       });
-
       if (restaurantId) {
-        const updatedEmployees = (await getEmployeesByRestaurant(
-          restaurantId
-        )) as BasicEmployee[];
-
+        const updatedEmployees = await getEmployeesByRestaurant(restaurantId);
         const enrichedEmployees: EnrichedEmployee[] = updatedEmployees.map(
-          (employee) => {
+          (employee: any) => {
             const existingEmployee = employees.find(
-              (e: EnrichedEmployee) => e.documentId === employee.documentId
+              (e) => e.documentId === employee.documentId
             );
             return {
               ...employee,
@@ -392,7 +404,6 @@ export function TeamContent() {
         );
         setEmployees(enrichedEmployees);
       }
-
       setEditingEmployee(null);
       toast({
         title: 'Éxito',
@@ -409,16 +420,11 @@ export function TeamContent() {
   };
 
   const handleDeleteEmployee = async (employeeId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este empleado?')) {
+    if (!confirm('¿Estás seguro de que quieres eliminar este empleado?'))
       return;
-    }
     try {
       await deleteEmployee(employeeId);
-      setEmployees(
-        employees.filter(
-          (emp: EnrichedEmployee) => emp.documentId !== employeeId
-        )
-      );
+      setEmployees(employees.filter((emp) => emp.documentId !== employeeId));
       toast({
         title: 'Éxito',
         description: 'Empleado eliminado correctamente',
@@ -461,7 +467,6 @@ export function TeamContent() {
       ID: employee.documentId,
       'URL de Reseña': generateEmployeeQRUrl(employee.documentId),
     }));
-
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(exportData);
     const columnWidths = [
@@ -490,13 +495,60 @@ export function TeamContent() {
     );
   }
 
-  const { employee: employeeOfMonth, score: employeeOfMonthScore } =
-    getEmployeeOfTheMonth();
-  const employeesNeedingAttention = getEmployeesNeedingAttention();
-  const topRatedEmployees = getTopRatedEmployees();
+  const {
+    employee: employeeOfMonth,
+    score: employeeOfMonthScore,
+  }: EmployeeOfMonthResult = (() => {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    let bestEmployee: EnrichedEmployee | null = null;
+    let highestScore = -1;
+    sortedEmployees.forEach((employee: EnrichedEmployee) => {
+      if (!employee.reviews) return;
+      const lastMonthReviews = employee.reviews.filter((review: ReviewExt) => {
+        const reviewDate = new Date(review.createdAt);
+        return reviewDate >= oneMonthAgo && review.calification >= 4;
+      });
+      const score = lastMonthReviews.length;
+      if (score > highestScore) {
+        highestScore = score;
+        bestEmployee = employee;
+      }
+    });
+    return { employee: bestEmployee, score: highestScore };
+  })();
+
+  const employeesNeedingAttention: EnrichedEmployee[] = (() => {
+    return sortedEmployees
+      .filter(
+        (employee: EnrichedEmployee) => (employee.daysWithoutReview || 30) > 14
+      )
+      .sort(
+        (a: EnrichedEmployee, b: EnrichedEmployee) =>
+          (b.daysWithoutReview || 0) - (a.daysWithoutReview || 0)
+      )
+      .slice(0, 3);
+  })();
 
   return (
     <div className="p-8">
+      {/* Si hay más de un restaurante, mostrar dropdown para seleccionar */}
+      {restaurants.length > 1 && (
+        <div className="mb-4">
+          <Select onValueChange={(val: string) => handleRestaurantSelect(val)}>
+            <SelectTrigger className="bg-white/10 text-white">
+              <SelectValue placeholder="Selecciona restaurante" />
+            </SelectTrigger>
+            <SelectContent>
+              {restaurants.map((r) => (
+                <SelectItem key={r.documentId} value={r.documentId}>
+                  {r.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <Tabs defaultValue="overview">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
@@ -540,7 +592,6 @@ export function TeamContent() {
             </Button>
           </div>
         </div>
-
         <TabsContent value="overview" className="mt-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card className="bg-gradient-to-br from-purple-600/30 to-blue-600/30 border-0">
@@ -552,35 +603,28 @@ export function TeamContent() {
               </CardHeader>
               <CardContent>
                 {employeeOfMonth ? (
-                  <div className="flex items-center">
-                    <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center mr-4">
-                      {employeeOfMonth.photo ? (
-                        <img
-                          src={`${import.meta.env.PUBLIC_API_URL}${
-                            employeeOfMonth.photo?.formats.thumbnail.url
-                          }`}
-                          alt={`${employeeOfMonth.firstName} ${employeeOfMonth.lastName}`}
-                          className="h-16 w-16 rounded-full object-cover"
-                        />
-                      ) : (
-                        <User className="h-8 w-8 text-white" />
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">
-                        {employeeOfMonth.firstName} {employeeOfMonth.lastName}
-                      </h3>
-                      <p className="text-white/70">
-                        {employeeOfMonth.position}
-                      </p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Award className="h-4 w-4 text-yellow-400" />
-                        <span className="text-white/80">
-                          {employeeOfMonthScore} reseñas positivas
-                        </span>
+                  (() => {
+                    const employee: EnrichedEmployee = employeeOfMonth;
+                    return (
+                      <div className="flex items-center">
+                        <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center mr-4">
+                          <User className="h-8 w-8 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-white">
+                            {employee.firstName} {employee.lastName}
+                          </h3>
+                          <p className="text-white/70">{employee.position}</p>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Award className="h-4 w-4 text-yellow-400" />
+                            <span className="text-white/80">
+                              {employeeOfMonthScore} reseñas positivas
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })()
                 ) : (
                   <div className="text-white/70">
                     No hay suficientes datos para determinar el empleado del
@@ -589,7 +633,6 @@ export function TeamContent() {
                 )}
               </CardContent>
             </Card>
-
             <Card className="bg-gradient-to-br from-green-600/30 to-emerald-600/30 border-0">
               <CardHeader>
                 <CardTitle className="text-white">Top Calificaciones</CardTitle>
@@ -611,17 +654,7 @@ export function TeamContent() {
                               #{index + 1}
                             </div>
                             <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2">
-                              {employee.photo ? (
-                                <img
-                                  src={`${import.meta.env.PUBLIC_API_URL}${
-                                    employee.photo?.formats.thumbnail.url
-                                  }`}
-                                  alt={`${employee.firstName} ${employee.lastName}`}
-                                  className="h-8 w-8 rounded-full object-cover"
-                                />
-                              ) : (
-                                <User className="h-4 w-4 text-white" />
-                              )}
+                              <User className="h-4 w-4 text-white" />
                             </div>
                             <div className="text-white">
                               {employee.firstName} {employee.lastName}
@@ -645,7 +678,6 @@ export function TeamContent() {
                 </div>
               </CardContent>
             </Card>
-
             <Card className="bg-gradient-to-br from-orange-600/30 to-red-600/30 border-0">
               <CardHeader>
                 <CardTitle className="text-white">Necesitan Atención</CardTitle>
@@ -655,26 +687,27 @@ export function TeamContent() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {getEmployeesNeedingAttention().length > 0 ? (
-                    getEmployeesNeedingAttention().map(
-                      (employee: EnrichedEmployee) => (
+                  {(() => {
+                    const needing: EnrichedEmployee[] = sortedEmployees
+                      .filter(
+                        (employee: EnrichedEmployee) =>
+                          (employee.daysWithoutReview || 30) > 14
+                      )
+                      .sort(
+                        (a: EnrichedEmployee, b: EnrichedEmployee) =>
+                          (b.daysWithoutReview || 0) -
+                          (a.daysWithoutReview || 0)
+                      )
+                      .slice(0, 3);
+                    if (needing.length > 0) {
+                      return needing.map((employee: EnrichedEmployee) => (
                         <div
                           key={employee.documentId}
                           className="flex items-center justify-between"
                         >
                           <div className="flex items-center">
                             <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2">
-                              {employee.photo ? (
-                                <img
-                                  src={`${import.meta.env.PUBLIC_API_URL}${
-                                    employee.photo?.formats.thumbnail.url
-                                  }`}
-                                  alt={`${employee.firstName} ${employee.lastName}`}
-                                  className="h-8 w-8 rounded-full object-cover"
-                                />
-                              ) : (
-                                <User className="h-4 w-4 text-white" />
-                              )}
+                              <User className="h-4 w-4 text-white" />
                             </div>
                             <div className="text-white">
                               {employee.firstName} {employee.lastName}
@@ -687,18 +720,19 @@ export function TeamContent() {
                             </span>
                           </div>
                         </div>
-                      )
-                    )
-                  ) : (
-                    <div className="text-white/70">
-                      ¡Genial! Todos los empleados tienen reseñas recientes.
-                    </div>
-                  )}
+                      ));
+                    } else {
+                      return (
+                        <div className="text-white/70">
+                          ¡Genial! Todos los empleados tienen reseñas recientes.
+                        </div>
+                      );
+                    }
+                  })()}
                 </div>
               </CardContent>
             </Card>
           </div>
-
           <Card className="bg-white/10 border-0">
             <CardHeader>
               <CardTitle className="text-white">Resumen de Equipo</CardTitle>
@@ -708,7 +742,7 @@ export function TeamContent() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {employees.map((employee: EnrichedEmployee) => (
+                {sortedEmployees.map((employee: EnrichedEmployee) => (
                   <div
                     key={employee.documentId}
                     className="p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
@@ -716,17 +750,7 @@ export function TeamContent() {
                   >
                     <div className="flex items-center gap-3 mb-3">
                       <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                        {employee.photo ? (
-                          <img
-                            src={`${import.meta.env.PUBLIC_API_URL}${
-                              employee.photo?.formats.thumbnail.url
-                            }`}
-                            alt={`${employee.firstName} ${employee.lastName}`}
-                            className="h-10 w-10 rounded-full object-cover"
-                          />
-                        ) : (
-                          <User className="h-5 w-5 text-white" />
-                        )}
+                        <User className="h-5 w-5 text-white" />
                       </div>
                       <div>
                         <h3 className="text-white font-medium">
@@ -747,13 +771,11 @@ export function TeamContent() {
                       <div className="bg-white/5 p-2 rounded">
                         <div className="text-white/60">Calificación</div>
                         <div className="text-white font-medium flex items-center">
-                          {employee.averageRating ? (
-                            <>
-                              {employee.averageRating.toFixed(1)}
-                              <Star className="h-4 w-4 text-yellow-400 ml-1" />
-                            </>
-                          ) : (
-                            '-'
+                          {employee.averageRating
+                            ? employee.averageRating.toFixed(1)
+                            : '-'}
+                          {employee.averageRating && (
+                            <Star className="h-4 w-4 text-yellow-400 ml-1" />
                           )}
                         </div>
                       </div>
@@ -764,7 +786,6 @@ export function TeamContent() {
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value="employees" className="mt-0">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div className="flex flex-wrap items-center gap-3">
@@ -824,7 +845,6 @@ export function TeamContent() {
               </div>
             </div>
           </div>
-
           {viewMode === 'grid' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredEmployees.map((employee: EnrichedEmployee) => (
@@ -837,17 +857,7 @@ export function TeamContent() {
                       <div className="flex justify-between mb-4">
                         <div className="flex items-center gap-4">
                           <div className="h-14 w-14 rounded-full bg-white/20 flex items-center justify-center">
-                            {employee.photo ? (
-                              <img
-                                src={`${import.meta.env.PUBLIC_API_URL}${
-                                  employee.photo?.formats.thumbnail.url
-                                }`}
-                                alt={`${employee.firstName} ${employee.lastName}`}
-                                className="h-14 w-14 rounded-full object-cover"
-                              />
-                            ) : (
-                              <User className="h-7 w-7 text-white" />
-                            )}
+                            <User className="h-7 w-7 text-white" />
                           </div>
                           <div>
                             <h3 className="text-lg font-semibold text-white">
@@ -881,7 +891,6 @@ export function TeamContent() {
                           </Button>
                         </div>
                       </div>
-
                       <div className="grid grid-cols-2 gap-3 mb-4">
                         <div className="bg-white/5 p-3 rounded">
                           <p className="text-white/60 text-sm mb-1">Reseñas</p>
@@ -906,7 +915,6 @@ export function TeamContent() {
                         </div>
                       </div>
                     </div>
-
                     <div className="flex border-t border-white/10">
                       <Button
                         variant="ghost"
@@ -918,9 +926,7 @@ export function TeamContent() {
                       <Button
                         variant="ghost"
                         className="flex items-center justify-center space-x-2 rounded-none text-white/80 h-12 hover:bg-white/10 transition-colors"
-                        onClick={() =>
-                          selectedEmployee && handleGenerateQR(selectedEmployee)
-                        }
+                        onClick={() => handleGenerateQR(employee)}
                       >
                         <QrCode className="h-4 w-4" />
                         <span>Generar QR</span>
@@ -931,7 +937,6 @@ export function TeamContent() {
               ))}
             </div>
           )}
-
           {viewMode === 'leaderboard' && (
             <Card className="bg-white/10 border-0">
               <CardContent className="p-0">
@@ -960,17 +965,7 @@ export function TeamContent() {
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
                                 <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                                  {employee.photo ? (
-                                    <img
-                                      src={`${import.meta.env.PUBLIC_API_URL}${
-                                        employee.photo?.formats.thumbnail.url
-                                      }`}
-                                      alt={`${employee.firstName} ${employee.lastName}`}
-                                      className="h-10 w-10 rounded-full object-cover"
-                                    />
-                                  ) : (
-                                    <User className="h-5 w-5 text-white" />
-                                  )}
+                                  <User className="h-5 w-5 text-white" />
                                 </div>
                                 <div>
                                   <div className="text-white font-medium">
@@ -1024,9 +1019,7 @@ export function TeamContent() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() =>
-                                    employee && handleGenerateQR(employee)
-                                  }
+                                  onClick={() => handleGenerateQR(employee)}
                                   className="text-white/80 hover:text-white hover:bg-white/10"
                                 >
                                   <QrCode className="h-4 w-4" />
@@ -1096,29 +1089,17 @@ export function TeamContent() {
                 </Button>
               </div>
             </DialogTitle>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1">
                 <div className="flex flex-col items-center mb-4">
                   <div className="h-32 w-32 rounded-full bg-white/20 flex items-center justify-center mb-3">
-                    {selectedEmployee.photo ? (
-                      <img
-                        src={`${import.meta.env.PUBLIC_API_URL}${
-                          selectedEmployee.photo?.formats.thumbnail.url
-                        }`}
-                        alt={`${selectedEmployee.firstName} ${selectedEmployee.lastName}`}
-                        className="h-32 w-32 rounded-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-16 w-16 text-white" />
-                    )}
+                    <User className="h-16 w-16 text-white" />
                   </div>
                   <h2 className="text-xl font-bold text-white">
                     {selectedEmployee.firstName} {selectedEmployee.lastName}
                   </h2>
                   <p className="text-white/60">{selectedEmployee.position}</p>
                 </div>
-
                 <div className="space-y-4">
                   <div className="bg-white/5 rounded-lg p-4">
                     <h3 className="text-white/60 mb-2 text-sm">Métricas</h3>
@@ -1144,29 +1125,29 @@ export function TeamContent() {
                       </div>
                     </div>
                   </div>
-
                   <div className="bg-white/5 rounded-lg p-4">
                     <h3 className="text-white/60 mb-2 text-sm">Horarios</h3>
                     <div className="space-y-1">
-                      {selectedEmployee.schedules.map((schedule) => (
-                        <div
-                          key={schedule.documentId}
-                          className="flex justify-between"
-                        >
-                          <span className="text-white capitalize">
-                            {schedule.day}
-                          </span>
-                          <span className="text-white/70">
-                            {schedule.startTime.slice(0, 5)} -{' '}
-                            {schedule.endTime.slice(0, 5)}
-                          </span>
-                        </div>
-                      ))}
+                      {selectedEmployee.schedules.map(
+                        (schedule: LocalSchedule) => (
+                          <div
+                            key={schedule.documentId}
+                            className="flex justify-between"
+                          >
+                            <span className="text-white capitalize">
+                              {schedule.day}
+                            </span>
+                            <span className="text-white/70">
+                              {schedule.startTime.slice(0, 5)} -{' '}
+                              {schedule.endTime.slice(0, 5)}
+                            </span>
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
-
               <div className="md:col-span-2 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium text-white">
@@ -1176,7 +1157,6 @@ export function TeamContent() {
                     {selectedEmployee.reviewCount || 0} total
                   </span>
                 </div>
-
                 {selectedEmployee.reviews &&
                 selectedEmployee.reviews.length > 0 ? (
                   <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
@@ -1186,7 +1166,7 @@ export function TeamContent() {
                           new Date(b.createdAt).getTime() -
                           new Date(a.createdAt).getTime()
                       )
-                      .map((review) => (
+                      .map((review: ReviewExt) => (
                         <div
                           key={review.id}
                           className="bg-white/5 p-4 rounded-lg"
@@ -1222,7 +1202,6 @@ export function TeamContent() {
                     Este empleado aún no tiene reseñas.
                   </div>
                 )}
-
                 <div className="bg-white/5 p-4 rounded-lg">
                   <h3 className="text-white/60 mb-3 text-sm">
                     Distribución de calificaciones
@@ -1262,7 +1241,6 @@ export function TeamContent() {
           </DialogContent>
         </Dialog>
       )}
-
       {restaurantId && (
         <AddEmployeeForm
           isOpen={isAddingEmployee || !!editingEmployee}
@@ -1276,10 +1254,12 @@ export function TeamContent() {
             editingEmployee
               ? {
                   ...editingEmployee,
-                  schedules: editingEmployee.schedules.map((s) => ({
-                    ...s,
-                    id: s.id.toString(),
-                  })),
+                  schedules: editingEmployee.schedules.map(
+                    (s: LocalSchedule) => ({
+                      ...s,
+                      id: s.id.toString(),
+                    })
+                  ),
                 }
               : undefined
           }
