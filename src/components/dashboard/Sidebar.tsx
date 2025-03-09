@@ -4,6 +4,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { auth } from '../../lib/firebase';
 import { signOut } from 'firebase/auth';
 import { Button } from '../ui/Button';
+import { clearUserRestaurants } from '../../lib/restaurantStore';
 import {
   Home,
   MessageSquare,
@@ -85,6 +86,7 @@ export function Sidebar() {
 
   const handleLogout = async () => {
     try {
+      clearUserRestaurants(); // Limpiar selecciones antes de cerrar sesión
       if (!auth) throw new Error('Firebase not initialized');
       await signOut(auth);
       window.location.href = '/login';

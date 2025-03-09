@@ -157,13 +157,37 @@ export function TeamContent() {
           auth.currentUser.uid
         );
         setRestaurants(ownerRestaurants);
+
+        // Guardar lista completa de restaurantes
+        setRestaurantsList(ownerRestaurants);
+
+        // Si solo hay un restaurante, seleccionarlo automáticamente
         if (ownerRestaurants.length === 1) {
-          setCurrentRestaurant(ownerRestaurants[0]);
-          setRestaurantId(ownerRestaurants[0].documentId);
-          setSelectedRestaurant(ownerRestaurants[0]);
+          const singleRestaurant = ownerRestaurants[0];
+          setCurrentRestaurant(singleRestaurant);
+          setRestaurantId(singleRestaurant.documentId);
+          setSelectedRestaurant(singleRestaurant);
+        } else if (ownerRestaurants.length > 0) {
+          // Verificar si el restaurante seleccionado pertenece al usuario actual
+          const currentSelected = getSelectedRestaurant();
+          if (currentSelected) {
+            const isValid = ownerRestaurants.some(
+              (r) => r.documentId === currentSelected.documentId
+            );
+
+            if (isValid) {
+              // Si es válido, usarlo
+              setCurrentRestaurant(currentSelected);
+              setRestaurantId(currentSelected.documentId);
+            } else {
+              // Si no es válido, no seleccionar ninguno
+              clearSelectedRestaurant();
+            }
+          }
         }
       }
     };
+
     fetchRestaurants();
   }, []);
 

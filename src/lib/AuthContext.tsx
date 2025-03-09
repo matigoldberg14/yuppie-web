@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { auth } from './firebase';
+import { clearUserRestaurants } from './restaurantStore';
 
 interface AuthContextType {
   user: User | null;
@@ -19,10 +20,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading: true,
   });
 
+  // En el useEffect del onAuthStateChanged
   useEffect(() => {
-    // Suscribirse a los cambios de autenticación
     const unsubscribe = auth?.onAuthStateChanged((user) => {
       console.log('Estado de auth actualizado:', user?.email);
+
+      // Si el usuario está cerrando sesión, limpiar las selecciones
+      if (!user) {
+        clearUserRestaurants();
+      }
+
       setState({
         user,
         loading: false,

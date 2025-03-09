@@ -5,8 +5,10 @@ import { Sidebar } from '../../components/dashboard/Sidebar';
 import { DashboardContent } from '../../components/dashboard/DashboardContent';
 import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 import SelectedRestaurantHeader from '../../components/dashboard/SelectedRestaurantHeader';
+import RestaurantValidator from '../../components/dashboard/RestaurantValidator';
 ---
 <DashboardLayout title="Dashboard | Yuppie">
+  <RestaurantValidator client:only="react" />
   <ProtectedRoute client:load>
     <div class="min-h-screen flex">
       <Sidebar client:load />
