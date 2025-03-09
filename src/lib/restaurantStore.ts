@@ -126,9 +126,17 @@ export function setRestaurantsList(restaurants: Restaurant[]): void {
       getKey(RESTAURANTS_LIST_KEY),
       JSON.stringify(restaurants)
     );
+
+    // Selección automática si solo hay un restaurante y ninguno seleccionado
+    if (restaurants.length === 1 && !getSelectedRestaurant()) {
+      console.log(
+        'restaurantStore: Auto-seleccionando único restaurante:',
+        restaurants[0].name
+      );
+      setSelectedRestaurant(restaurants[0]);
+    }
   }
 }
-
 // Obtener la lista completa de restaurantes
 export function getRestaurantsList(): Restaurant[] {
   if (typeof window === 'undefined') return [];

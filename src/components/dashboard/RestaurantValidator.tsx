@@ -30,18 +30,26 @@ const RestaurantValidator: React.FC = () => {
           return;
         }
 
-        // Obtener restaurante seleccionado actualmente
-        const currentSelected = getSelectedRestaurant();
-
         // Si solo hay un restaurante, seleccionarlo automáticamente
         if (ownerRestaurants.length === 1) {
+          // Importante: hacer esto de manera inmediata para evitar parpadeos
           setSelectedRestaurant(ownerRestaurants[0]);
+          console.log(
+            'RestaurantValidator: Auto-seleccionado restaurante único:',
+            ownerRestaurants[0].name
+          );
           setIsValidating(false);
           return;
         }
 
-        // Si hay más de un restaurante pero ninguno seleccionado, redirigir
+        // Si hay múltiples restaurantes, verificar la selección
+        const currentSelected = getSelectedRestaurant();
+
+        // Si no hay seleccionado y hay múltiples, redirigir
         if (!currentSelected) {
+          console.log(
+            'RestaurantValidator: Múltiples restaurantes sin selección, redirigiendo...'
+          );
           window.location.href = '/dashboard/restaurants';
           return;
         }
@@ -52,11 +60,17 @@ const RestaurantValidator: React.FC = () => {
         );
 
         if (!isValid) {
-          // Si no es válido, redirigir a selección
+          console.log(
+            'RestaurantValidator: Restaurante seleccionado no válido, redirigiendo...'
+          );
           window.location.href = '/dashboard/restaurants';
           return;
         }
 
+        console.log(
+          'RestaurantValidator: Restaurante válido:',
+          currentSelected.name
+        );
         setIsValidating(false);
       } catch (error) {
         console.error('Error validating restaurant:', error);

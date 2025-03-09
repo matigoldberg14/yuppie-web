@@ -5,6 +5,8 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/Button';
 import { Building2, MapPin, ExternalLink } from 'lucide-react';
 import { getSelectedRestaurant } from '../../lib/restaurantStore';
+import { auth } from '../../lib/firebase';
+import { getOwnerRestaurants } from '../../services/api';
 
 // Function to get a hardcoded city for a restaurant
 const getCiudad = (restaurantId: number) => {
@@ -16,6 +18,33 @@ const SelectedRestaurantHeader: React.FC = () => {
   const [currentRestaurant, setCurrentRestaurant] = useState(
     getSelectedRestaurant()
   );
+  const [loading, setLoading] = useState(true);
+  const [hasMultipleRestaurants, setHasMultipleRestaurants] = useState(false);
+
+  // Verificar al inicio si el usuario tiene un solo restaurante
+  useEffect(() => {
+    const checkSingleRestaurant = async () => {
+      if (auth?.currentUser?.uid) {
+        const ownerRestaurants = await getOwnerRestaurants(
+          auth.currentUser.uid
+        );
+
+        // Si tiene un solo restaurante, no deberíamos mostrar mensaje de error
+        setHasMultipleRestaurants(ownerRestaurants.length > 1);
+
+        // Si no hay restaurante seleccionado pero solo tiene uno, seleccionarlo automáticamente
+        if (!currentRestaurant && ownerRestaurants.length === 1) {
+          setCurrentRestaurant(ownerRestaurants[0]);
+        }
+
+        setLoading(false);
+      } else {
+        setLoading(false);
+      }
+    };
+
+    checkSingleRestaurant();
+  }, [currentRestaurant]);
 
   // Listen for changes in localStorage or custom events
   useEffect(() => {
@@ -45,7 +74,14 @@ const SelectedRestaurantHeader: React.FC = () => {
     };
   }, []);
 
-  if (!currentRestaurant) {
+  if (loading) {
+    return (
+      <div className="mb-6 p-4">Cargando información del restaurante...</div>
+    );
+  }
+
+  // Solo mostrar el mensaje de error si tiene múltiples restaurantes y ninguno seleccionado
+  if (!currentRestaurant && hasMultipleRestaurants) {
     return (
       <Card className="mb-6 border-yellow-500">
         <CardContent className="p-4">
@@ -71,6 +107,12 @@ const SelectedRestaurantHeader: React.FC = () => {
     );
   }
 
+  // Si no hay restaurante seleccionado y tiene un solo restaurante,
+  // no mostramos nada para evitar parpadeos mientras se selecciona automáticamente
+  if (!currentRestaurant) {
+    return null;
+  }
+
   return (
     <Card className="mb-6 bg-white/10 border-0">
       <CardContent className="p-4">
@@ -90,14 +132,16 @@ const SelectedRestaurantHeader: React.FC = () => {
               </p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-white hover:bg-white/10"
-            onClick={() => (window.location.href = '/dashboard/restaurants')}
-          >
-            Cambiar Restaurante <ExternalLink className="ml-1 h-3 w-3" />
-          </Button>
+          {hasMultipleRestaurants && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/10"
+              onClick={() => (window.location.href = '/dashboard/restaurants')}
+            >
+              Cambiar Restaurante <ExternalLink className="ml-1 h-3 w-3" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
