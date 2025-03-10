@@ -1,50 +1,85 @@
 // src/types/metrics.ts
-export type TimeFilter = 'today' | 'week' | 'month' | 'year' | 'custom';
+// Type for rating data by period
+export interface RatingByPeriod {
+  day: number;
+  week: number;
+  month: number;
+  year: number;
+}
 
+// Type for reviews data by period
+export interface ReviewsByPeriod {
+  day: number;
+  week: number;
+  month: number;
+  year: number;
+}
+
+// Type for top employee
+export interface TopEmployee {
+  id: string;
+  name: string;
+  position: string;
+  rating: number;
+  reviews: number;
+}
+
+// Type for restaurant metrics
+export interface RestaurantMetrics {
+  documentId: string;
+  name: string;
+  totalReviews: number;
+  averageRating: number;
+  employeeCount: number;
+  totalTaps: number;
+  conversionRate: number;
+  positiveReviewsPercent: number;
+  reviewsByPeriod: ReviewsByPeriod;
+  ratingByPeriod: RatingByPeriod;
+  topEmployees: TopEmployee[];
+}
+
+// Type for time filter
+export type TimeFilter = 'day' | 'week' | 'month' | 'year';
+
+// Type for metrics data
 export interface MetricsData {
   totalReviews: number;
   averageRating: number;
   totalTaps: number;
   responseRate: number;
-  reviewsByType: {
-    type: string;
-    count: number;
-    percentage: number;
-  }[];
+  googleSentRate: number;
+  trends: {
+    volumeTrend: number;
+    ratingTrend: number;
+  };
   ratingsDistribution: {
     rating: number;
     count: number;
-    percentage: number;
   }[];
-  recentReviews: {
-    id: number;
-    calification: number;
-    comment: string;
-    email: string;
-    date: string;
+  reviewsByType: {
+    type: string;
+    count: number;
   }[];
-  googleSentRate: number;
-  employeePerformance: {
-    employeeId: number;
-    name: string;
-    averageRating: number;
-    totalReviews: number;
-    responseTime: number;
-  }[];
-  timeOfDayAnalysis: {
-    morning: number;
-    afternoon: number;
-    evening: number;
-  };
-  weekdayAnalysis: {
-    [key: string]: {
+  weekdayAnalysis: Record<
+    string,
+    {
       count: number;
       averageRating: number;
-    };
-  };
-  trends: {
-    ratingTrend: number;
-    volumeTrend: number;
-    responseTimeTrend: number;
-  };
+    }
+  >;
+  hourlyAnalysis?: Record<
+    string,
+    {
+      count: number;
+      averageRating: number;
+    }
+  >;
+}
+
+// Type for metrics history
+export interface MetricsHistory {
+  dates: string[];
+  reviews: number[];
+  ratings: number[];
 }

@@ -10,6 +10,8 @@ import {
   updateEmployee,
   getRestaurantByFirebaseUID,
 } from '../../services/api';
+import type { Restaurant as RestaurantStore } from '../../lib/restaurantStore';
+import { clearSelectedRestaurant } from '../../lib/restaurantStore';
 import {
   Plus,
   User,
@@ -172,9 +174,9 @@ export function TeamContent() {
           const currentSelected = getSelectedRestaurant();
           if (currentSelected) {
             const isValid = ownerRestaurants.some(
-              (r) => r.documentId === currentSelected.documentId
+              (r: RestaurantStore) =>
+                r.documentId === currentSelected.documentId
             );
-
             if (isValid) {
               // Si es válido, usarlo
               setCurrentRestaurant(currentSelected);
@@ -197,7 +199,8 @@ export function TeamContent() {
     if (selected) {
       setCurrentRestaurant(selected);
       setRestaurantId(selected.documentId);
-      setSelectedRestaurant(selected);
+      // Forzamos que el objeto tenga 'linkMaps' (si no existe, lo asignamos como cadena vacía)
+      setSelectedRestaurant({ ...selected, linkMaps: selected.linkMaps ?? '' });
     }
   };
 

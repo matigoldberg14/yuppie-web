@@ -1,19 +1,26 @@
 // src/components/dashboard/RestaurantsOverview.tsx
 import React, { useState, useEffect } from 'react';
 import { auth } from '../../lib/firebase';
-import { getOwnerRestaurants } from '../../services/api';
+import {
+  getOwnerRestaurants,
+  getRestaurantReviews,
+  getEmployeesByRestaurant,
+} from '../../services/api';
 import { RestaurantDetail } from './RestaurantDetail';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/Button';
+import type { Review } from '../../types/reviews';
+import type { Employee } from '../../types/employee';
 import {
   Building2,
   MapPin,
   Star,
   Users,
-  TrendingUp,
-  ShoppingBag,
+  MessageSquare,
+  Zap,
   Search,
+  RefreshCw,
 } from 'lucide-react';
 import { Input } from '../ui/input';
 import AdvancedComparison from './AdvancedComparison';
@@ -24,6 +31,7 @@ import {
   toggleCompareRestaurant as toggleCompare,
   setRestaurantsList,
 } from '../../lib/restaurantStore';
+import { useToast } from '../ui/use-toast';
 
 export interface Restaurant {
   id: number;
@@ -34,10 +42,15 @@ export interface Restaurant {
     firstName: string;
     lastName: string;
   };
-  ingresos?: number;
-  clientes?: number;
-  satisfaccion?: number;
-  ocupacion?: number;
+  linkMaps: string;
+}
+
+// Interfaz para las métricas calculadas
+interface RestaurantMetric {
+  totalReviews: number;
+  averageRating: number;
+  conversionRate: number;
+  employeeCount: number;
 }
 
 // Función para obtener una ciudad hardcodeada para un restaurante
@@ -49,9 +62,14 @@ const getCiudad = (restaurantId: number) => {
 export function RestaurantsOverview() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [metricsLoading, setMetricsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'list' | 'compare'>('list');
   const [searchTerm, setSearchTerm] = useState('');
+  const [restaurantMetrics, setRestaurantMetrics] = useState<
+    Record<string, RestaurantMetric>
+  >({});
+  const { toast } = useToast();
 
   // Estados para manejar la selección de restaurantes
   const [currentRestaurant, setCurrentRestaurantState] =
@@ -109,10 +127,8 @@ export function RestaurantsOverview() {
 
   // Cargar datos de restaurantes
   useEffect(() => {
-    // Ahora obtenemos el usuario fuera del hook
     const fetchRestaurants = async () => {
       try {
-        // Añadimos más logs para depuración
         console.log('Iniciando fetchRestaurants');
 
         const uid = auth?.currentUser?.uid;
@@ -135,35 +151,21 @@ export function RestaurantsOverview() {
           return;
         }
 
-        // Enhance restaurant data with sample metrics if they don't exist
-        const enhancedData = data.map((restaurant: Restaurant) => {
-          console.log('Procesando restaurante:', restaurant);
-          return {
-            ...restaurant,
-            ingresos:
-              restaurant.ingresos || Math.floor(Math.random() * 100000) + 50000,
-            clientes:
-              restaurant.clientes || Math.floor(Math.random() * 3000) + 1000,
-            satisfaccion:
-              restaurant.satisfaccion || (Math.random() * 2 + 3).toFixed(1),
-            ocupacion:
-              restaurant.ocupacion || Math.floor(Math.random() * 30) + 60,
-          };
-        });
-
-        console.log('Datos mejorados:', enhancedData);
-        setRestaurants(enhancedData);
-        setRestaurantsList(enhancedData);
+        setRestaurants(data);
+        setRestaurantsList(data);
 
         // Si no hay restaurante seleccionado y tenemos datos, seleccionar el primero
         const currentSelected = getSelectedRestaurant();
         console.log('Restaurante actualmente seleccionado:', currentSelected);
 
-        if (!currentSelected && enhancedData.length > 0) {
-          console.log('Seleccionando primer restaurante:', enhancedData[0]);
-          setSelectedRestaurant(enhancedData[0]);
-          setCurrentRestaurantState(enhancedData[0]);
+        if (!currentSelected && data.length > 0) {
+          console.log('Seleccionando primer restaurante:', data[0]);
+          setSelectedRestaurant(data[0]);
+          setCurrentRestaurantState(data[0]);
         }
+
+        // Cargar métricas para todos los restaurantes
+        await loadRestaurantMetrics(data);
       } catch (err) {
         console.error('Error en fetchRestaurants:', err);
         setError('Error al obtener los restaurantes');
@@ -172,23 +174,18 @@ export function RestaurantsOverview() {
       }
     };
 
-    // Asegurarnos de que el usuario esté autenticado antes de cargar
     const checkAuthAndFetch = () => {
       if (auth?.currentUser) {
         console.log('Usuario autenticado, cargando restaurantes');
         fetchRestaurants();
       } else {
         console.log('Usuario no autenticado, esperando...');
-        // Podríamos añadir más lógica aquí si es necesario, por ejemplo una redirección
-        // Por ahora solo establecemos que no hay carga
         setLoading(false);
       }
     };
 
-    // Intentamos cargar inmediatamente, pero también nos suscribimos a cambios de auth
     checkAuthAndFetch();
 
-    // Suscribirse a cambios en el estado de autenticación
     const unsubscribe = auth?.onAuthStateChanged((user) => {
       console.log(
         'Estado de autenticación cambiado:',
@@ -205,6 +202,56 @@ export function RestaurantsOverview() {
       if (unsubscribe) unsubscribe();
     };
   }, []);
+
+  // Cargar métricas para los restaurantes
+  const loadRestaurantMetrics = async (restaurants: Restaurant[]) => {
+    setMetricsLoading(true);
+    const metrics: Record<string, RestaurantMetric> = {};
+
+    try {
+      for (const restaurant of restaurants) {
+        // Obtener reseñas reales
+        const reviews: Review[] = await getRestaurantReviews(
+          restaurant.documentId
+        );
+
+        // Obtener empleados reales
+        const employees: Employee[] = await getEmployeesByRestaurant(
+          restaurant.documentId
+        );
+
+        // Calcular métricas reales
+        const totalReviews = reviews.length;
+        const totalRating = reviews.reduce(
+          (sum: number, review: Review) => sum + review.calification,
+          0
+        );
+        const averageRating = totalReviews > 0 ? totalRating / totalReviews : 0;
+        const totalTaps = parseInt(restaurant.taps || '0');
+        const conversionRate =
+          totalTaps > 0 ? (totalReviews / totalTaps) * 100 : 0;
+        const employeeCount = employees.length;
+
+        metrics[restaurant.documentId] = {
+          totalReviews,
+          averageRating,
+          conversionRate,
+          employeeCount,
+        };
+      }
+
+      setRestaurantMetrics(metrics);
+    } catch (error) {
+      console.error('Error cargando métricas:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar las métricas de los restaurantes',
+        variant: 'destructive',
+      });
+    } finally {
+      setMetricsLoading(false);
+    }
+  };
 
   // Manejar selección de restaurante
   const handleSelectRestaurant = (restaurant: Restaurant) => {
@@ -318,34 +365,72 @@ export function RestaurantsOverview() {
                 <CardContent>
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
-                      <TrendingUp className="h-4 w-4 mb-1 text-green-400" />
-                      <div className="text-xs text-white/60">Ingresos</div>
-                      <div className="font-medium text-white">
-                        ${restaurant.ingresos?.toLocaleString() ?? 'N/A'}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
-                      <Users className="h-4 w-4 mb-1 text-blue-400" />
-                      <div className="text-xs text-white/60">Clientes</div>
-                      <div className="font-medium text-white">
-                        {restaurant.clientes?.toLocaleString() ?? 'N/A'}
-                      </div>
+                      <MessageSquare className="h-4 w-4 mb-1 text-blue-400" />
+                      <div className="text-xs text-white/60">Total Reseñas</div>
+                      {metricsLoading ? (
+                        <div className="h-5 flex items-center">
+                          <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
+                        </div>
+                      ) : (
+                        <div className="font-medium text-white">
+                          {restaurantMetrics[restaurant.documentId]
+                            ?.totalReviews || 0}
+                        </div>
+                      )}
                     </div>
                     <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
                       <Star className="h-4 w-4 mb-1 text-yellow-400" />
-                      <div className="text-xs text-white/60">Satisfacción</div>
-                      <div className="font-medium text-white">
-                        {restaurant.satisfaccion ?? 'N/A'}
+                      <div className="text-xs text-white/60">
+                        Rating Promedio
                       </div>
+                      {metricsLoading ? (
+                        <div className="h-5 flex items-center">
+                          <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
+                        </div>
+                      ) : (
+                        <div className="font-medium text-white">
+                          {restaurantMetrics[restaurant.documentId]
+                            ? restaurantMetrics[
+                                restaurant.documentId
+                              ].averageRating.toFixed(1)
+                            : '0'}
+                          /5
+                        </div>
+                      )}
                     </div>
                     <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
-                      <ShoppingBag className="h-4 w-4 mb-1 text-purple-400" />
-                      <div className="text-xs text-white/60">Ocupación</div>
-                      <div className="font-medium text-white">
-                        {restaurant.ocupacion
-                          ? `${restaurant.ocupacion}%`
-                          : 'N/A'}
+                      <Zap className="h-4 w-4 mb-1 text-amber-400" />
+                      <div className="text-xs text-white/60">
+                        Tasa de Conversión
                       </div>
+                      {metricsLoading ? (
+                        <div className="h-5 flex items-center">
+                          <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
+                        </div>
+                      ) : (
+                        <div className="font-medium text-white">
+                          {restaurantMetrics[restaurant.documentId]
+                            ? restaurantMetrics[
+                                restaurant.documentId
+                              ].conversionRate.toFixed(1)
+                            : '0'}
+                          %
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
+                      <Users className="h-4 w-4 mb-1 text-purple-400" />
+                      <div className="text-xs text-white/60">Equipo</div>
+                      {metricsLoading ? (
+                        <div className="h-5 flex items-center">
+                          <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
+                        </div>
+                      ) : (
+                        <div className="font-medium text-white">
+                          {restaurantMetrics[restaurant.documentId]
+                            ?.employeeCount || 0}
+                        </div>
+                      )}
                     </div>
                   </div>
 

@@ -7,6 +7,7 @@ export interface Restaurant {
   documentId: string;
   name: string;
   taps: string;
+  linkMaps: string;
   owner: {
     firstName: string;
     lastName: string;
@@ -16,7 +17,6 @@ export interface Restaurant {
   satisfaccion?: number;
   ocupacion?: number;
 }
-
 // Claves para localStorage
 const SELECTED_RESTAURANT_KEY = 'selectedRestaurant';
 const COMPARE_RESTAURANTS_KEY = 'compareRestaurants';
