@@ -10,7 +10,7 @@ import { getOwnerRestaurants } from '../../services/api';
 
 // Function to get a hardcoded city for a restaurant
 const getCiudad = (restaurantId: number) => {
-  const cities = ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Bilbao'];
+  const cities = ['CABA', 'CABA', 'CABA', 'CABA', 'CABA'];
   return cities[restaurantId % cities.length];
 };
 

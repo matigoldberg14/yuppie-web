@@ -129,7 +129,7 @@ const COLORS = [
 
 // Cities mapping for demo purposes
 // This simulates geolocation data that would come from a real API
-const CITIES = ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Bilbao'];
+const CITIES = ['CABA', 'CABA', 'CABA', 'CABA', 'CABA'];
 
 // Función mejorada que acepta tanto un objeto Restaurant como un ID
 const getCiudad = (restaurantOrId: Restaurant | number): string => {

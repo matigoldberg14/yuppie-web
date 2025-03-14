@@ -169,6 +169,6 @@ export function exportRestaurantComparison(
 
 // Función auxiliar getCiudad para compatibilidad con código existente
 function getCiudad(restaurantId: number): string {
-  const cities = ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Bilbao'];
+  const cities = ['CABA', 'CABA', 'CABA', 'CABA', 'CABA'];
   return cities[restaurantId % cities.length];
 }
