@@ -86,6 +86,7 @@ import type { Employee } from '../../types/employee';
 import type { Review } from '../../types/reviews';
 import type { RestaurantMetrics } from '../../types/metrics';
 import RestaurantMap from './RestaurantMap';
+import { formatInsightText } from '../../utils/formatInsights';
 
 export interface Restaurant {
   id: number;
@@ -115,6 +116,25 @@ export interface Restaurant {
 
 interface AdvancedComparisonProps {
   restaurants: Restaurant[];
+}
+
+const styleElement = document.createElement('style');
+styleElement.textContent = `
+  .insight-content p {
+    margin-bottom: 0.75rem;
+  }
+  
+  .insight-content strong {
+    color: white;
+    font-weight: 600;
+  }
+  
+  .insight-content p:last-child {
+    margin-bottom: 0;
+  }
+`;
+if (typeof document !== 'undefined') {
+  document.head.appendChild(styleElement);
 }
 
 // Colors for the charts
@@ -164,6 +184,7 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
   const [restaurantMetrics, setRestaurantMetrics] = useState<
     Record<string, RestaurantMetrics>
   >({});
+
   const [allReviews, setAllReviews] = useState<Record<string, Review[]>>({});
   const [allEmployees, setAllEmployees] = useState<Record<string, Employee[]>>(
     {}
@@ -2159,7 +2180,12 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
                         : 'Oportunidades'}
                     </h3>
                   </div>
-                  <p className="text-white/80 whitespace-pre-line">{insight}</p>
+                  <div
+                    className="text-white/80 space-y-2 insight-content"
+                    dangerouslySetInnerHTML={{
+                      __html: formatInsightText(insight),
+                    }}
+                  />
                 </div>
               ))}
             </div>
