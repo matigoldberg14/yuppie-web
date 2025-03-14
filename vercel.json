@@ -3,7 +3,6 @@
   "buildCommand": "npm ci && npm run build",
   "devCommand": "npm run dev",
   "framework": "astro",
-  "nodeVersion": "18.x",
   "headers": [
     {
       "source": "/(.*)",
