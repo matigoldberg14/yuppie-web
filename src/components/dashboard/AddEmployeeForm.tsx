@@ -214,37 +214,75 @@ export default function AddEmployeeForm({
                 <Label htmlFor="firstName" className="text-white">
                   Nombre *
                 </Label>
-                <Input
-                  id="firstName"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className="bg-white/10 border-white/20 text-white"
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="bg-white/10 border-white/20 text-white pr-10"
+                    required
+                  />
+                  {firstName && (
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"
+                      onClick={() => setFirstName('')}
+                      aria-label="Borrar nombre"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
+
               <div>
                 <Label htmlFor="lastName" className="text-white">
                   Apellido *
                 </Label>
-                <Input
-                  id="lastName"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className="bg-white/10 border-white/20 text-white"
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="bg-white/10 border-white/20 text-white pr-10"
+                    required
+                  />
+                  {lastName && (
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"
+                      onClick={() => setLastName('')}
+                      aria-label="Borrar apellido"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
+
               <div>
                 <Label htmlFor="position" className="text-white">
                   Cargo *
                 </Label>
-                <Input
-                  id="position"
-                  value={position}
-                  onChange={(e) => setPosition(e.target.value)}
-                  className="bg-white/10 border-white/20 text-white"
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="position"
+                    value={position}
+                    onChange={(e) => setPosition(e.target.value)}
+                    className="bg-white/10 border-white/20 text-white pr-10"
+                    required
+                  />
+                  {position && (
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"
+                      onClick={() => setPosition('')}
+                      aria-label="Borrar cargo"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             <div className="md:col-span-2 space-y-4">

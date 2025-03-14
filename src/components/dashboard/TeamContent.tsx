@@ -350,7 +350,28 @@ export function TeamContent() {
       .slice(0, 3);
   };
 
-  const topRatedEmployees = getTopRatedEmployees();
+  const topRatedEmployees: EnrichedEmployee[] = (() => {
+    try {
+      return sortedEmployees
+        .filter((employee: EnrichedEmployee) => {
+          const reviewCount = employee.reviewCount;
+          return (
+            typeof reviewCount === 'number' &&
+            !isNaN(reviewCount) &&
+            reviewCount >= 3
+          );
+        })
+        .sort((a: EnrichedEmployee, b: EnrichedEmployee) => {
+          const ratingA = a.averageRating || 0;
+          const ratingB = b.averageRating || 0;
+          return ratingB - ratingA;
+        })
+        .slice(0, 3);
+    } catch (error) {
+      console.error('Error obteniendo empleados mejor calificados:', error);
+      return [];
+    }
+  })();
 
   // Para agregar un empleado (forzamos photo a null)
   const handleAddEmployee = async (data: {
@@ -530,31 +551,65 @@ export function TeamContent() {
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     let bestEmployee: EnrichedEmployee | null = null;
     let highestScore = -1;
+
     sortedEmployees.forEach((employee: EnrichedEmployee) => {
-      if (!employee.reviews) return;
-      const lastMonthReviews = employee.reviews.filter((review: ReviewExt) => {
-        const reviewDate = new Date(review.createdAt);
-        return reviewDate >= oneMonthAgo && review.calification >= 4;
-      });
-      const score = lastMonthReviews.length;
-      if (score > highestScore) {
-        highestScore = score;
-        bestEmployee = employee;
+      // Verificación de seguridad para reviews
+      if (!employee.reviews || !Array.isArray(employee.reviews)) return;
+
+      try {
+        const lastMonthReviews = employee.reviews.filter(
+          (review: ReviewExt) => {
+            if (!review || !review.createdAt) return false;
+
+            try {
+              const reviewDate = new Date(review.createdAt);
+              return (
+                !isNaN(reviewDate.getTime()) &&
+                reviewDate >= oneMonthAgo &&
+                review.calification >= 4
+              );
+            } catch (e) {
+              console.error('Error al procesar fecha:', e);
+              return false;
+            }
+          }
+        );
+
+        const score = lastMonthReviews.length;
+        if (score > highestScore) {
+          highestScore = score;
+          bestEmployee = employee;
+        }
+      } catch (error) {
+        console.error('Error procesando empleado:', employee.documentId, error);
       }
     });
+
     return { employee: bestEmployee, score: highestScore };
   })();
 
+  // Empleados que necesitan atención - implementación mejorada
   const employeesNeedingAttention: EnrichedEmployee[] = (() => {
-    return sortedEmployees
-      .filter(
-        (employee: EnrichedEmployee) => (employee.daysWithoutReview || 30) > 14
-      )
-      .sort(
-        (a: EnrichedEmployee, b: EnrichedEmployee) =>
-          (b.daysWithoutReview || 0) - (a.daysWithoutReview || 0)
-      )
-      .slice(0, 3);
+    try {
+      return sortedEmployees
+        .filter((employee: EnrichedEmployee) => {
+          // Asegurarse de que daysWithoutReview sea un número válido
+          const days = employee.daysWithoutReview;
+          return typeof days === 'number' && !isNaN(days) && days > 14;
+        })
+        .sort((a: EnrichedEmployee, b: EnrichedEmployee) => {
+          const daysA = a.daysWithoutReview || 0;
+          const daysB = b.daysWithoutReview || 0;
+          return daysB - daysA;
+        })
+        .slice(0, 3);
+    } catch (error) {
+      console.error(
+        'Error obteniendo empleados que necesitan atención:',
+        error
+      );
+      return [];
+    }
   })();
 
   return (

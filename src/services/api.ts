@@ -153,13 +153,16 @@ export async function incrementTaps(documentId: string) {
     console.log('Restaurant obtenido:', restaurant);
 
     // Leer taps actual del objeto obtenido
-    const currentTaps = parseInt(restaurant.taps || '0');
+    const currentTaps = parseInt(
+      restaurant.attributes?.taps || restaurant.taps || '0'
+    );
     const newTaps = currentTaps + 1;
     console.log('Actualizando taps de:', currentTaps, 'a:', newTaps);
 
-    // Actualizar taps usando el documentId en la URL (ya que funciona en tu entorno)
+    // Actualizar usando el ID numérico, no el documentId
+    const restaurantId = restaurant.id;
     const updateResponse = await fetch(
-      `${API_CONFIG.baseUrl}/restaurants/${documentId}`,
+      `${API_CONFIG.baseUrl}/restaurants/${restaurantId}`,
       {
         method: 'PUT',
         headers: {
@@ -170,6 +173,7 @@ export async function incrementTaps(documentId: string) {
         }),
       }
     );
+
     if (!updateResponse.ok) {
       throw new Error(
         `Error actualizando taps: ${await updateResponse.text()}`
