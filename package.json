@@ -7,8 +7,7 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro",
-    "postinstall": "astro telemetry disable"
+    "astro": "astro"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
@@ -63,7 +62,7 @@
     "shadcn-ui": "^0.9.4",
     "tailwind-merge": "^2.2.1",
     "tailwindcss": "^3.4.1",
-    "vite": "^6.2.2",
+    "vite": "^5.1.4",
     "xlsx": "^0.18.5",
     "zod": "^3.22.4"
   },

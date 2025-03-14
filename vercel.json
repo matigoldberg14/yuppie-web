@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm ci && npm run build",
+  "buildCommand": "npm ci && astro telemetry disable && npm run build",
   "devCommand": "npm run dev",
   "framework": "astro",
   "headers": [
