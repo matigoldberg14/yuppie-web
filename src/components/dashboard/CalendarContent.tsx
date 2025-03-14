@@ -107,10 +107,10 @@ export function CalendarContent() {
     <div className="p-6">
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white">Calendario</h1>
-        <Button variant="primary">
+        {/*        <Button variant="primary">
           <Plus className="mr-2 h-4 w-4" />
           Nuevo evento
-        </Button>
+        </Button> */}
       </header>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 bg-white/10 border-0">
@@ -138,7 +138,7 @@ export function CalendarContent() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 ">
               {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
                 <div key={day} className="p-2 text-center text-white/60">
                   {day}
@@ -174,19 +174,18 @@ export function CalendarContent() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-white/10 border-0">
+        {/*         <Card className="bg-white/10 border-0">
           <CardHeader>
             <CardTitle className="text-white">Próximos eventos</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Aquí podrías listar eventos reales */}
               <div className="text-white/60 text-center py-8">
                 Sin eventos próximos.
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </div>
   );
