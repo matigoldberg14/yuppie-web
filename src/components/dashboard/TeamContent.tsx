@@ -466,19 +466,6 @@ export function TeamContent() {
     }
   };
 
-  const generateEmployeeQRUrl = (employeeId: string) => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/rating?local=${restaurantId}&employee=${employeeId}`;
-  };
-
-  const handleGenerateQR = (employee: EnrichedEmployee) => {
-    const url = generateEmployeeQRUrl(employee.documentId);
-    prompt(
-      `URL para escanear y dejar reseña para ${employee.firstName} ${employee.lastName}:`,
-      url
-    );
-  };
-
   const handleExportEmployeesData = () => {
     const exportData = employees.map((employee: EnrichedEmployee) => ({
       Nombre: `${employee.firstName} ${employee.lastName}`,
@@ -491,8 +478,6 @@ export function TeamContent() {
         ? new Date(employee.lastReviewDate).toLocaleDateString()
         : 'N/A',
       'Días Sin Reseña': employee.daysWithoutReview || 'N/A',
-      ID: employee.documentId,
-      'URL de Reseña': generateEmployeeQRUrl(employee.documentId),
     }));
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -503,8 +488,6 @@ export function TeamContent() {
       { wch: 20 },
       { wch: 15 },
       { wch: 15 },
-      { wch: 25 },
-      { wch: 60 },
     ];
     ws['!cols'] = columnWidths;
     XLSX.utils.book_append_sheet(wb, ws, 'Empleados');
@@ -910,14 +893,6 @@ export function TeamContent() {
                       >
                         Ver detalles
                       </Button>
-                      <Button
-                        variant="ghost"
-                        className="flex items-center justify-center space-x-2 rounded-none text-white/80 h-12 hover:bg-white/10 transition-colors"
-                        onClick={() => handleGenerateQR(employee)}
-                      >
-                        <QrCode className="h-4 w-4" />
-                        <span>Generar QR</span>
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -1002,14 +977,6 @@ export function TeamContent() {
                                   className="text-white/80 hover:text-white hover:bg-white/10"
                                 >
                                   Detalles
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleGenerateQR(employee)}
-                                  className="text-white/80 hover:text-white hover:bg-white/10"
-                                >
-                                  <QrCode className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -1661,16 +1628,6 @@ export function TeamContent() {
             <DialogTitle className="flex justify-between items-center">
               <span>Detalles del Empleado</span>
               <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    selectedEmployee && handleGenerateQR(selectedEmployee)
-                  }
-                  className="text-white/80 hover:text-white hover:bg-white/10"
-                >
-                  <QrCode className="h-4 w-4" />
-                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
