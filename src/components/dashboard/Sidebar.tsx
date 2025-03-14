@@ -149,12 +149,12 @@ export function Sidebar() {
     {
       icon: <Target className="h-4 w-4" />,
       text: 'Proximamente...',
-      href: '/dashboard/objectives',
+      href: '/dashboard/',
     },
     {
       icon: <Lightbulb className="h-4 w-4" />,
       text: 'Proximamente...',
-      href: '/dashboard/improvements',
+      href: '/dashboard/',
     },
   ];
 
