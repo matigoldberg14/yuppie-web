@@ -138,7 +138,7 @@ export function CalendarContent() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-7 ">
+            <div className="grid grid-cols-7 gap-1">
               {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
                 <div key={day} className="p-2 text-center text-white/60">
                   {day}

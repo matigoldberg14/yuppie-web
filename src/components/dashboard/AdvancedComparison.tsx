@@ -1140,7 +1140,7 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
         <Card className="bg-white/10 border-0">
           <CardHeader className="pb-2">
             <CardTitle className="text-white text-lg flex justify-between items-center">
-              <span>Reseñas ({timeRange})</span>
+              <span>Reseñas </span>
               <MessageSquare className="h-5 w-5 text-blue-400" />
             </CardTitle>
           </CardHeader>
@@ -1203,7 +1203,7 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
         <Card className="bg-white/10 border-0">
           <CardHeader className="pb-2">
             <CardTitle className="text-white text-lg flex justify-between items-center">
-              <span>Calificación ({timeRange})</span>
+              <span>Calificación </span>
               <Star className="h-5 w-5 text-yellow-400" />
             </CardTitle>
           </CardHeader>
