@@ -1,5 +1,5 @@
 // src/components/dashboard/AddEmployeeForm.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/input';
@@ -9,6 +9,11 @@ import { motion } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 import { EmployeeSchedule } from './EmployeeSchedule';
 import type { DaySchedule } from './EmployeeSchedule';
+
+// Tipo para el índice dinámico
+type DayMap = {
+  [key: string]: any[];
+};
 
 interface WorkSchedule {
   day: string;
@@ -49,36 +54,71 @@ export default function AddEmployeeForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  // Usar un ref para controlar si ya inicializamos los datos
+  const initialized = useRef(false);
+  const prevOpenState = useRef(isOpen);
+
+  // Este useEffect solo se ejecuta cuando el diálogo se abre o cambia initialData
   useEffect(() => {
-    if (initialData) {
-      setFirstName(initialData.firstName || '');
-      setLastName(initialData.lastName || '');
-      setPosition(initialData.position || '');
-      if (initialData.schedules && initialData.schedules.length > 0) {
-        const newSchedule: DaySchedule = {};
-        [
-          'monday',
-          'tuesday',
-          'wednesday',
-          'thursday',
-          'friday',
-          'saturday',
-          'sunday',
-        ].forEach((day) => {
-          newSchedule[day] = [];
-        });
-        initialData.schedules.forEach((sch) => {
-          if (newSchedule[sch.day]) {
-            newSchedule[sch.day].push({
-              id: Math.random().toString(36).substring(2, 11),
-              startTime: sch.startTime,
-              endTime: sch.endTime,
-            });
-          }
-        });
-        setSchedule(newSchedule);
+    // Solo inicializar si:
+    // 1. El diálogo está abierto
+    // 2. O bien, no hemos inicializado, o bien, el estado de apertura ha cambiado
+    if (isOpen && (!initialized.current || prevOpenState.current !== isOpen)) {
+      if (initialData) {
+        setFirstName(initialData.firstName || '');
+        setLastName(initialData.lastName || '');
+        setPosition(initialData.position || '');
+
+        // Inicialización de horarios
+        if (initialData.schedules && initialData.schedules.length > 0) {
+          const newSchedule: DayMap = {};
+
+          [
+            'monday',
+            'tuesday',
+            'wednesday',
+            'thursday',
+            'friday',
+            'saturday',
+            'sunday',
+          ].forEach((day) => {
+            newSchedule[day] = [];
+          });
+
+          initialData.schedules.forEach((sch) => {
+            if (newSchedule[sch.day]) {
+              newSchedule[sch.day].push({
+                id: Math.random().toString(36).substring(2, 11),
+                startTime: sch.startTime,
+                endTime: sch.endTime,
+              });
+            }
+          });
+
+          setSchedule(newSchedule as DaySchedule);
+        } else {
+          // Horarios vacíos
+          const emptySchedule: DayMap = {};
+          [
+            'monday',
+            'tuesday',
+            'wednesday',
+            'thursday',
+            'friday',
+            'saturday',
+            'sunday',
+          ].forEach((day) => {
+            emptySchedule[day] = [];
+          });
+          setSchedule(emptySchedule as DaySchedule);
+        }
       } else {
-        const emptySchedule: DaySchedule = {};
+        // Sin datos iniciales, crear estado vacío
+        setFirstName('');
+        setLastName('');
+        setPosition('');
+
+        const emptySchedule: DayMap = {};
         [
           'monday',
           'tuesday',
@@ -90,27 +130,20 @@ export default function AddEmployeeForm({
         ].forEach((day) => {
           emptySchedule[day] = [];
         });
-        setSchedule(emptySchedule);
+        setSchedule(emptySchedule as DaySchedule);
       }
-    } else {
-      setFirstName('');
-      setLastName('');
-      setPosition('');
-      const emptySchedule: DaySchedule = {};
-      [
-        'monday',
-        'tuesday',
-        'wednesday',
-        'thursday',
-        'friday',
-        'saturday',
-        'sunday',
-      ].forEach((day) => {
-        emptySchedule[day] = [];
-      });
-      setSchedule(emptySchedule);
+
+      initialized.current = true;
     }
-  }, [initialData, isOpen]);
+
+    // Actualizar el estado anterior
+    prevOpenState.current = isOpen;
+
+    // Cuando el diálogo se cierra, reiniciar el flag para la próxima apertura
+    if (!isOpen) {
+      initialized.current = false;
+    }
+  }, [isOpen, initialData]);
 
   const validateSchedules = (): boolean => {
     const hasAnySchedule = Object.values(schedule).some(
@@ -210,6 +243,8 @@ export default function AddEmployeeForm({
                   </div>
                 </div>
               </div>
+
+              {/* Input con botón para limpiar */}
               <div>
                 <Label htmlFor="firstName" className="text-white">
                   Nombre *
@@ -235,6 +270,7 @@ export default function AddEmployeeForm({
                 </div>
               </div>
 
+              {/* Input con botón para limpiar */}
               <div>
                 <Label htmlFor="lastName" className="text-white">
                   Apellido *
@@ -260,6 +296,7 @@ export default function AddEmployeeForm({
                 </div>
               </div>
 
+              {/* Input con botón para limpiar */}
               <div>
                 <Label htmlFor="position" className="text-white">
                   Cargo *

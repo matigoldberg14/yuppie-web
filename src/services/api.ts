@@ -132,65 +132,70 @@ export async function getAllRestaurants() {
 
 export async function incrementTaps(documentId: string) {
   try {
-    console.log('Incrementando taps para documentId:', documentId);
-
-    // Obtener el restaurante usando el filtro por documentId
-    const response0 = await fetch(
-      `${API_CONFIG.baseUrl}/restaurants?filters[documentId][$eq]=${documentId}&populate=*`
+    // Paso 1: Obtener la información actual del restaurante para conocer el valor actual de taps
+    const response = await fetch(
+      `${
+        import.meta.env.PUBLIC_API_URL
+      }/restaurants?filters[documentId][$eq]=${documentId}`
     );
-    if (!response0.ok) {
+
+    if (!response.ok) {
       console.error(
-        'Error obteniendo restaurante (sin filtro):',
-        await response0.text()
+        'Error al obtener información del restaurante',
+        await response.text()
       );
       return null;
     }
-    const json0 = await response0.json();
-    if (!json0.data || json0.data.length === 0) {
-      throw new Error('Restaurant not found in incrementTaps');
+
+    const data = await response.json();
+    if (!data.data || data.data.length === 0) {
+      console.error(
+        'No se encontró el restaurante con documentId:',
+        documentId
+      );
+      return null;
     }
-    const restaurant = json0.data[0];
-    console.log('Restaurant obtenido:', restaurant);
 
-    // Leer taps actual del objeto obtenido
-    const currentTaps = parseInt(
-      restaurant.attributes?.taps || restaurant.taps || '0'
-    );
+    // Extraer el valor actual de taps y calcular el nuevo valor
+    const restaurant = data.data[0];
+    let currentTaps = parseInt(restaurant.taps || '0');
+    if (isNaN(currentTaps)) currentTaps = 0;
+
     const newTaps = currentTaps + 1;
-    console.log('Actualizando taps de:', currentTaps, 'a:', newTaps);
+    console.log(
+      `Incrementando taps de ${currentTaps} a ${newTaps} para restaurante: ${restaurant.name}`
+    );
 
-    // Actualizar usando el ID numérico, no el documentId
-    const restaurantId = restaurant.id;
+    // Paso 2: IMPORTANTE: Usar el documentId directamente en la URL
+    // Actualizamos usando una solicitud directa sin pasar por ninguna función intermedia
     const updateResponse = await fetch(
-      `${API_CONFIG.baseUrl}/restaurants/${restaurantId}`,
+      `${import.meta.env.PUBLIC_API_URL}/restaurants/${documentId}`,
       {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          data: { taps: newTaps.toString() },
+          data: {
+            taps: newTaps.toString(),
+          },
         }),
       }
     );
 
+    // Verificar si la actualización fue exitosa
     if (!updateResponse.ok) {
-      throw new Error(
-        `Error actualizando taps: ${await updateResponse.text()}`
-      );
+      console.error('Error al actualizar taps:', await updateResponse.text());
+      return null;
     }
 
-    const result = await updateResponse.json();
-    console.log('Resultado de la actualización:', result);
-
-    // Devolver el objeto actualizado
-    return result;
+    console.log('¡Taps actualizado exitosamente!');
+    return await updateResponse.json();
   } catch (error) {
     console.error('Error en incrementTaps:', error);
-    throw error;
+    return null;
   }
 }
-
 export interface CreateReviewInput {
   restaurantId: number;
   calification: number;

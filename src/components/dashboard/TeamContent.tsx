@@ -1,5 +1,5 @@
 // src/components/dashboard/TeamContent.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { auth } from '../../lib/firebase';
 import {
   getOwnerRestaurants,
@@ -350,28 +350,7 @@ export function TeamContent() {
       .slice(0, 3);
   };
 
-  const topRatedEmployees: EnrichedEmployee[] = (() => {
-    try {
-      return sortedEmployees
-        .filter((employee: EnrichedEmployee) => {
-          const reviewCount = employee.reviewCount;
-          return (
-            typeof reviewCount === 'number' &&
-            !isNaN(reviewCount) &&
-            reviewCount >= 3
-          );
-        })
-        .sort((a: EnrichedEmployee, b: EnrichedEmployee) => {
-          const ratingA = a.averageRating || 0;
-          const ratingB = b.averageRating || 0;
-          return ratingB - ratingA;
-        })
-        .slice(0, 3);
-    } catch (error) {
-      console.error('Error obteniendo empleados mejor calificados:', error);
-      return [];
-    }
-  })();
+  const topRatedEmployees = getTopRatedEmployees();
 
   // Para agregar un empleado (forzamos photo a null)
   const handleAddEmployee = async (data: {
@@ -546,71 +525,10 @@ export function TeamContent() {
   const {
     employee: employeeOfMonth,
     score: employeeOfMonthScore,
-  }: EmployeeOfMonthResult = (() => {
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-    let bestEmployee: EnrichedEmployee | null = null;
-    let highestScore = -1;
+  }: EmployeeOfMonthResult = getEmployeeOfTheMonth();
 
-    sortedEmployees.forEach((employee: EnrichedEmployee) => {
-      // Verificación de seguridad para reviews
-      if (!employee.reviews || !Array.isArray(employee.reviews)) return;
-
-      try {
-        const lastMonthReviews = employee.reviews.filter(
-          (review: ReviewExt) => {
-            if (!review || !review.createdAt) return false;
-
-            try {
-              const reviewDate = new Date(review.createdAt);
-              return (
-                !isNaN(reviewDate.getTime()) &&
-                reviewDate >= oneMonthAgo &&
-                review.calification >= 4
-              );
-            } catch (e) {
-              console.error('Error al procesar fecha:', e);
-              return false;
-            }
-          }
-        );
-
-        const score = lastMonthReviews.length;
-        if (score > highestScore) {
-          highestScore = score;
-          bestEmployee = employee;
-        }
-      } catch (error) {
-        console.error('Error procesando empleado:', employee.documentId, error);
-      }
-    });
-
-    return { employee: bestEmployee, score: highestScore };
-  })();
-
-  // Empleados que necesitan atención - implementación mejorada
-  const employeesNeedingAttention: EnrichedEmployee[] = (() => {
-    try {
-      return sortedEmployees
-        .filter((employee: EnrichedEmployee) => {
-          // Asegurarse de que daysWithoutReview sea un número válido
-          const days = employee.daysWithoutReview;
-          return typeof days === 'number' && !isNaN(days) && days > 14;
-        })
-        .sort((a: EnrichedEmployee, b: EnrichedEmployee) => {
-          const daysA = a.daysWithoutReview || 0;
-          const daysB = b.daysWithoutReview || 0;
-          return daysB - daysA;
-        })
-        .slice(0, 3);
-    } catch (error) {
-      console.error(
-        'Error obteniendo empleados que necesitan atención:',
-        error
-      );
-      return [];
-    }
-  })();
+  const employeesNeedingAttention: EnrichedEmployee[] =
+    getEmployeesNeedingAttention();
 
   return (
     <div className="p-8">
@@ -769,20 +687,9 @@ export function TeamContent() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {(() => {
-                    const needing: EnrichedEmployee[] = sortedEmployees
-                      .filter(
-                        (employee: EnrichedEmployee) =>
-                          (employee.daysWithoutReview || 30) > 14
-                      )
-                      .sort(
-                        (a: EnrichedEmployee, b: EnrichedEmployee) =>
-                          (b.daysWithoutReview || 0) -
-                          (a.daysWithoutReview || 0)
-                      )
-                      .slice(0, 3);
-                    if (needing.length > 0) {
-                      return needing.map((employee: EnrichedEmployee) => (
+                  {employeesNeedingAttention.length > 0 ? (
+                    employeesNeedingAttention.map(
+                      (employee: EnrichedEmployee) => (
                         <div
                           key={employee.documentId}
                           className="flex items-center justify-between"
@@ -802,15 +709,13 @@ export function TeamContent() {
                             </span>
                           </div>
                         </div>
-                      ));
-                    } else {
-                      return (
-                        <div className="text-white/70">
-                          ¡Genial! Todos los empleados tienen reseñas recientes.
-                        </div>
-                      );
-                    }
-                  })()}
+                      )
+                    )
+                  ) : (
+                    <div className="text-white/70">
+                      ¡Genial! Todos los empleados tienen reseñas recientes.
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1136,6 +1041,615 @@ export function TeamContent() {
             </Card>
           )}
         </TabsContent>
+        <TabsContent value="stats" className="mt-0">
+          <div className="mb-4">
+            <Card className="bg-white/10 border-0">
+              <CardHeader>
+                <CardTitle className="text-white">
+                  Estadísticas Comparativas de Empleados
+                </CardTitle>
+                <CardDescription className="text-white/70">
+                  Compara el rendimiento de todos los empleados para identificar
+                  fortalezas y oportunidades de mejora
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Tabla comparativa de empleados */}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-white/10 text-white/70 text-sm">
+                        <th className="text-left p-3">Empleado</th>
+                        <th className="text-center p-3">Reseñas</th>
+                        <th className="text-center p-3">Calificación</th>
+                        <th className="text-center p-3">% 5 estrellas</th>
+                        <th className="text-center p-3">Última reseña</th>
+                        <th className="text-center p-3">Tendencia</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedEmployees.map((employee) => {
+                        // Calcular porcentaje de reseñas de 5 estrellas
+                        const fiveStarCount =
+                          employee.reviews?.filter(
+                            (review) => review.calification === 5
+                          ).length || 0;
+                        const fiveStarPercentage = employee.reviewCount
+                          ? Math.round(
+                              (fiveStarCount / employee.reviewCount) * 100
+                            )
+                          : 0;
+
+                        // Determinar si la tendencia es positiva o negativa (último mes vs mes anterior)
+                        const oneMonthAgo = new Date();
+                        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+                        const twoMonthsAgo = new Date();
+                        twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+
+                        const lastMonthReviews =
+                          employee.reviews?.filter((review) => {
+                            const date = new Date(review.createdAt);
+                            return date >= oneMonthAgo;
+                          }) || [];
+
+                        const previousMonthReviews =
+                          employee.reviews?.filter((review) => {
+                            const date = new Date(review.createdAt);
+                            return date >= twoMonthsAgo && date < oneMonthAgo;
+                          }) || [];
+
+                        const lastMonthAvg = lastMonthReviews.length
+                          ? lastMonthReviews.reduce(
+                              (sum, r) => sum + r.calification,
+                              0
+                            ) / lastMonthReviews.length
+                          : 0;
+
+                        const prevMonthAvg = previousMonthReviews.length
+                          ? previousMonthReviews.reduce(
+                              (sum, r) => sum + r.calification,
+                              0
+                            ) / previousMonthReviews.length
+                          : 0;
+
+                        const trendDirection =
+                          lastMonthAvg > prevMonthAvg
+                            ? 'up'
+                            : lastMonthAvg < prevMonthAvg
+                            ? 'down'
+                            : 'neutral';
+
+                        return (
+                          <tr
+                            key={employee.documentId}
+                            className="border-b border-white/5 hover:bg-white/5 text-white"
+                          >
+                            <td className="p-3">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+                                  <User className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                  <div className="font-medium">
+                                    {employee.firstName} {employee.lastName}
+                                  </div>
+                                  <div className="text-white/60 text-sm">
+                                    {employee.position}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="font-semibold">
+                                {employee.reviewCount || 0}
+                              </div>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <span className="font-semibold">
+                                  {employee.averageRating
+                                    ? employee.averageRating.toFixed(1)
+                                    : '-'}
+                                </span>
+                                {employee.averageRating !== undefined
+                                  ? employee.averageRating.toFixed(1)
+                                  : '-'}
+                              </div>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="font-semibold">
+                                {fiveStarPercentage}%
+                              </div>
+                            </td>
+                            <td className="p-3 text-center">
+                              {employee.lastReviewDate ? (
+                                <div className="text-white/80">
+                                  {new Date(
+                                    employee.lastReviewDate
+                                  ).toLocaleDateString()}
+                                  <div className="text-white/60 text-sm">
+                                    {employee.daysWithoutReview === 0
+                                      ? 'Hoy'
+                                      : employee.daysWithoutReview === 1
+                                      ? 'Ayer'
+                                      : `Hace ${employee.daysWithoutReview} días`}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-white/40">Sin reseñas</div>
+                              )}
+                            </td>
+                            <td className="p-3 text-center">
+                              {lastMonthReviews.length > 0 ||
+                              previousMonthReviews.length > 0 ? (
+                                <div>
+                                  {trendDirection === 'up' && (
+                                    <div className="flex items-center justify-center text-green-400">
+                                      <svg
+                                        className="w-5 h-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                                        />
+                                      </svg>
+                                      <span className="ml-1 text-sm">
+                                        Mejorando
+                                      </span>
+                                    </div>
+                                  )}
+                                  {trendDirection === 'down' && (
+                                    <div className="flex items-center justify-center text-red-400">
+                                      <svg
+                                        className="w-5 h-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"
+                                        />
+                                      </svg>
+                                      <span className="ml-1 text-sm">
+                                        Bajando
+                                      </span>
+                                    </div>
+                                  )}
+                                  {trendDirection === 'neutral' && (
+                                    <div className="flex items-center justify-center text-yellow-400">
+                                      <svg
+                                        className="w-5 h-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M5 12h14"
+                                        />
+                                      </svg>
+                                      <span className="ml-1 text-sm">
+                                        Estable
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="text-white/40">Sin datos</div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Gráficos y tarjetas principales */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card className="bg-gradient-to-br from-purple-600/30 to-blue-600/30 border-0">
+              <CardHeader>
+                <CardTitle className="text-white">Empleado del Mes</CardTitle>
+                <CardDescription className="text-white/70">
+                  Basado en reseñas positivas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {employeeOfMonth ? (
+                  <div className="flex items-center">
+                    <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center mr-4">
+                      <User className="h-8 w-8 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">
+                        {employeeOfMonth.firstName} {employeeOfMonth.lastName}
+                      </h3>
+                      <p className="text-white/70">
+                        {employeeOfMonth.position}
+                      </p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Award className="h-4 w-4 text-yellow-400" />
+                        <span className="text-white/80">
+                          {employeeOfMonthScore} reseñas positivas
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-white/70">
+                    No hay suficientes datos para determinar el empleado del
+                    mes.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-green-600/30 to-emerald-600/30 border-0">
+              <CardHeader>
+                <CardTitle className="text-white">Top Calificaciones</CardTitle>
+                <CardDescription className="text-white/70">
+                  Empleados con mejores reseñas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {topRatedEmployees.length > 0 ? (
+                    topRatedEmployees.map(
+                      (employee: EnrichedEmployee, index: number) => (
+                        <div
+                          key={employee.documentId}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center">
+                            <div className="mr-2 w-5 text-center text-white/70">
+                              #{index + 1}
+                            </div>
+                            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2">
+                              <User className="h-4 w-4 text-white" />
+                            </div>
+                            <div className="text-white">
+                              {employee.firstName} {employee.lastName}
+                            </div>
+                          </div>
+                          <div className="flex items-center">
+                            <Star className="h-4 w-4 text-yellow-400 mr-1" />
+                            <span className="text-white">
+                              {employee.averageRating !== undefined
+                                ? employee.averageRating.toFixed(1)
+                                : '-'}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    )
+                  ) : (
+                    <div className="text-white/70">
+                      No hay suficientes datos para determinar top
+                      calificaciones.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-orange-600/30 to-red-600/30 border-0">
+              <CardHeader>
+                <CardTitle className="text-white">Necesitan Atención</CardTitle>
+                <CardDescription className="text-white/70">
+                  Empleados sin reseñas recientes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {employeesNeedingAttention.length > 0 ? (
+                    employeesNeedingAttention.map(
+                      (employee: EnrichedEmployee) => (
+                        <div
+                          key={employee.documentId}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center">
+                            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2">
+                              <User className="h-4 w-4 text-white" />
+                            </div>
+                            <div className="text-white">
+                              {employee.firstName} {employee.lastName}
+                            </div>
+                          </div>
+                          <div className="flex items-center">
+                            <AlertCircle className="h-4 w-4 text-orange-400 mr-1" />
+                            <span className="text-white/70">
+                              {employee.daysWithoutReview} días
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    )
+                  ) : (
+                    <div className="text-white/70">
+                      ¡Genial! Todos los empleados tienen reseñas recientes.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sección de estadísticas adicionales */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="col-span-full md:col-span-2">
+              <Card className="bg-white/10 border-0 h-full">
+                <CardHeader>
+                  <CardTitle className="text-white">
+                    Distribución de Calificaciones
+                  </CardTitle>
+                  <CardDescription className="text-white/70">
+                    Cómo se distribuyen las calificaciones entre los empleados
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[5, 4, 3, 2, 1].map((rating) => {
+                      // Calcular el total de reseñas con esta calificación
+                      const reviewsWithRating = reviews.filter(
+                        (r) => r.calification === rating
+                      ).length;
+                      const percentage = reviews.length
+                        ? (reviewsWithRating / reviews.length) * 100
+                        : 0;
+
+                      return (
+                        <div key={rating} className="space-y-1">
+                          <div className="flex justify-between">
+                            <div className="flex items-center">
+                              <span className="font-medium text-white">
+                                {rating}
+                              </span>
+                              <Star className="h-4 w-4 ml-1 text-yellow-400" />
+                            </div>
+                            <span className="text-white/70">
+                              {reviewsWithRating} reseña
+                              {reviewsWithRating !== 1 ? 's' : ''} (
+                              {percentage.toFixed(1)}%)
+                            </span>
+                          </div>
+                          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                              style={{ width: `${percentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Estadísticas generales de reseñas */}
+                  <div className="mt-8 grid grid-cols-3 gap-4">
+                    <div className="bg-white/5 p-4 rounded-lg">
+                      <h4 className="text-white/60 text-sm mb-1">
+                        Total de reseñas
+                      </h4>
+                      <div className="text-2xl font-bold text-white">
+                        {reviews.length}
+                      </div>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg">
+                      <h4 className="text-white/60 text-sm mb-1">
+                        Calificación promedio
+                      </h4>
+                      <div className="text-2xl font-bold text-white flex items-center">
+                        {reviews.length
+                          ? (
+                              reviews.reduce(
+                                (sum, r) => sum + r.calification,
+                                0
+                              ) / reviews.length
+                            ).toFixed(1)
+                          : '0.0'}
+                        <Star className="h-5 w-5 text-yellow-400 ml-1" />
+                      </div>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg">
+                      <h4 className="text-white/60 text-sm mb-1">
+                        Satisfacción
+                      </h4>
+                      <div className="text-2xl font-bold text-white">
+                        {reviews.length
+                          ? (
+                              (reviews.filter((r) => r.calification >= 4)
+                                .length /
+                                reviews.length) *
+                              100
+                            ).toFixed(0)
+                          : '0'}
+                        %
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Estadísticas de rendimiento */}
+            <div className="col-span-full md:col-span-1">
+              <Card className="bg-white/10 border-0 h-full">
+                <CardHeader>
+                  <CardTitle className="text-white">Rendimiento</CardTitle>
+                  <CardDescription className="text-white/70">
+                    Indicadores clave
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {/* Reseñas por empleado */}
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-white/70">
+                          Reseñas por empleado
+                        </span>
+                        <span className="text-white font-medium">
+                          {employees.length
+                            ? (reviews.length / employees.length).toFixed(1)
+                            : '0'}
+                        </span>
+                      </div>
+                      <Progress
+                        value={Math.min(
+                          100,
+                          (reviews.length / (employees.length || 1)) * 10
+                        )}
+                        className="h-2"
+                      />
+                    </div>
+
+                    {/* Empleados sin reseñas */}
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-white/70">
+                          Empleados sin reseñas
+                        </span>
+                        <span className="text-white font-medium">
+                          {employees.filter((e) => !e.reviewCount).length}/
+                          {employees.length}
+                        </span>
+                      </div>
+                      <Progress
+                        value={
+                          employees.length
+                            ? 100 -
+                              (employees.filter((e) => !e.reviewCount).length /
+                                employees.length) *
+                                100
+                            : 0
+                        }
+                        className="h-2"
+                      />
+                    </div>
+
+                    {/* Reseñas de 5 estrellas */}
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-white/70">
+                          Reseñas 5 estrellas
+                        </span>
+                        <span className="text-white font-medium">
+                          {reviews.length
+                            ? (
+                                (reviews.filter((r) => r.calification === 5)
+                                  .length /
+                                  reviews.length) *
+                                100
+                              ).toFixed(0)
+                            : '0'}
+                          %
+                        </span>
+                      </div>
+                      <Progress
+                        value={
+                          reviews.length
+                            ? (reviews.filter((r) => r.calification === 5)
+                                .length /
+                                reviews.length) *
+                              100
+                            : 0
+                        }
+                        className="h-2"
+                      />
+                    </div>
+
+                    {/* Reseñas negativas */}
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-white/70">Reseñas negativas</span>
+                        <span className="text-white font-medium">
+                          {reviews.length
+                            ? (
+                                (reviews.filter((r) => r.calification <= 2)
+                                  .length /
+                                  reviews.length) *
+                                100
+                              ).toFixed(0)
+                            : '0'}
+                          %
+                        </span>
+                      </div>
+                      <Progress
+                        value={
+                          reviews.length
+                            ? 100 -
+                              (reviews.filter((r) => r.calification <= 2)
+                                .length /
+                                reviews.length) *
+                                100
+                            : 100
+                        }
+                        className="h-2"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Acciones recomendadas */}
+                  <div className="mt-8 bg-white/5 p-4 rounded-lg">
+                    <h4 className="text-white font-medium mb-2">
+                      Acciones recomendadas
+                    </h4>
+                    <ul className="space-y-2 text-sm text-white/70">
+                      {employeesNeedingAttention.length > 0 && (
+                        <li className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 text-orange-400 mt-0.5 flex-shrink-0" />
+                          <span>
+                            Solicitar más reseñas para empleados sin actividad
+                            reciente
+                          </span>
+                        </li>
+                      )}
+                      {employees.filter(
+                        (e) => e.averageRating && e.averageRating < 3.5
+                      ).length > 0 && (
+                        <li className="flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 text-orange-400 mt-0.5 flex-shrink-0" />
+                          <span>
+                            Revisar desempeño de empleados con calificación por
+                            debajo de 3.5
+                          </span>
+                        </li>
+                      )}
+
+                      {(employees.length === 0 ||
+                        employees.filter(
+                          (e) => e.averageRating && e.averageRating >= 4.5
+                        ).length > 0) && (
+                        <li className="flex items-start gap-2">
+                          <Star className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                          <span>
+                            ¡Reconocer a los empleados con mejores
+                            calificaciones!
+                          </span>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
 
       {selectedEmployee && (
@@ -1260,7 +1774,7 @@ export function TeamContent() {
                                   key={i}
                                   className={`h-4 w-4 ${
                                     i < review.calification
-                                      ? 'text-yellow-400 fill-yellow-400'
+                                      ? 'text-yellow-400 fill-current'
                                       : 'text-gray-400'
                                   }`}
                                 />
