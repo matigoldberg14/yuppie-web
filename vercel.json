@@ -1,8 +1,9 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
+  "buildCommand": "npm ci && npm run build",
   "devCommand": "npm run dev",
   "framework": "astro",
+  "nodeVersion": "18.x",
   "headers": [
     {
       "source": "/(.*)",
