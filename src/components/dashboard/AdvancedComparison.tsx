@@ -118,23 +118,27 @@ interface AdvancedComparisonProps {
   restaurants: Restaurant[];
 }
 
-const styleElement = document.createElement('style');
-styleElement.textContent = `
-  .insight-content p {
-    margin-bottom: 0.75rem;
-  }
-  
-  .insight-content strong {
-    color: white;
-    font-weight: 600;
-  }
-  
-  .insight-content p:last-child {
-    margin-bottom: 0;
-  }
-`;
-if (typeof document !== 'undefined') {
-  document.head.appendChild(styleElement);
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  // Solo se ejecuta en el navegador, no en SSR
+  // Diferir la ejecución para asegurar que el DOM está disponible
+  setTimeout(() => {
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+        .insight-content p {
+          margin-bottom: 0.75rem;
+        }
+        
+        .insight-content strong {
+          color: white;
+          font-weight: 600;
+        }
+        
+        .insight-content p:last-child {
+          margin-bottom: 0;
+        }
+      `;
+    document.head.appendChild(styleEl);
+  }, 0);
 }
 
 // Colors for the charts
