@@ -856,7 +856,54 @@ export async function getEmployeeNumericId(
   }
 }
 
-// Función para obtener todos los restaurantes de un owner dado su firebaseUID
+export async function updateRestaurantLocation(
+  documentId: string,
+  location: {
+    street: string;
+    number: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+  },
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  }
+): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `${process.env.API_URL}/api/restaurants/${documentId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: {
+            location: {
+              ...location,
+            },
+            coordinates: {
+              latitude: coordinates.latitude,
+              longitude: coordinates.longitude,
+            },
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error updating location: ${response.status}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in updateRestaurantLocation:', error);
+    throw error;
+  }
+}
+
 // Función para obtener todos los restaurantes de un owner dado su firebaseUID
 export async function getOwnerRestaurants(firebaseUID: string) {
   try {
@@ -866,7 +913,7 @@ export async function getOwnerRestaurants(firebaseUID: string) {
       return [];
     }
 
-    const url = `${baseUrl}/restaurants?filters[firebaseUID][$eq]=${firebaseUID}&populate=owner`;
+    const url = `${baseUrl}/restaurants?filters[firebaseUID][$eq]=${firebaseUID}&populate=*`;
     console.log('Solicitando restaurantes desde:', url);
 
     const response = await fetch(url);
@@ -879,7 +926,7 @@ export async function getOwnerRestaurants(firebaseUID: string) {
     }
 
     const result = await response.json();
-    console.log('Resultado completo de la API:', result);
+    console.log('Resultado completo:', result);
 
     if (!result.data) {
       console.error('La respuesta de la API no contiene campo "data":', result);
@@ -893,46 +940,60 @@ export async function getOwnerRestaurants(firebaseUID: string) {
 
     // Mapeamos los datos para asegurarnos que tengan la estructura correcta
     const restaurants = result.data.map((restaurantData: any) => {
-      console.log('Procesando datos de restaurante:', restaurantData);
+      // IMPORTANTE: La estructura directa en las respuestas de Strapi
+      const id = restaurantData.id || 0;
+      const documentId =
+        restaurantData.documentId || restaurantData.id?.toString() || 'unknown';
+      const name = restaurantData.name || 'Restaurante sin nombre';
+      const taps = restaurantData.taps || '0';
 
-      // Extraer los datos necesarios, con valores por defecto en caso de faltar
-      const mappedRestaurant = {
-        id: restaurantData.id || 0,
-        documentId:
-          restaurantData.documentId ||
-          restaurantData.id?.toString() ||
-          'unknown',
-        name:
-          restaurantData.name ||
-          restaurantData.attributes?.name ||
-          'Restaurante sin nombre',
-        taps: restaurantData.taps || restaurantData.attributes?.taps || '0',
-        owner: {
-          firstName:
-            restaurantData.owner?.name ||
-            restaurantData.attributes?.owner?.name ||
-            '',
-          lastName:
-            restaurantData.owner?.lastName ||
-            restaurantData.attributes?.owner?.lastName ||
-            '',
-        },
-        // Añadimos estos campos para métricas, aunque normalmente deberían venir del backend
-        ingresos: Math.floor(Math.random() * 100000) + 50000,
-        clientes: Math.floor(Math.random() * 3000) + 1000,
-        satisfaccion: (Math.random() * 2 + 3).toFixed(1),
-        ocupacion: Math.floor(Math.random() * 30) + 60,
+      // Extraer datos del propietario de forma segura
+      const owner = {
+        firstName: restaurantData.owner?.name || '',
+        lastName: restaurantData.owner?.lastName || '',
       };
 
-      console.log('Restaurante mapeado:', mappedRestaurant);
-      return mappedRestaurant;
+      // Extraer coordenadas directamente desde los campos de nivel superior
+      // IMPORTANTE: Las coordenadas están a nivel de raíz, no en un subobjeto
+      const coordinates = {
+        latitude:
+          restaurantData.latitude !== null
+            ? Number(restaurantData.latitude)
+            : -34.603722,
+        longitude:
+          restaurantData.longitude !== null
+            ? Number(restaurantData.longitude)
+            : -58.381592,
+      };
+
+      // Extraer información de ubicación directamente de los campos de nivel superior
+      const location = {
+        street: restaurantData.address || '',
+        number: '',
+        city: restaurantData.city || '',
+        state: restaurantData.state || '',
+        country: restaurantData.country || '',
+        postalCode: restaurantData.postalCode || '',
+      };
+
+      // Construir y devolver el objeto de restaurante
+      return {
+        id,
+        documentId,
+        name,
+        taps,
+        owner,
+        location,
+        coordinates,
+        linkMaps: restaurantData.linkMaps || '',
+        firebaseUID: restaurantData.firebaseUID || '',
+      };
     });
 
     console.log('Total de restaurantes procesados:', restaurants.length);
     return restaurants;
   } catch (error) {
     console.error('Error en getOwnerRestaurants:', error);
-    // Devolvemos un array vacío en caso de error, pero podríamos considerar mostrar un mensaje al usuario
     return [];
   }
 }

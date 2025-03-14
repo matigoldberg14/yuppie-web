@@ -1,5 +1,6 @@
 // src/components/dashboard/AdvancedComparison.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import {
   Card,
   CardContent,
@@ -11,6 +12,9 @@ import {
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { exportRestaurantComparison } from '../../utils/exportData';
+type ComparativeTabType = 'overview' | 'ratings' | 'employees' | 'categories';
+
 import {
   Select,
   SelectContent,
@@ -46,6 +50,7 @@ import {
   AlertTriangle,
   Map,
   Users,
+  Users2,
   Star,
   Zap,
   ArrowUpRight,
@@ -80,6 +85,7 @@ import { getRestaurantInsights } from '../../services/insightsService';
 import type { Employee } from '../../types/employee';
 import type { Review } from '../../types/reviews';
 import type { RestaurantMetrics } from '../../types/metrics';
+import RestaurantMap from './RestaurantMap';
 
 export interface Restaurant {
   id: number;
@@ -90,6 +96,21 @@ export interface Restaurant {
     firstName: string;
     lastName: string;
   };
+  // Campos para ubicación
+  location?: {
+    street?: string;
+    number?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+  };
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
+  linkMaps?: string;
+  firebaseUID?: string;
 }
 
 interface AdvancedComparisonProps {
@@ -110,8 +131,20 @@ const COLORS = [
 // This simulates geolocation data that would come from a real API
 const CITIES = ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Bilbao'];
 
-const getCiudad = (restaurantId: number) => {
-  return CITIES[restaurantId % CITIES.length];
+// Función mejorada que acepta tanto un objeto Restaurant como un ID
+const getCiudad = (restaurantOrId: Restaurant | number): string => {
+  // Si es un número (ID), usar el array predeterminado
+  if (typeof restaurantOrId === 'number') {
+    return CITIES[restaurantOrId % CITIES.length];
+  }
+
+  // Si es un objeto Restaurant, verificar si tiene ciudad en su ubicación
+  if (restaurantOrId.location && restaurantOrId.location.city) {
+    return restaurantOrId.location.city;
+  }
+
+  // Como fallback, usar el array predeterminado basado en el ID
+  return CITIES[restaurantOrId.id % CITIES.length];
 };
 
 const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
@@ -145,8 +178,26 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
   const [insightTimeRange, setInsightTimeRange] = useState('month');
   const [categoryDistribution, setCategoryDistribution] = useState<any[]>([]);
   const [ratingDistribution, setRatingDistribution] = useState<any[]>([]);
-  const [comparativeTab, setComparativeTab] = useState('overview');
+  const [comparativeTab, setComparativeTab] =
+    useState<ComparativeTabType>('overview');
   const { toast } = useToast();
+
+  const [uiFilterOptions, setUiFilterOptions] = useState({
+    minRating: 0,
+    maxRating: 5,
+    minReviews: 0,
+    showOnlyActive: true,
+  });
+
+  const availableCities = useMemo(() => {
+    // Recopilar todas las ciudades reales de los restaurantes
+    const cities = restaurants
+      .map((r) => (r.location?.city ? r.location.city : getCiudad(r)))
+      .filter(Boolean);
+
+    // Eliminar duplicados
+    return [...new Set(cities)];
+  }, [restaurants]);
 
   // Load initial state and listen for changes
   useEffect(() => {
@@ -543,6 +594,14 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
 
   // Generate data for radar
   const generateRadarData = () => {
+    // Si no hay restaurantes seleccionados o no hay métricas, devolver array vacío
+    if (
+      selectedLocales.length === 0 ||
+      Object.keys(restaurantMetrics).length === 0
+    ) {
+      return [];
+    }
+
     const metrics = [
       { key: 'totalReviews', label: 'Reseñas Totales', max: 100 },
       { key: 'averageRating', label: 'Calificación', max: 5 },
@@ -555,24 +614,40 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
       { key: 'employeeCount', label: 'Tamaño Equipo', max: 20 },
     ];
 
-    return metrics.map((metric) => {
-      const radarPoint: any = { subject: metric.label };
+    // Obtener restaurantes con métricas válidas
+    const restaurantsWithMetrics = Object.values(restaurantMetrics).filter(
+      (rm) => {
+        // Asegurarse de que el restaurante está seleccionado y existe
+        const restaurant = restaurants.find(
+          (r) => r.documentId === rm.documentId
+        );
+        return restaurant && selectedLocales.includes(restaurant.id);
+      }
+    );
 
-      // For each selected restaurant
-      Object.values(restaurantMetrics)
-        .filter((rm) =>
-          selectedLocales.includes(
-            restaurants.find((r) => r.documentId === rm.documentId)?.id || 0
-          )
-        )
-        .forEach((restaurant) => {
-          // Normalize value to a 0-100 scale for radar chart
-          const value = restaurant[
-            metric.key as keyof typeof restaurant
-          ] as number;
+    // Si no hay restaurantes con métricas válidas, devolver array vacío
+    if (restaurantsWithMetrics.length === 0) {
+      return [];
+    }
+
+    return metrics.map((metric) => {
+      // Definir radarPoint como un objeto indexable con string para evitar errores TS
+      const radarPoint: { [key: string]: any } = { subject: metric.label };
+
+      // Para cada restaurante seleccionado con métricas válidas
+      restaurantsWithMetrics.forEach((restaurant) => {
+        // Obtener el valor como keyof para evitar error de TypeScript
+        const value = restaurant[metric.key as keyof typeof restaurant];
+
+        // Solo añadir si la métrica existe y es un número
+        if (value !== undefined && typeof value === 'number' && !isNaN(value)) {
           const normalizedValue = Math.min(100, (value / metric.max) * 100);
           radarPoint[restaurant.name] = normalizedValue;
-        });
+        } else {
+          // Si la métrica no existe, usar 0 para evitar errores
+          radarPoint[restaurant.name] = 0;
+        }
+      });
 
       return radarPoint;
     });
@@ -693,30 +768,28 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
 
   const toggleLocalSelection = (id: number) => {
     if (selectedLocales.includes(id)) {
-      setSelectedLocales(selectedLocales.filter((localId) => localId !== id));
+      // No permitir deseleccionar si es el único restaurante seleccionado
+      if (selectedLocales.length > 1) {
+        setSelectedLocales(selectedLocales.filter((localId) => localId !== id));
+      } else {
+        toast({
+          title: 'Selección requerida',
+          description: 'Debe mantener al menos un restaurante seleccionado',
+          variant: 'destructive',
+        });
+      }
     } else {
       setSelectedLocales([...selectedLocales, id]);
     }
   };
 
-  {
-    selectedLocales.length > 0 && (
-      <div className="flex flex-wrap gap-2 mt-2">
-        {restaurants
-          .filter((local) => selectedLocales.includes(local.id))
-          .map((local) => (
-            <div
-              key={local.id}
-              className="flex items-center gap-1 bg-white/20 text-white px-2 py-1 rounded-full cursor-pointer"
-              onClick={() => toggleLocalSelection(local.id)}
-            >
-              <span>{local.name}</span>
-              <span className="font-bold">×</span>
-            </div>
-          ))}
-      </div>
-    );
-  }
+  // para asegurar que siempre haya uno seleccionado al iniciar
+  useEffect(() => {
+    if (restaurants.length > 0 && selectedLocales.length === 0) {
+      // Si hay restaurantes pero ninguno seleccionado, seleccionar el primero
+      setSelectedLocales([restaurants[0].id]);
+    }
+  }, [restaurants]);
 
   const handleTimeRangeChange = (value: string) => {
     setTimeRange(value);
@@ -764,11 +837,15 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
         (r) => r.documentId === restaurant.documentId
       );
 
+      // Obtener la ciudad del restaurante completo o usar el valor por defecto
+      const city =
+        fullRestaurant?.location?.city || getCiudad(fullRestaurant?.id || 0);
+
       return {
         id: fullRestaurant?.id || 0,
         documentId: restaurant.documentId,
         name: restaurant.name,
-        city: getCiudad(fullRestaurant?.id || 0),
+        city, // Almacenar la ciudad como una propiedad plana
         totalReviews: restaurant.totalReviews,
         averageRating: restaurant.averageRating,
         conversionRate: restaurant.conversionRate,
@@ -796,6 +873,102 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
 
   const comparativeMetrics = getComparativeMetrics();
 
+  const handleExportData = () => {
+    try {
+      // Crear una matriz de datos para el Excel
+      const headers = [
+        'Restaurante',
+        'Ciudad',
+        'Reseñas',
+        'Calificación',
+        'Tasa de Conversión',
+        'Reseñas Positivas',
+      ];
+
+      const data = [headers];
+
+      // Agregar datos de cada restaurante
+      Object.values(restaurantMetrics)
+        .filter((metrics) =>
+          selectedLocales.includes(
+            restaurants.find((r) => r.documentId === metrics.documentId)?.id ||
+              0
+          )
+        )
+        .forEach((metrics) => {
+          const restaurant = restaurants.find(
+            (r) => r.documentId === metrics.documentId
+          );
+          if (!restaurant) return;
+
+          // Obtener la ubicación real
+          const city = restaurant.location?.city || getCiudad(restaurant.id);
+
+          data.push([
+            metrics.name,
+            city,
+            metrics.totalReviews.toString(),
+            metrics.averageRating.toFixed(1),
+            `${metrics.conversionRate.toFixed(1)}%`,
+            `${metrics.positiveReviewsPercent.toFixed(1)}%`,
+          ]);
+        });
+
+      // Crear un libro de Excel
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(data);
+
+      // Añadir estilos para la fila de encabezado
+      const headerStyle = {
+        font: { bold: true },
+        fill: { fgColor: { rgb: '4318FF' } },
+        alignment: { horizontal: 'center' },
+      };
+
+      // Aplicar estilos al encabezado (no soportado directamente en js-xlsx, solo como referencia)
+
+      // Ajustar anchos de columna
+      const colWidths = [
+        { wch: 20 }, // Restaurante
+        { wch: 15 }, // Ciudad
+        { wch: 10 }, // Reseñas
+        { wch: 12 }, // Calificación
+        { wch: 18 }, // Tasa de Conversión
+        { wch: 18 }, // Reseñas Positivas
+      ];
+      ws['!cols'] = colWidths;
+
+      // Añadir la hoja al libro
+      XLSX.utils.book_append_sheet(wb, ws, 'Comparativa de Restaurantes');
+
+      // Generar el archivo y descargarlo
+      const fileName = `comparativa_restaurantes_${
+        new Date().toISOString().split('T')[0]
+      }.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast({
+        title: 'Exportación exitosa',
+        description: 'Los datos se han exportado correctamente',
+      });
+    } catch (error) {
+      console.error('Error exportando datos:', error);
+      toast({
+        title: 'Error en la exportación',
+        description: 'No se pudieron exportar los datos',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Implementación de la funcionalidad de filtro
+  const [filterOptions, setFilterOptions] = useState({
+    minRating: 0,
+    maxRating: 5,
+    minReviews: 0,
+    showOnlyActive: true,
+  });
+
   return (
     <div className="p-6 bg-gradient-to-br from-[#2F02CC] to-[#5A2FE0]">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -808,35 +981,38 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
             Comparación y análisis de rendimiento entre locales
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <div className="w-[120px]">
-            <div className="flex gap-2 items-center">
-              <span className="text-white text-sm">Período:</span>
-              <select
-                className="bg-white/10 border-0 text-white p-2 rounded-md"
-                value={timeRange}
-                onChange={(e) => handleTimeRangeChange(e.target.value)}
-              >
-                <option value="day">Día</option>
-                <option value="week">Semana</option>
-                <option value="month">Mes</option>
-                <option value="year">Año</option>
-              </select>
-            </div>
+
+        {/* Contenedor con más separación */}
+        <div className="flex items-center">
+          {/* Selector de período con un fondo sutil */}
+          <div className="flex items-center mr-12 bg-white/5 px-4 py-2 rounded-lg">
+            {' '}
+            {/* Margen aumentado a 12 y fondo sutil */}
+            <span className="text-white mr-3 font-medium">Período:</span>{' '}
+            {/* Margen derecho aumentado */}
+            <select
+              className="bg-white/10 border-0 text-white p-2 rounded-md min-w-[90px]"
+              value={timeRange}
+              onChange={(e) => handleTimeRangeChange(e.target.value)}
+            >
+              <option value="day">Día</option>
+              <option value="week">Semana</option>
+              <option value="month">Mes</option>
+              <option value="year">Año</option>
+            </select>
           </div>
+          {/* Separador vertical más prominente */}
+          <div className="h-10 w-[2px] bg-white/20 mr-12 hidden md:block"></div>{' '}
+          {/* Altura y grosor aumentados, margen aumentado */}
+          {/* Botón exportar con más padding y estilizado */}
           <Button
             variant="secondary"
-            className="bg-white/10 border-0 text-white hover:bg-white/20"
+            className="bg-white/10 border-0 text-white hover:bg-white/20 flex items-center gap-3 px-8 py-2.5 rounded-lg"
+            onClick={handleExportData}
           >
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-          </Button>
-          <Button
-            variant="secondary"
-            className="bg-white/10 border-0 text-white hover:bg-white/20"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
+            <Download className="h-5 w-5" /> {/* Icono más grande */}
+            <span className="font-medium">Exportar</span>{' '}
+            {/* Texto más prominente */}
           </Button>
         </div>
       </div>
@@ -851,48 +1027,45 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
             </Badge>
           </CardHeader>
           <CardContent>
-            <div className="relative h-[300px] bg-white/5 rounded-lg flex items-center justify-center">
-              <Map className="h-16 w-16 text-white/20" />
-              <div className="absolute text-white">
-                Mapa interactivo de locales
-              </div>
-              <div className="absolute top-4 left-4 bg-white/10 p-2 rounded-lg">
-                <div className="flex items-center gap-2 text-white text-sm">
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span>
-                    Total Reseñas:{' '}
-                    {currentRestaurant
-                      ? restaurantMetrics[currentRestaurant.documentId]
-                          ?.totalReviews
-                      : '-'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-white text-sm">
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <span>
-                    Rating Promedio:{' '}
-                    {currentRestaurant
-                      ? restaurantMetrics[
-                          currentRestaurant.documentId
-                        ]?.averageRating.toFixed(1)
-                      : '-'}
-                    /5
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-white text-sm">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <span>
-                    Tasa de Conversión:{' '}
-                    {currentRestaurant
-                      ? restaurantMetrics[
-                          currentRestaurant.documentId
-                        ]?.conversionRate.toFixed(1)
-                      : '-'}
-                    %
-                  </span>
-                </div>
-              </div>
-            </div>
+            <RestaurantMap
+              restaurants={restaurants.map((restaurant) => ({
+                id: restaurant.id,
+                name: restaurant.name,
+                documentId: restaurant.documentId,
+                coordinates: {
+                  latitude: restaurant.coordinates?.latitude || -34.61,
+                  longitude: restaurant.coordinates?.longitude || -58.44,
+                },
+                metrics: restaurantMetrics[restaurant.documentId]
+                  ? {
+                      totalReviews:
+                        restaurantMetrics[restaurant.documentId].totalReviews,
+                      averageRating:
+                        restaurantMetrics[restaurant.documentId].averageRating,
+                      conversionRate:
+                        restaurantMetrics[restaurant.documentId].conversionRate,
+                    }
+                  : undefined,
+                address: restaurant.location
+                  ? `${restaurant.location.street || ''} ${
+                      restaurant.location.number || ''
+                    }, ${restaurant.location.city || ''}`
+                  : undefined,
+              }))}
+              selectedRestaurantId={currentRestaurant?.documentId}
+              onRestaurantClick={(documentId) => {
+                const restaurant = restaurants.find(
+                  (r) => r.documentId === documentId
+                );
+                if (restaurant) {
+                  setCurrentRestaurant(restaurant);
+                  window.dispatchEvent(
+                    new CustomEvent('restaurantChange', { detail: restaurant })
+                  );
+                }
+              }}
+              className="h-[300px]"
+            />
           </CardContent>
         </Card>
 
@@ -905,11 +1078,11 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="mb-4 max-w-md">
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-white/50" />
                 <Input
-                  placeholder="Buscar local..."
+                  placeholder="Buscar restaurante..."
                   className="pl-8 bg-white/5 border-white/10 text-white"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -933,7 +1106,7 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
                           {local.name}
                         </div>
                         <div className="text-white/60 text-xs">
-                          {getCiudad(local.id)}
+                          {local.location?.city || getCiudad(local)}
                         </div>
                       </div>
                     </div>
@@ -1068,6 +1241,7 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
                           <Star className="h-3 w-3 text-yellow-400 ml-1" />
                         </div>
                       </div>
+                      {/* Aquí está el cambio: la barra usa valor max={5} */}
                       <Progress
                         value={periodRating}
                         max={5}
@@ -1305,46 +1479,50 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
             <CardTitle className="text-white">
               Análisis Comparativo Detallado
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex gap-1">
               <Button
                 variant="secondary"
                 size="sm"
-                className={`bg-white/10 border-white/20 hover:bg-white/20 text-white ${
+                className={`bg-white/10 border-white/20 hover:bg-white/20 text-white flex items-center gap-1 ${
                   comparativeTab === 'overview' ? 'bg-white/20' : ''
                 }`}
                 onClick={() => setComparativeTab('overview')}
               >
-                Vista General
+                <BarChart3 className="h-3 w-3" />
+                <span>General</span>
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
-                className={`bg-white/10 border-white/20 hover:bg-white/20 text-white ${
+                className={`bg-white/10 border-white/20 hover:bg-white/20 text-white flex items-center gap-1 ${
                   comparativeTab === 'ratings' ? 'bg-white/20' : ''
                 }`}
                 onClick={() => setComparativeTab('ratings')}
               >
-                Calificaciones
+                <Star className="h-3 w-3" />
+                <span>Ratings</span>
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
-                className={`bg-white/10 border-white/20 hover:bg-white/20 text-white ${
+                className={`bg-white/10 border-white/20 hover:bg-white/20 text-white flex items-center gap-1 ${
                   comparativeTab === 'employees' ? 'bg-white/20' : ''
                 }`}
                 onClick={() => setComparativeTab('employees')}
               >
-                Empleados
+                <Users2 className="h-3 w-3" />
+                <span>Equipo</span>
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
-                className={`bg-white/10 border-white/20 hover:bg-white/20 text-white ${
+                className={`bg-white/10 border-white/20 hover:bg-white/20 text-white flex items-center gap-1 ${
                   comparativeTab === 'categories' ? 'bg-white/20' : ''
                 }`}
                 onClick={() => setComparativeTab('categories')}
               >
-                Categorías
+                <Zap className="h-3 w-3" />
+                <span>Categorías</span>
               </Button>
             </div>
           </div>
@@ -1424,44 +1602,59 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
 
                   {/* Radar chart */}
                   <div className="h-[400px] bg-white/5 rounded-lg p-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart
-                        cx="50%"
-                        cy="50%"
-                        outerRadius="80%"
-                        data={radarData}
-                      >
-                        <PolarGrid stroke="rgba(255,255,255,0.2)" />
-                        <PolarAngleAxis
-                          dataKey="subject"
-                          stroke="rgba(255,255,255,0.7)"
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: 'rgba(0,0,0,0.8)',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: 'white',
-                          }}
-                        />
-                        {localesSeleccionados.map((local, index) => {
-                          const metrics = restaurantMetrics[local.documentId];
-                          if (!metrics) return null;
-
-                          return (
-                            <Radar
-                              key={local.id}
-                              name={metrics.name}
-                              dataKey={metrics.name}
-                              stroke={COLORS[index % COLORS.length]}
-                              fill={COLORS[index % COLORS.length]}
-                              fillOpacity={0.2}
-                            />
-                          );
-                        })}
-                        <Legend />
-                      </RadarChart>
-                    </ResponsiveContainer>
+                    {radarData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadarChart
+                          cx="50%"
+                          cy="50%"
+                          outerRadius="80%"
+                          data={radarData}
+                        >
+                          <PolarGrid stroke="rgba(255,255,255,0.2)" />
+                          <PolarAngleAxis
+                            dataKey="subject"
+                            stroke="rgba(255,255,255,0.7)"
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: 'rgba(0,0,0,0.8)',
+                              border: 'none',
+                              borderRadius: '4px',
+                              color: 'white',
+                            }}
+                          />
+                          {localesSeleccionados
+                            .filter((local) => {
+                              // Solo incluir restaurantes que tengan métricas válidas
+                              const metrics =
+                                restaurantMetrics[local.documentId];
+                              return metrics !== undefined;
+                            })
+                            .map((local, index) => {
+                              const metrics =
+                                restaurantMetrics[local.documentId];
+                              return (
+                                <Radar
+                                  key={local.id}
+                                  name={metrics.name}
+                                  dataKey={metrics.name}
+                                  stroke={COLORS[index % COLORS.length]}
+                                  fill={COLORS[index % COLORS.length]}
+                                  fillOpacity={0.2}
+                                />
+                              );
+                            })}
+                          <Legend />
+                        </RadarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-white/70">
+                        <div className="text-center">
+                          <AlertTriangle className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                          <p>No hay suficientes datos para mostrar el radar</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1891,7 +2084,7 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
               <select
                 className="bg-white/10 border-0 text-white p-2 rounded-md"
                 value={insightTimeRange}
-                onChange={(e) => setInsightTimeRange(e.target.value)}
+                onChange={(e) => handleInsightTimeRangeChange(e.target.value)}
               >
                 <option value="day">Día</option>
                 <option value="week">Semana</option>
@@ -1910,32 +2103,13 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
             >
               {insightLoading ? (
                 <>
-                  <svg
-                    className="animate-spin h-4 w-4 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Generando...
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Generando...</span>
                 </>
               ) : (
                 <>
                   <Zap className="h-4 w-4 text-amber-400" />
-                  Generar nuevo análisis
+                  <span>Generar nuevo análisis</span>
                 </>
               )}
             </Button>

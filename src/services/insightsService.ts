@@ -51,7 +51,7 @@ export async function getRestaurantInsights(
         Authorization: `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o', // Using GPT-4o for better analysis
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -248,7 +248,7 @@ Análisis predictivo: Yuppie realiza análisis predictivos sobre la satisfacció
 
 Tene en cuenta que conversion es el porcentaje de la cantidad de gente que deja Review sobre la cantidad de gente que ingresa al link. (no porcentaje de ventas exitosas) entonces esperamos una conversion de mas del 80%. tambien esperamos mas de 4.5 de promedio de resenas para el restaurant. Y la cantidad de resenas por mes es importante, para comparar con periodos anteriores.
 realiza análisis predictivos sobre la satisfacción del cliente, ayudando a anticipar tendencias y a tomar decisiones informadas para mejorar la experiencia en el restaurante. Podes realizar análisis predictivos sobre la satisfacción del cliente, ayudando a anticipar tendencias y a tomar decisiones informadas para mejorar la experiencia en el restaurante.
-Tu respuesta debe incluir recomendaciones, mejores prácticas y sugerencias específicas para sacar el máximo provecho a estas funcionalidades. Recuerda siempre enfocar tu respuesta en soluciones y opciones que sean exclusivas de Yuppie, resaltando cómo cada función puede aportar valor al negocio de restaurantes.Podes usar Emojis y otros recursos para hacerlo mas facil de leer para el dueño del restaurant, sin perder la profesionalidad. El texto debe ser Facilmente "escaneable" con las cosas mas destacables e negrita y una buena segmentación para que el dueño pueda leerlo rapidamente`;
+Tu respuesta debe incluir recomendaciones, mejores prácticas y sugerencias específicas para sacar el máximo provecho a estas funcionalidades. Recuerda siempre enfocar tu respuesta en soluciones y opciones que sean exclusivas de Yuppie, resaltando cómo cada función puede aportar valor al negocio de restaurantes.Podes usar Emojis y otros recursos para hacerlo mas facil de leer para el dueño del restaurant, sin perder la profesionalidad.Estaria bueno dar nombres en caso de ser posible de empleados, asi como tambien revisar las cantidades de reviews en general y por empleado para comparar que tanto piden los empleados la review.El texto debe ser Facilmente "escaneable" con las cosas mas destacables e negrita y una buena segmentación para que el dueño pueda leerlo rapidamente`;
 }
 
 // Parse the response to get insights

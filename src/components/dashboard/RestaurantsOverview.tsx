@@ -6,11 +6,11 @@ import {
   getRestaurantReviews,
   getEmployeesByRestaurant,
 } from '../../services/api';
-import { RestaurantDetail } from './RestaurantDetail';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/Button';
 import type { Review } from '../../types/reviews';
+import type { Restaurant } from '../../types/restaurant';
 import type { Employee } from '../../types/employee';
 import {
   Building2,
@@ -21,6 +21,8 @@ import {
   Zap,
   Search,
   RefreshCw,
+  Plus,
+  Check,
 } from 'lucide-react';
 import { Input } from '../ui/input';
 import AdvancedComparison from './AdvancedComparison';
@@ -33,7 +35,7 @@ import {
 } from '../../lib/restaurantStore';
 import { useToast } from '../ui/use-toast';
 
-export interface Restaurant {
+export interface RestaurantData {
   id: number;
   documentId: string;
   name: string;
@@ -41,6 +43,18 @@ export interface Restaurant {
   owner: {
     firstName: string;
     lastName: string;
+  };
+  location?: {
+    street: string;
+    number: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+  };
+  coordinates?: {
+    latitude: number;
+    longitude: number;
   };
   linkMaps: string;
 }
@@ -53,14 +67,25 @@ interface RestaurantMetric {
   employeeCount: number;
 }
 
-// Función para obtener una ciudad hardcodeada para un restaurante
-const getCiudad = (restaurantId: number) => {
-  const cities = ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Bilbao'];
-  return cities[restaurantId % cities.length];
+// Función para convertir de RestaurantData a Restaurant
+const convertToRestaurant = (data: RestaurantData): Restaurant => {
+  return {
+    id: data.id,
+    documentId: data.documentId,
+    name: data.name,
+    taps: data.taps || '0',
+    linkMaps: data.linkMaps || '',
+    owner: {
+      firstName: data.owner?.firstName || '',
+      lastName: data.owner?.lastName || '',
+    },
+    location: data.location,
+    coordinates: data.coordinates,
+  };
 };
 
 export function RestaurantsOverview() {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [restaurants, setRestaurants] = useState<RestaurantData[]>([]);
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,19 +98,22 @@ export function RestaurantsOverview() {
 
   // Estados para manejar la selección de restaurantes
   const [currentRestaurant, setCurrentRestaurantState] =
-    useState<Restaurant | null>(null);
+    useState<RestaurantData | null>(null);
   const [compareRestaurants, setCompareRestaurantsState] = useState<
-    Restaurant[]
+    RestaurantData[]
   >([]);
+
+  // Obtener ciudad desde datos reales o usar función de respaldo para compatibilidad
+  const getCiudad = (restaurant: RestaurantData): string => {
+    return restaurant.location?.city || 'Ciudad no disponible';
+  };
 
   // Filtrar restaurantes basados en la búsqueda
   const filteredRestaurants = searchTerm
     ? restaurants.filter(
         (restaurant) =>
           restaurant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          getCiudad(restaurant.id)
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())
+          getCiudad(restaurant).toLowerCase().includes(searchTerm.toLowerCase())
       )
     : restaurants;
 
@@ -151,21 +179,37 @@ export function RestaurantsOverview() {
           return;
         }
 
-        setRestaurants(data);
-        setRestaurantsList(data);
+        // Convertir los datos recibidos al formato esperado por el componente
+        const formattedData: RestaurantData[] = data.map((restaurant: any) => ({
+          id: restaurant.id,
+          documentId: restaurant.documentId,
+          name: restaurant.name,
+          taps: restaurant.taps,
+          owner: restaurant.owner,
+          linkMaps: restaurant.linkMaps || '',
+          // Mapear la ubicación correctamente
+          location: restaurant.location,
+          coordinates: restaurant.coordinates,
+        }));
+
+        setRestaurants(formattedData);
+
+        // Convertir los datos para el store
+        const convertedData = formattedData.map(convertToRestaurant);
+        setRestaurantsList(convertedData);
 
         // Si no hay restaurante seleccionado y tenemos datos, seleccionar el primero
         const currentSelected = getSelectedRestaurant();
         console.log('Restaurante actualmente seleccionado:', currentSelected);
 
-        if (!currentSelected && data.length > 0) {
-          console.log('Seleccionando primer restaurante:', data[0]);
-          setSelectedRestaurant(data[0]);
-          setCurrentRestaurantState(data[0]);
+        if (!currentSelected && formattedData.length > 0) {
+          console.log('Seleccionando primer restaurante:', formattedData[0]);
+          setSelectedRestaurant(convertToRestaurant(formattedData[0]));
+          setCurrentRestaurantState(formattedData[0]);
         }
 
         // Cargar métricas para todos los restaurantes
-        await loadRestaurantMetrics(data);
+        await loadRestaurantMetrics(formattedData);
       } catch (err) {
         console.error('Error en fetchRestaurants:', err);
         setError('Error al obtener los restaurantes');
@@ -204,7 +248,7 @@ export function RestaurantsOverview() {
   }, []);
 
   // Cargar métricas para los restaurantes
-  const loadRestaurantMetrics = async (restaurants: Restaurant[]) => {
+  const loadRestaurantMetrics = async (restaurants: RestaurantData[]) => {
     setMetricsLoading(true);
     const metrics: Record<string, RestaurantMetric> = {};
 
@@ -254,15 +298,41 @@ export function RestaurantsOverview() {
   };
 
   // Manejar selección de restaurante
-  const handleSelectRestaurant = (restaurant: Restaurant) => {
+  const handleSelectRestaurant = (restaurant: RestaurantData) => {
     console.log('Seleccionando restaurante:', restaurant);
-    setSelectedRestaurant(restaurant);
+
+    // Siempre establecer el restaurante seleccionado
+    setSelectedRestaurant(convertToRestaurant(restaurant));
+
+    // Si no hay restaurantes en la lista de comparación, agregar este
+    const compareList = getCompareRestaurants();
+    if (compareList.length === 0) {
+      toggleCompare(convertToRestaurant(restaurant));
+    }
   };
 
   // Manejar toggle para comparación
-  const handleToggleCompare = (restaurant: Restaurant) => {
+  const handleToggleCompare = (restaurant: RestaurantData) => {
     console.log('Toggle comparación para:', restaurant);
-    toggleCompare(restaurant);
+
+    // Obtener la lista actual
+    const currentSelected = getCompareRestaurants();
+
+    // Si el restaurante ya está en la lista y no es el único, quitarlo
+    if (currentSelected.some((r) => r.id === restaurant.id)) {
+      if (currentSelected.length > 1) {
+        toggleCompare(convertToRestaurant(restaurant));
+      } else {
+        toast({
+          title: 'Acción no permitida',
+          description: 'Debe mantener al menos un restaurante para comparación',
+          variant: 'destructive',
+        });
+      }
+    } else {
+      // Si no está en la lista, agregarlo
+      toggleCompare(convertToRestaurant(restaurant));
+    }
   };
 
   if (loading)
@@ -345,8 +415,8 @@ export function RestaurantsOverview() {
                     <div>
                       {restaurant.name}
                       <div className="text-sm font-normal text-white/60 flex items-center mt-1">
-                        <MapPin className="w-4 h-4 mr-1" />{' '}
-                        {getCiudad(restaurant.id)}
+                        <MapPin className="w-4 h-4 mr-1" />
+                        {getCiudad(restaurant)}
                       </div>
                     </div>
                     <Badge
@@ -384,7 +454,7 @@ export function RestaurantsOverview() {
                         Rating Promedio
                       </div>
                       {metricsLoading ? (
-                        <div className="h-5 flex items-center">
+                        <div className="h-5 flex items-center justify-center">
                           <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
                         </div>
                       ) : (
@@ -438,33 +508,37 @@ export function RestaurantsOverview() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full text-white hover:bg-white/10"
+                      className="w-full text-white hover:bg-white/10 flex items-center justify-center gap-1"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleToggleCompare(restaurant);
                       }}
                     >
                       {compareRestaurants.some(
-                        (r: Restaurant) =>
+                        (r: RestaurantData) =>
                           r.documentId === restaurant.documentId
-                      )
-                        ? '✓ Añadido a comparación'
-                        : '+ Añadir a comparación'}
+                      ) ? (
+                        <>
+                          <Check className="h-4 w-4" /> Añadido a comparación
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4" /> Añadir a comparación
+                        </>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
-
-          {currentRestaurant && (
-            <RestaurantDetail restaurant={currentRestaurant} />
-          )}
         </>
       )}
 
       {activeTab === 'compare' && (
-        <AdvancedComparison restaurants={restaurants} />
+        <AdvancedComparison
+          restaurants={restaurants.map(convertToRestaurant)}
+        />
       )}
     </div>
   );
