@@ -1,4 +1,3 @@
-// Reemplaza completamente el archivo Rating.tsx
 import { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
@@ -21,7 +20,7 @@ interface Props {
   employeeDocumentId?: string;
 }
 
-// Memoized para evitar re-renders
+// Static array that won't re-render - use web-safe emoji Unicode code points
 const ratingOptions = [
   { rating: 1, emoji: '😠', label: 'Muy insatisfecho', color: 'bg-red-500' },
   { rating: 2, emoji: '🙁', label: 'Insatisfecho', color: 'bg-orange-500' },
@@ -30,7 +29,7 @@ const ratingOptions = [
   { rating: 5, emoji: '😁', label: 'Muy satisfecho', color: 'bg-green-500' },
 ] as const;
 
-// Componente optimizado con lazy loading de animaciones
+// Optimize component for better performance on mobile
 export function RatingForm({
   restaurantId,
   restaurantDocumentId,
@@ -38,38 +37,58 @@ export function RatingForm({
   linkMaps,
   employeeDocumentId,
 }: Props) {
-  // Parseamos el ID una sola vez
+  // Parse the ID once
   const numericRestaurantId = parseInt(restaurantId, 10);
 
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [emojisLoaded, setEmojisLoaded] = useState(false);
   const { toast } = useToast();
 
-  console.log('RatingForm inicializado con:', {
-    restaurantId,
-    numericRestaurantId,
-    restaurantDocumentId,
-    employeeDocumentId,
-    nextUrl,
-    linkMaps,
-  });
+  // Preload emojis
+  useEffect(() => {
+    // Create a hidden div to preload emojis and ensure they're ready before display
+    const preloadEmojis = () => {
+      const preloadDiv = document.createElement('div');
+      preloadDiv.style.position = 'absolute';
+      preloadDiv.style.opacity = '0';
+      preloadDiv.style.pointerEvents = 'none';
+      preloadDiv.style.width = '0';
+      preloadDiv.style.height = '0';
+      preloadDiv.style.overflow = 'hidden';
+
+      // Add all emojis with explicit font-size to ensure proper loading
+      ratingOptions.forEach((option) => {
+        const span = document.createElement('span');
+        span.style.fontSize = '40px'; // Match the size you'll display
+        span.textContent = option.emoji;
+        preloadDiv.appendChild(span);
+      });
+
+      document.body.appendChild(preloadDiv);
+
+      // Set a timeout to ensure emojis have time to load
+      setTimeout(() => {
+        setEmojisLoaded(true);
+        document.body.removeChild(preloadDiv);
+      }, 300);
+    };
+
+    preloadEmojis();
+  }, []);
 
   useEffect(() => {
-    // IMPORTANTE: Si la URL actual no tiene employee, limpiamos cualquier
-    // empleado guardado en localStorage para evitar que se reutilice
+    // Handle employee ID in localStorage
     if (!employeeDocumentId) {
       localStorage.removeItem('yuppie_employee');
-      console.log('URL sin empleado - eliminando empleado de localStorage');
     } else {
-      // Si la URL actual tiene un empleado, lo guardamos
       localStorage.setItem('yuppie_employee', employeeDocumentId);
-      console.log('Guardando empleado en localStorage:', employeeDocumentId);
     }
   }, [employeeDocumentId]);
 
-  // Verificación de review enviada optimizada!
+  // Check for previous submissions
   useEffect(() => {
     if (!restaurantDocumentId) return;
 
@@ -89,20 +108,16 @@ export function RatingForm({
       } catch (error) {
         console.error('Error verificando estado de review:', error);
       } finally {
-        // Marcamos como cargado incluso si hay error
         setIsLoaded(true);
       }
     };
 
-    // Usar requestIdleCallback o setTimeout para no bloquear el render
-    if (window.requestIdleCallback) {
-      window.requestIdleCallback(checkSubmission);
-    } else {
-      setTimeout(checkSubmission, 100);
-    }
+    // Use requestAnimationFrame instead of requestIdleCallback for better compatibility
+    requestAnimationFrame(() => {
+      checkSubmission();
+    });
   }, [restaurantDocumentId, toast]);
 
-  // Memoized functions para evitar recreaciones
   const handleRatingHover = useCallback(
     (rating: number) => {
       if (!isSubmitting && !alreadySubmitted) {
@@ -112,7 +127,7 @@ export function RatingForm({
     [isSubmitting, alreadySubmitted]
   );
 
-  // Función central para crear reseñas
+  // Function to create reviews
   const createReviewWithData = async (
     rating: number,
     restaurantRealId: number,
@@ -124,7 +139,6 @@ export function RatingForm({
       }`
     );
 
-    // Crear objeto de reseña
     const reviewData: any = {
       restaurantId: restaurantRealId,
       calification: rating,
@@ -134,10 +148,8 @@ export function RatingForm({
       googleSent: true,
     };
 
-    // Añadir empleado si existe
     if (employeeRealId) {
       reviewData.employeeId = employeeRealId;
-      console.log('Añadiendo employeeId:', employeeRealId);
     }
 
     try {
@@ -150,7 +162,7 @@ export function RatingForm({
     }
   };
 
-  // FUNCIÓN PRINCIPAL
+  // Main handler function
   const handleRatingSelect = useCallback(
     async (rating: number) => {
       if (isSubmitting || alreadySubmitted) return;
@@ -173,7 +185,6 @@ export function RatingForm({
             duration: 2000,
           });
 
-          // CRITICAL: Get the real restaurant and employee (if exists) IDs in Strapi
           try {
             // Get restaurant ID
             console.log(
@@ -206,10 +217,10 @@ export function RatingForm({
                 }
               }
 
-              // For 5-star ratings, we use a default positive email that serves as a placeholder
+              // For 5-star ratings, use a default positive email
               const reviewEmail = 'prefirio-no-dar-su-email@nodiosuemail.com';
 
-              // Check if this email has already submitted a review for this restaurant in the last 24 hours
+              // Check if this email has already submitted a review
               const emailStatus = await checkEmailReviewStatus(
                 restaurantDocumentId,
                 reviewEmail
@@ -219,7 +230,6 @@ export function RatingForm({
                 console.log(
                   'This email already submitted a review in the last 24 hours.'
                 );
-                // For automated Google reviews, we still proceed but log the occurrence
               }
 
               // Send review with correct IDs
@@ -251,10 +261,9 @@ export function RatingForm({
           console.log(`Redirecting to Google Maps: ${linkMaps}`);
           setTimeout(() => {
             window.location.href = linkMaps;
-          }, 2000); // Increased to 2 seconds to give more time
+          }, 2000);
         } else {
           // For ratings less than 5 - Redirect to next page
-          // IMPORTANT: Include employee ID in URL if it exists
           if (employeeDocumentId) {
             const fullNextUrl = `${nextUrl}${
               nextUrl.includes('?') ? '&' : '?'
@@ -287,10 +296,8 @@ export function RatingForm({
     ]
   );
 
-  // Si ya se envió la review o no se ha cargado aún, mostrar fallback
+  // If already submitted, show fallback
   if (alreadySubmitted) {
-    // Mostrar toast pero no redireccionar automáticamente
-    // porque podría interferir con la redirección a Google Maps
     return (
       <div className="w-full text-center py-4">
         <p className="text-white text-opacity-80">
@@ -300,8 +307,8 @@ export function RatingForm({
     );
   }
 
-  // Fallback mientras carga, para evitar saltos bruscos de layout
-  if (!isLoaded) {
+  // Show loading state
+  if (!isLoaded || !emojisLoaded) {
     return (
       <div className="w-full max-w-md flex flex-col items-center gap-8">
         <h2 className="text-2xl font-medium text-white text-center">
@@ -320,80 +327,56 @@ export function RatingForm({
 
   return (
     <div className="w-full max-w-md flex flex-col items-center gap-8">
-      <motion.h2
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-2xl font-medium text-white text-center"
-      >
+      <h2 className="text-2xl font-medium text-white text-center">
         ¿Qué tan satisfecho quedaste con el servicio?
-      </motion.h2>
+      </h2>
 
       <div className="flex justify-between w-full px-4 relative">
-        <AnimatePresence>
-          {ratingOptions.map(({ rating, emoji, label, color }) => (
-            <motion.button
-              key={rating}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{
-                type: 'spring',
-                stiffness: 300,
-                // Staggered animations para cargar progresivamente
-                delay: 0.05 * (rating - 1),
-              }}
-              onClick={() => handleRatingSelect(rating)}
-              onMouseEnter={() => handleRatingHover(rating)}
-              onFocus={() => handleRatingHover(rating)}
-              disabled={isSubmitting}
-              className={`relative group flex flex-col items-center ${
-                isSubmitting
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'cursor-pointer'
-              }`}
-              aria-label={label}
-            >
-              <span className="text-4xl transform transition-transform duration-200 group-hover:scale-110">
-                {emoji}
-              </span>
+        {ratingOptions.map(({ rating, emoji, label, color }) => (
+          <button
+            key={rating}
+            onClick={() => handleRatingSelect(rating)}
+            onMouseEnter={() => handleRatingHover(rating)}
+            onTouchStart={() => handleRatingHover(rating)}
+            onFocus={() => handleRatingHover(rating)}
+            disabled={isSubmitting}
+            className={`relative group flex flex-col items-center ${
+              isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+            }`}
+            aria-label={label}
+          >
+            {/* Use a simpler approach for the emoji display */}
+            <span className="text-4xl transform transition-transform duration-200 group-hover:scale-110">
+              {emoji}
+            </span>
 
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{
-                  opacity: selectedRating === rating ? 1 : 0,
-                  y: selectedRating === rating ? 0 : 10,
-                }}
-                className={`absolute -bottom-12 px-3 py-1 rounded-full text-sm text-white ${color}`}
+            {/* Only show label when selected to improve performance */}
+            {selectedRating === rating && (
+              <div
+                className={`absolute -bottom-12 px-3 py-1 rounded-full text-sm text-white ${color} opacity-100`}
               >
                 {label}
-              </motion.div>
+              </div>
+            )}
 
-              <motion.div
-                initial={false}
-                animate={{
-                  scale: selectedRating === rating ? 1 : 0,
-                  opacity: selectedRating === rating ? 1 : 0,
-                }}
-                className={`absolute -bottom-2 w-2 h-2 rounded-full ${color}`}
+            {/* Indicator dot when selected */}
+            {selectedRating === rating && (
+              <div
+                className={`absolute -bottom-2 w-2 h-2 rounded-full ${color} opacity-100`}
               />
-            </motion.button>
-          ))}
-        </AnimatePresence>
+            )}
+          </button>
+        ))}
       </div>
 
       {isSubmitting && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center text-white/80"
-        >
+        <div className="text-center text-white/80">
           Procesando tu calificación...
-        </motion.div>
+        </div>
       )}
     </div>
   );
 }
 
-// Exportar versión memoizada para evitar re-renders innecesarios
+// Export memoized version for better performance
 export const MemoizedRatingForm = memo(RatingForm);

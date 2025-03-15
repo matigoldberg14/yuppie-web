@@ -13,7 +13,7 @@
     "@astrojs/check": "^0.9.4",
     "@astrojs/react": "^4.2.0",
     "@astrojs/tailwind": "^6.0.0",
-    "@astrojs/vercel": "^8.0.8",
+    "@astrojs/vercel": "^8.1.2",
     "@emailjs/browser": "^4.4.1",
     "@firebasegen/default-connector": "file:dataconnect-generated/js/default-connector",
     "@formspree/react": "^2.5.1",

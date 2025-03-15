@@ -35,6 +35,32 @@ const nextUrl = `/improvement?local=${documentId}${employeeDocumentId ? `&employ
   <!-- Precargar la siguiente página -->
   <link rel="prefetch" href={nextUrl} />
   
+  <!-- Asegurarse de que la fuente emojis se cargue primero -->
+  <style is:inline>
+    @supports (font-variation-settings: normal) {
+      .emoji-text {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        text-rendering: optimizeLegibility;
+      }
+    }
+    
+    /* Mostrar fallback mientras se cargan los emojis */
+    .emoji-container {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    body.emojis-ready .emoji-container {
+      opacity: 1;
+    }
+    
+    /* Prevent emoji rescaling on iOS */
+    .emoji-text {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+  </style>
+  
   <div class="min-h-screen bg-gradient flex flex-col items-center justify-center p-4">
     <div class="w-full max-w-md">
       <h1 class="text-4xl font-bold mb-6 text-center text-shadow">
@@ -43,25 +69,29 @@ const nextUrl = `/improvement?local=${documentId}${employeeDocumentId ? `&employ
       
       <div class="card p-6">
         <h2 class="text-2xl font-semibold mb-4 text-center">Califica tu experiencia</h2>
-        <!-- Fallback para emojis -->
+        
+        <!-- Fallback para emojis con HTML estático (no JavaScript) -->
         <noscript>
           <div class="flex justify-between w-full px-4 py-6 text-center">
             <div class="flex flex-col items-center">😠<div class="mt-2">Muy insatisfecho</div></div>
             <div class="flex flex-col items-center">🙁<div class="mt-2">Insatisfecho</div></div>
             <div class="flex flex-col items-center">😐<div class="mt-2">Neutral</div></div>
             <div class="flex flex-col items-center">🙂<div class="mt-2">Satisfecho</div></div>
-            <div class="flex flex-col items-center">😍<div class="mt-2">Muy satisfecho</div></div>
+            <div class="flex flex-col items-center">😁<div class="mt-2">Muy satisfecho</div></div>
           </div>
         </noscript>
         
-        <RatingForm 
-        client:load 
-        restaurantId={restaurant.id.toString()}
-        restaurantDocumentId={documentId}
-        employeeDocumentId={employeeDocumentId || undefined}
-        nextUrl={nextUrl}
-        linkMaps={restaurant.linkMaps}
-      />
+        <!-- Contenedor con clase para control de opacidad durante carga -->
+        <div class="emoji-container">
+          <RatingForm 
+            client:load 
+            restaurantId={restaurant.id.toString()}
+            restaurantDocumentId={documentId}
+            employeeDocumentId={employeeDocumentId || undefined}
+            nextUrl={nextUrl}
+            linkMaps={restaurant.linkMaps}
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -103,60 +133,76 @@ const nextUrl = `/improvement?local=${documentId}${employeeDocumentId ? `&employ
     padding-bottom: 1.5rem;
   }
 </style>
+
 <script>
-  // Añadir este script al principio del archivo rating.astro
+  // Script de precarga de emojis mejorado para dispositivos móviles
   document.addEventListener('DOMContentLoaded', () => {
-    // Obtener los parámetros actuales de la URL
+    // Preload emojis with optimized technique
+    const emojis = ['😠', '🙁', '😐', '🙂', '😁'];
+    
+    // Create a div to ensure emojis are rendered before being shown
+    const preloadDiv = document.createElement('div');
+    preloadDiv.id = 'emoji-preloader';
+    preloadDiv.setAttribute('aria-hidden', 'true');
+    preloadDiv.style.position = 'fixed';
+    preloadDiv.style.top = '0';
+    preloadDiv.style.left = '0';
+    preloadDiv.style.opacity = '0.01'; // Tiny bit visible to ensure rendering
+    preloadDiv.style.pointerEvents = 'none';
+    preloadDiv.style.zIndex = '-1000';
+    preloadDiv.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+    
+    // Add each emoji with explicit styling to force full render
+    emojis.forEach(emoji => {
+      const span = document.createElement('span');
+      span.style.fontSize = '40px'; // Match display size
+      span.style.display = 'inline-block';
+      span.style.width = '40px';
+      span.style.height = '40px';
+      span.style.lineHeight = '40px';
+      span.style.textAlign = 'center';
+      span.className = 'emoji-text';
+      span.textContent = emoji;
+      preloadDiv.appendChild(span);
+    });
+    
+    document.body.appendChild(preloadDiv);
+    
+    // Give browser some time to render the emojis
+    setTimeout(() => {
+      // Mark emojis as ready
+      document.body.classList.add('emojis-ready');
+    }, 300);
+    
+    // Fetch URL parameters for restaurant management
     const params = new URLSearchParams(window.location.search);
     const currentRestaurantId = params.get('local');
     const currentEmployeeId = params.get('employee');
     
-    // Eliminar datos de empleado si no está presente en la URL actual
+    // Clean up employee data if not present
     if (!currentEmployeeId) {
       localStorage.removeItem('yuppie_employee');
-      console.log('URL sin empleado - datos de empleado eliminados de localStorage');
     }
     
-    // Siempre actualizar el restaurante y limpiar datos de reviews anteriores
+    // Update restaurant and clean previous data if needed
     if (currentRestaurantId) {
       const previousRestaurantId = localStorage.getItem('yuppie_restaurant');
       
-      // Si es un restaurante diferente, limpiar datos previos
+      // If it's a different restaurant, clear previous data
       if (previousRestaurantId !== currentRestaurantId) {
-        // Limpiar datos específicos de reviews anteriores
         localStorage.removeItem('yuppie_rating');
         localStorage.removeItem('yuppie_improvement');
         localStorage.removeItem('emergency_review_data');
-        
-        console.log('Nuevo restaurante detectado - limpiando datos anteriores');
       }
       
-      // Actualizar ID del restaurante actual
+      // Update current restaurant ID
       localStorage.setItem('yuppie_restaurant', currentRestaurantId);
     }
-  });
-  </script>
-<script>
-  // Script para precarga de emojis y assets críticos
-  document.addEventListener('DOMContentLoaded', () => {
-    // Asegurarnos que los emojis están cargados
-    const emojis = ['😠', '🙁', '😐', '🙂', '😍'];
-    const preloadDiv = document.createElement('div');
-    preloadDiv.style.opacity = '0';
-    preloadDiv.style.position = 'absolute';
-    preloadDiv.style.pointerEvents = 'none';
-    preloadDiv.textContent = emojis.join('');
-    document.body.appendChild(preloadDiv);
     
-    // Precarga de la siguiente página
+    // Prefetch the next page
     const prefetchImprovement = document.createElement('link');
     prefetchImprovement.rel = 'prefetch';
-    prefetchImprovement.href = '/improvement?local=' + new URLSearchParams(window.location.search).get('local');
+    prefetchImprovement.href = '/improvement?local=' + params.get('local');
     document.head.appendChild(prefetchImprovement);
-    
-    // Eliminar el div después de un segundo
-    setTimeout(() => {
-      document.body.removeChild(preloadDiv);
-    }, 1000);
   });
 </script>
