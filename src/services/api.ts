@@ -865,54 +865,6 @@ export async function getEmployeeNumericId(
   }
 }
 
-export async function updateRestaurantLocation(
-  documentId: string,
-  location: {
-    street: string;
-    number: string;
-    city: string;
-    state: string;
-    country: string;
-    postalCode: string;
-  },
-  coordinates: {
-    latitude: number;
-    longitude: number;
-  }
-): Promise<boolean> {
-  try {
-    const response = await fetch(
-      `${process.env.API_URL}/api/restaurants/${documentId}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          data: {
-            location: {
-              ...location,
-            },
-            coordinates: {
-              latitude: coordinates.latitude,
-              longitude: coordinates.longitude,
-            },
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Error updating location: ${response.status}`);
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error in updateRestaurantLocation:', error);
-    throw error;
-  }
-}
-
 // Función para obtener todos los restaurantes de un owner dado su firebaseUID
 export async function getOwnerRestaurants(firebaseUID: string) {
   try {

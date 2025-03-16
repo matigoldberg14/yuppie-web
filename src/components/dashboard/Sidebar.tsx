@@ -66,7 +66,7 @@ export function Sidebar() {
         mainContent.style.paddingLeft = '1rem';
       }
     }
-    // Guardar el estado en localStorage y notificar mediante evento
+    // Guardar el estado en localStorage y notificar mediante evento.
     if (typeof window !== 'undefined') {
       localStorage.setItem('sidebarCollapsed', isCollapsed.toString());
       window.dispatchEvent(
@@ -146,16 +146,6 @@ export function Sidebar() {
           },
         ]
       : []),
-    {
-      icon: <Target className="h-4 w-4" />,
-      text: 'Proximamente...',
-      href: '/dashboard/',
-    },
-    {
-      icon: <Lightbulb className="h-4 w-4" />,
-      text: 'Proximamente...',
-      href: '/dashboard/',
-    },
   ];
 
   return (
