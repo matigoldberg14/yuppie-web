@@ -505,28 +505,10 @@ export function RestaurantsOverview() {
                   </div>
 
                   <div className="mt-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-white hover:bg-white/10 flex items-center justify-center gap-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleCompare(restaurant);
-                      }}
-                    >
-                      {compareRestaurants.some(
-                        (r: RestaurantData) =>
-                          r.documentId === restaurant.documentId
-                      ) ? (
-                        <>
-                          <Check className="h-4 w-4" /> Añadido a comparación
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4" /> Añadir a comparación
-                        </>
-                      )}
-                    </Button>
+                    <div className="text-center text-white/60 text-xs py-2">
+                      Utiliza la vista de comparación para analizar múltiples
+                      locales
+                    </div>
                   </div>
                 </CardContent>
               </Card>

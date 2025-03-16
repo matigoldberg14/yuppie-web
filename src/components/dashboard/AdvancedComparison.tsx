@@ -234,15 +234,13 @@ const AdvancedComparison: React.FC<AdvancedComparisonProps> = ({
       setCurrentRestaurant(selected);
       setCompareRestaurants(comparisonList);
 
-      // Set up list of selected based on main restaurant and comparison list
-      const ids: number[] = [];
-      if (selected) ids.push(selected.id);
-      comparisonList.forEach((r) => {
-        if (!ids.includes(r.id)) ids.push(r.id);
-      });
-
-      setSelectedLocales(ids);
-      loadRestaurantMetrics(ids);
+      // CAMBIO AQUÍ: Inicializar con todos los restaurantes seleccionados
+      if (restaurants.length > 0) {
+        // Seleccionar todos los restaurantes para la comparación
+        const allIds = restaurants.map((r) => r.id);
+        setSelectedLocales(allIds);
+        loadRestaurantMetrics(allIds);
+      }
     };
 
     loadInitialState();
