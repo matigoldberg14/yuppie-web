@@ -561,14 +561,14 @@ export function TeamContent() {
             <Button
               variant="ghost"
               onClick={handleExportEmployeesData}
-              className="text-white border-white/20 hover:bg-white/10"
+              className="flex items-center text-white border-white/20 hover:bg-white/10"
             >
               <Download className="h-4 w-4 mr-2" />
               Exportar Datos
             </Button>
             <Button
               onClick={() => setIsAddingEmployee(true)}
-              className="bg-white text-black hover:bg-white/90"
+              className="flex items-center bg-white text-black hover:bg-white/90"
             >
               <Plus className="mr-2 h-4 w-4" />
               Agregar miembro
@@ -769,31 +769,46 @@ export function TeamContent() {
                 />
               </div>
               <Select onValueChange={(val: string) => setSortOption(val)}>
-                <SelectTrigger className="bg-white/5 border-white/20 text-white w-[160px] h-10">
-                  <SelectValue placeholder="Ordenar por" />
+                <SelectTrigger className="flex items-center justify-center bg-white/5 border border-white/20 text-white w-[160px] h-10 rounded-md focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50">
+                  <SelectValue
+                    placeholder="Ordenar por"
+                    className="text-center"
+                  />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-white/10 text-white">
-                  <SelectItem value="name" className="py-2.5">
+                <SelectContent className="bg-gray-800 border border-white/10 text-white rounded-md shadow-lg">
+                  <SelectItem
+                    value="name"
+                    className="py-2 px-4 hover:bg-gray-700 transition-colors cursor-pointer text-center"
+                  >
                     Nombre
                   </SelectItem>
-                  <SelectItem value="rating" className="py-2.5">
+                  <SelectItem
+                    value="rating"
+                    className="py-2 px-4 hover:bg-gray-700 transition-colors cursor-pointer text-center"
+                  >
                     Calificación
                   </SelectItem>
-                  <SelectItem value="reviews" className="py-2.5">
+                  <SelectItem
+                    value="reviews"
+                    className="py-2 px-4 hover:bg-gray-700 transition-colors cursor-pointer text-center"
+                  >
                     Cantidad de reseñas
                   </SelectItem>
-                  <SelectItem value="lastReview" className="py-2.5">
+                  <SelectItem
+                    value="lastReview"
+                    className="py-2 px-4 hover:bg-gray-700 transition-colors cursor-pointer text-center"
+                  >
                     Última reseña
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <div className="flex rounded-md overflow-hidden border border-white/20">
+              <div className="flex rounded-md overflow-hidden border border-gray-300">
                 <Button
                   variant="primary"
                   className={
                     viewMode === 'grid'
                       ? 'bg-white text-black font-medium'
-                      : 'bg-transparent text-white/80 border-r border-white/20 hover:bg-white/10'
+                      : 'bg-transparent text-black/80 border-r border-gray-300 hover:bg-gray-100'
                   }
                   size="sm"
                   onClick={() => setViewMode('grid')}
@@ -805,7 +820,7 @@ export function TeamContent() {
                   className={
                     viewMode === 'leaderboard'
                       ? 'bg-white text-black font-medium'
-                      : 'bg-transparent text-white/80 hover:bg-white/10'
+                      : 'bg-transparent text-black/80 hover:bg-gray-100'
                   }
                   size="sm"
                   onClick={() => setViewMode('leaderboard')}

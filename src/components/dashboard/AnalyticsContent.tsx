@@ -184,8 +184,8 @@ export function AnalyticsContent() {
             <option value="month">Último mes</option>
             <option value="year">Último año</option>
           </select>
-          <Button variant="ghost" className="text-white">
-            <Download className="mr-2 h-4 w-4" />
+          <Button variant="ghost" className="flex items-center text-white">
+            <Download className=" mr-2 h-4 w-4" />
             Exportar
           </Button>
         </div>

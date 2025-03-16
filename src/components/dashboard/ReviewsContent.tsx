@@ -284,7 +284,7 @@ export function ReviewsContent() {
         <h1 className="text-2xl font-bold text-white">Reseñas</h1>
         <Button
           variant="ghost"
-          className="text-white hover:bg-white/10"
+          className="flex items-center text-white hover:bg-white/10"
           onClick={handleExportToExcel}
         >
           <Download className="mr-2 h-4 w-4" />

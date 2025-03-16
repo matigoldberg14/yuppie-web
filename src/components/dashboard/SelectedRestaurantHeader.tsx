@@ -136,7 +136,7 @@ const SelectedRestaurantHeader: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              className="text-white hover:bg-white/10"
+              className="flex items-center text-white hover:bg-white/10"
               onClick={() => (window.location.href = '/dashboard/restaurants')}
             >
               Cambiar Restaurante <ExternalLink className="ml-1 h-3 w-3" />
