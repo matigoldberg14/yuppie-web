@@ -53,23 +53,17 @@ export default function AddEmployeeForm({
   const [schedule, setSchedule] = useState<DaySchedule>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+
+  // Usar un ref para controlar si ya inicializamos los datos
   const initialized = useRef(false);
   const prevOpenState = useRef(isOpen);
-  // Agregar esta nueva línea:
-  const prevInitialDataRef = useRef(initialData);
 
   // Este useEffect solo se ejecuta cuando el diálogo se abre o cambia initialData
   useEffect(() => {
     // Solo inicializar si:
     // 1. El diálogo está abierto
     // 2. O bien, no hemos inicializado, o bien, el estado de apertura ha cambiado
-    // 3. O bien, han cambiado los datos iniciales
-    if (
-      isOpen &&
-      (!initialized.current ||
-        prevOpenState.current !== isOpen ||
-        initialData !== prevInitialDataRef.current)
-    ) {
+    if (isOpen && (!initialized.current || prevOpenState.current !== isOpen)) {
       if (initialData) {
         setFirstName(initialData.firstName || '');
         setLastName(initialData.lastName || '');
@@ -140,7 +134,6 @@ export default function AddEmployeeForm({
       }
 
       initialized.current = true;
-      prevInitialDataRef.current = initialData; // Guardar referencia a los datos actuales
     }
 
     // Actualizar el estado anterior
