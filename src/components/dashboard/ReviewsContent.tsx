@@ -339,9 +339,14 @@ export function ReviewsContent() {
                       {review.typeImprovement}
                     </span>
                   )}
+                  {/* Solo mostrar "Enviada a Google" si googleSent es true */}
+                  {review.googleSent && (
+                    <span className="text-sm bg-green-600 text-white px-2 py-1 rounded-full">
+                      Enviada a Google
+                    </span>
+                  )}
                 </div>
               </div>
-
               {/* Resto del código de cupones */}
               {review.email !== 'prefirio-no-dar-su-email@nodiosuemail.com' &&
                 (review.couponCode ? (

@@ -1,3 +1,4 @@
+// src/components/feedback/Rating.tsx
 import { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
@@ -5,12 +6,13 @@ import {
   createReview,
   getRestaurantNumericId,
   getEmployeeNumericId,
+  checkEmailReviewStatus,
+  checkIfEmailHasFiveStarReview,
 } from '../../services/api';
 import {
   hasSubmittedReviewToday,
   recordReviewSubmission,
 } from '../../utils/reviewLimiter';
-import { checkEmailReviewStatus } from '../../services/api';
 
 interface Props {
   restaurantId: string;
@@ -118,6 +120,48 @@ export function RatingForm({
     });
   }, [restaurantDocumentId, toast]);
 
+  // Precargar datos para optimizar el tiempo de carga
+  useEffect(() => {
+    if (!restaurantDocumentId) return;
+
+    const preloadData = async () => {
+      try {
+        // Intentar obtener el ID del restaurante en paralelo
+        getRestaurantNumericId(restaurantDocumentId).catch((err: Error) => {
+          console.error('Error precargando ID de restaurante:', err);
+        });
+
+        // Si hay ID de empleado, también precargarlo
+        if (employeeDocumentId) {
+          getEmployeeNumericId(employeeDocumentId).catch((err: Error) => {
+            console.error('Error precargando ID de empleado:', err);
+          });
+        }
+
+        // También podemos precargar la verificación de email si existe
+        const savedEmail = localStorage.getItem('yuppie_email');
+        if (savedEmail) {
+          checkIfEmailHasFiveStarReview(restaurantDocumentId, savedEmail).catch(
+            (err: Error) => {
+              console.error('Error precargando verificación de email:', err);
+            }
+          );
+        }
+      } catch (error) {
+        console.error('Error en precarga de datos:', error);
+      }
+    };
+
+    // Usar requestIdleCallback si está disponible, de lo contrario setTimeout
+    if (typeof window !== 'undefined') {
+      if (window.requestIdleCallback) {
+        window.requestIdleCallback(() => preloadData());
+      } else {
+        setTimeout(preloadData, 100);
+      }
+    }
+  }, [restaurantDocumentId, employeeDocumentId]);
+
   const handleRatingHover = useCallback(
     (rating: number) => {
       if (!isSubmitting && !alreadySubmitted) {
@@ -131,11 +175,13 @@ export function RatingForm({
   const createReviewWithData = async (
     rating: number,
     restaurantRealId: number,
-    employeeRealId?: number
+    employeeRealId?: number,
+    email: string = 'prefirio-no-dar-su-email@nodiosuemail.com'
   ) => {
+    console.log(`=== INICIO createReviewWithData ===`);
     console.log(
-      `Creando reseña con: restaurante=${restaurantRealId}, rating=${rating}${
-        employeeRealId ? `, empleado=${employeeRealId}` : ''
+      `📊 Datos: restaurante=${restaurantRealId}, rating=${rating}, email=${email}${
+        employeeRealId ? `, empleado=${employeeRealId}` : ', sin empleado'
       }`
     );
 
@@ -143,7 +189,7 @@ export function RatingForm({
       restaurantId: restaurantRealId,
       calification: rating,
       typeImprovement: 'Otra',
-      email: 'prefirio-no-dar-su-email@nodiosuemail.com',
+      email: email,
       comment: 'Google Review: 5 estrellas. Review enviada a Google!',
       googleSent: true,
     };
@@ -152,13 +198,17 @@ export function RatingForm({
       reviewData.employeeId = employeeRealId;
     }
 
+    console.log(`📤 Enviando datos a API:`, JSON.stringify(reviewData));
+
     try {
       const result = await createReview(reviewData);
-      console.log('Review creada exitosamente:', result);
+      console.log(`✅ Review creada exitosamente:`, result);
       return true;
     } catch (apiError) {
-      console.error('Error en createReview:', apiError);
+      console.error(`❌ Error en createReview:`, apiError);
       throw apiError;
+    } finally {
+      console.log(`=== FIN createReviewWithData ===`);
     }
   };
 
@@ -175,93 +225,154 @@ export function RatingForm({
         localStorage.setItem('yuppie_rating', rating.toString());
         localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
 
-        // For 5-star ratings only, we'll automatically submit to Google
+        // For 5-star ratings only, we'll decide if redirect to Google or follow Yuppie flow
         if (rating === 5) {
           localStorage.setItem('yuppie_improvement', 'Otra');
-
-          toast({
-            title: '¡Gracias!',
-            description: '¿Nos dejarías un comentario en Google?',
-            duration: 2000,
-          });
+          console.log(`==== FLUJO DE RATING 5 ESTRELLAS INICIADO ====`);
 
           try {
-            // Get restaurant ID
+            // VERIFICACIÓN CRUCIAL - Si ya existe una review de 5 estrellas previa para este restaurante
             console.log(
-              `Getting real numeric ID for restaurant documentId: ${restaurantDocumentId}`
+              `🔍 Verificando si ya existe una review de 5 estrellas previa...`
+            );
+            // Usamos una bandera específica para reviews de 5 estrellas
+            const hasFiveStarReviewFlag = localStorage.getItem(
+              `review_google_5stars_${restaurantDocumentId}`
+            );
+
+            if (hasFiveStarReviewFlag === 'true') {
+              console.log(
+                `⚠️ REVIEW DE 5 ESTRELLAS PREVIA ENCONTRADA - Redirigiendo a flujo Yuppie`
+              );
+
+              toast({
+                title: '¡Gracias!',
+                description:
+                  'Por favor completa algunos detalles más sobre tu experiencia',
+                duration: 2000,
+              });
+
+              // Redirigir al flujo de Yuppie
+              if (employeeDocumentId) {
+                const fullNextUrl = `${nextUrl}${
+                  nextUrl.includes('?') ? '&' : '?'
+                }employee=${employeeDocumentId}`;
+                console.log(`🔀 Redirigiendo a: ${fullNextUrl}`);
+                window.location.href = fullNextUrl;
+              } else {
+                console.log(`🔀 Redirigiendo a: ${nextUrl}`);
+                window.location.href = nextUrl;
+              }
+              return; // CRUCIAL: Terminar la ejecución aquí
+            }
+
+            // Si llegamos aquí, es porque NO hay reviews de 5 estrellas previas, continuamos el flujo normal
+            console.log(
+              `✅ NO HAY REVIEWS DE 5 ESTRELLAS PREVIAS - Continuando flujo a Google Maps`
+            );
+
+            toast({
+              title: '¡Gracias!',
+              description: '¿Nos dejarías un comentario en Google?',
+              duration: 2000,
+            });
+
+            // Usamos el email guardado si existe (probablemente de una review de 1-4 estrellas)
+            const savedEmail = localStorage.getItem('yuppie_email');
+            console.log(
+              `📧 Verificando email guardado: ${
+                savedEmail || 'NO HAY EMAIL GUARDADO'
+              }`
+            );
+
+            // Usamos el email guardado o el genérico si no hay uno guardado
+            const reviewEmail =
+              savedEmail || 'prefirio-no-dar-su-email@nodiosuemail.com';
+
+            // El resto del proceso para crear la review y redireccionar a Google
+            console.log(
+              `🏪 Buscando ID para restaurante: ${restaurantDocumentId}`
             );
             const realRestaurantId = await getRestaurantNumericId(
               restaurantDocumentId
             );
 
             if (realRestaurantId) {
-              console.log(
-                `Real restaurant numeric ID obtained: ${realRestaurantId} (was ${numericRestaurantId})`
-              );
+              console.log(`✅ ID obtenido: ${realRestaurantId}`);
 
-              // Get employee ID (if exists)
-              let employeeRealId;
+              // Get employee ID if needed
+              let employeeRealId: number | undefined;
               if (employeeDocumentId) {
                 try {
-                  console.log(
-                    `Getting real numeric ID for employee documentId: ${employeeDocumentId}`
-                  );
-                  employeeRealId = await getEmployeeNumericId(
+                  const idResult = await getEmployeeNumericId(
                     employeeDocumentId
                   );
-                  console.log(
-                    `Real employee numeric ID obtained: ${employeeRealId}`
-                  );
+                  // Convertimos null a undefined para asegurar compatibilidad de tipos
+                  employeeRealId = idResult || undefined;
                 } catch (empError) {
-                  console.error('Error getting employee ID:', empError);
+                  console.error('Error obteniendo ID empleado:', empError);
+                  employeeRealId = undefined; // Explícitamente asignamos undefined en caso de error
                 }
               }
 
-              // For 5-star ratings, use a default positive email
-              const reviewEmail = 'prefirio-no-dar-su-email@nodiosuemail.com';
-
-              // Check if this email has already submitted a review
-              const emailStatus = await checkEmailReviewStatus(
-                restaurantDocumentId,
-                reviewEmail
-              );
-
-              if (emailStatus.hasReviewed) {
-                console.log(
-                  'This email already submitted a review in the last 24 hours.'
-                );
-              }
-
-              // Send review with correct IDs
+              // Crear la review con el email correspondiente
               try {
+                console.log(
+                  `📝 Creando review en API con email: ${reviewEmail}`
+                );
                 await createReviewWithData(
                   5,
                   realRestaurantId,
-                  employeeRealId || undefined
+                  employeeRealId,
+                  reviewEmail
                 );
               } catch (error) {
-                console.error(
-                  'Error creating review, trying without employee:',
-                  error
-                );
-
-                // If it fails with employee, try without it
+                console.error('Error creando review:', error);
                 if (employeeRealId) {
-                  await createReviewWithData(5, realRestaurantId);
+                  await createReviewWithData(
+                    5,
+                    realRestaurantId,
+                    undefined,
+                    reviewEmail
+                  );
                 }
               }
-            } else {
-              console.error('Could not get real restaurant ID');
-            }
-          } catch (idError) {
-            console.error('Error getting real IDs:', idError);
-          }
 
-          // Redirect to Google Maps after processing everything
-          console.log(`Redirecting to Google Maps: ${linkMaps}`);
-          setTimeout(() => {
-            window.location.href = linkMaps;
-          }, 2000);
+              // IMPORTANTE: Guardar una bandera ESPECÍFICA para reviews de 5 estrellas
+              try {
+                localStorage.setItem(
+                  `review_google_5stars_${restaurantDocumentId}`,
+                  'true'
+                );
+                console.log(
+                  `🔒 Marcando restaurante ${restaurantDocumentId} como ya revisado con 5 estrellas`
+                );
+              } catch (storageErr) {
+                console.error(
+                  'Error guardando estado en localStorage:',
+                  storageErr
+                );
+              }
+
+              // Redirect to Google Maps
+              console.log(`🔀 Redirigiendo a Google Maps: ${linkMaps}`);
+              setTimeout(() => {
+                window.location.href = linkMaps;
+              }, 200);
+            }
+          } catch (error) {
+            console.error('❌ Error en flujo de 5 estrellas:', error);
+            setIsSubmitting(false);
+
+            // En caso de error, vamos al flujo seguro de Yuppie
+            if (employeeDocumentId) {
+              window.location.href = `${nextUrl}${
+                nextUrl.includes('?') ? '&' : '?'
+              }employee=${employeeDocumentId}`;
+            } else {
+              window.location.href = nextUrl;
+            }
+          }
         } else {
           // For ratings less than 5 - Redirect to next page
           if (employeeDocumentId) {

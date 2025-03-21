@@ -330,6 +330,37 @@ export async function checkEmailReviewStatus(
   }
 }
 
+export async function checkIfEmailHasFiveStarReview(
+  restaurantDocumentId: string,
+  email: string
+): Promise<boolean> {
+  console.log(`=== INICIO checkIfEmailHasFiveStarReview ===`);
+
+  try {
+    if (!restaurantDocumentId) {
+      return false;
+    }
+
+    // Verificar si ya hay una review de 5 estrellas guardada en localStorage
+    const hasFiveStarReviewFlag = localStorage.getItem(
+      `review_google_5stars_${restaurantDocumentId}`
+    );
+
+    if (hasFiveStarReviewFlag === 'true') {
+      console.log(`🚨 Se encontró bandera de review de 5 estrellas previa`);
+      return true; // Ya hay una review de 5 estrellas previa
+    }
+
+    console.log(`🚫 No se encontró bandera de review de 5 estrellas previa`);
+    return false;
+  } catch (error) {
+    console.error('❌ Error verificando reviews:', error);
+    return false;
+  } finally {
+    console.log(`=== FIN checkIfEmailHasFiveStarReview ===`);
+  }
+}
+
 export async function getRestaurant(documentId: string) {
   try {
     // En modo development, no se aplica el filtro publishedAt
