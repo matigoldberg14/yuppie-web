@@ -193,25 +193,25 @@ export function AnalyticsContent() {
             >
               <option
                 value="today"
-                style={{ backgroundColor: '#1e1e1e', color: 'white' }}
+                style={{ backgroundColor: 'white', color: '#1e1e1e' }}
               >
                 Hoy
               </option>
               <option
                 value="week"
-                style={{ backgroundColor: '#1e1e1e', color: 'white' }}
+                style={{ backgroundColor: 'white', color: '#1e1e1e' }}
               >
                 Última semana
               </option>
               <option
                 value="month"
-                style={{ backgroundColor: '#1e1e1e', color: 'white' }}
+                style={{ backgroundColor: 'white', color: '#1e1e1e' }}
               >
                 Último mes
               </option>
               <option
                 value="year"
-                style={{ backgroundColor: '#1e1e1e', color: 'white' }}
+                style={{ backgroundColor: 'white', color: '#1e1e1e' }}
               >
                 Último año
               </option>
