@@ -18,6 +18,13 @@ import {
 } from './charts/ChartComponents';
 import { getCachedMetrics, setCachedMetrics } from './metricsCache';
 import { getSelectedRestaurant } from '../../lib/restaurantStore';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const MetricCard = React.memo(({ title, value, trend, icon }: any) => (
   <Card className="bg-white/10 border-0">
@@ -174,18 +181,54 @@ export function AnalyticsContent() {
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white">Analytics</h1>
         <div className="flex gap-2">
-          <select
-            value={timeFilter}
-            onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
-            className="bg-white/10 text-white border-0 rounded-lg px-4 py-2"
-          >
-            <option value="today">Hoy</option>
-            <option value="week">Última semana</option>
-            <option value="month">Último mes</option>
-            <option value="year">Último año</option>
-          </select>
+          <div className="relative">
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
+              className="bg-white/10 text-white border-0 rounded-lg px-4 py-2 pr-10 appearance-none"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                color: 'white',
+              }}
+            >
+              <option
+                value="today"
+                style={{ backgroundColor: '#1e1e1e', color: 'white' }}
+              >
+                Hoy
+              </option>
+              <option
+                value="week"
+                style={{ backgroundColor: '#1e1e1e', color: 'white' }}
+              >
+                Última semana
+              </option>
+              <option
+                value="month"
+                style={{ backgroundColor: '#1e1e1e', color: 'white' }}
+              >
+                Último mes
+              </option>
+              <option
+                value="year"
+                style={{ backgroundColor: '#1e1e1e', color: 'white' }}
+              >
+                Último año
+              </option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center mr-2 text-white">
+              <svg
+                className="fill-current h-4 w-4"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+              >
+                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+              </svg>
+            </div>
+          </div>
+
           <Button variant="ghost" className="flex items-center text-white">
-            <Download className=" mr-2 h-4 w-4" />
+            <Download className="mr-2 h-4 w-4" />
             Exportar
           </Button>
         </div>
