@@ -519,12 +519,18 @@ export function TeamContent() {
       {restaurants.length > 1 && (
         <div className="mb-4">
           <Select onValueChange={(val: string) => handleRestaurantSelect(val)}>
-            <SelectTrigger className="bg-white/10 text-white">
+            <SelectTrigger className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/20 hover:border-white/40 text-white rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300">
               <SelectValue placeholder="Selecciona restaurante" />
             </SelectTrigger>
-            <SelectContent>
+
+            {/* Nuevo estilo para el dropdown */}
+            <SelectContent className="bg-gradient-to-br from-indigo-600/90 to-purple-700/90 backdrop-blur-xl border border-indigo-300/30 text-white rounded-lg shadow-xl">
               {restaurants.map((r) => (
-                <SelectItem key={r.documentId} value={r.documentId}>
+                <SelectItem
+                  key={r.documentId}
+                  value={r.documentId}
+                  className="hover:bg-white/20 focus:bg-white/25 transition-colors rounded-md my-1 cursor-pointer text-white font-medium px-1 py-2"
+                >
                   {r.name}
                 </SelectItem>
               ))}
