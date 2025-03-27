@@ -197,20 +197,17 @@ export function TeamContent() {
 
   // Si hay más de un restaurante, se usa el dropdown para elegir
   const handleRestaurantSelect = (documentId: string) => {
+    // Buscar el restaurante seleccionado por su ID
     const selected = restaurants.find((r) => r.documentId === documentId);
-    // Corregimos esta línea reemplazando 'val' con 'documentId'
-    const selectedRestaurant = restaurants.find(
-      (r) => r.documentId === documentId
-    );
-
-    if (selectedRestaurant) {
-      setSelectedRestaurantName(selectedRestaurant.name);
-    }
 
     if (selected) {
+      // Actualizar el nombre del restaurante seleccionado primero
+      setSelectedRestaurantName(selected.name);
+      console.log('Restaurante seleccionado:', selected.name); // Log para verificar
+
+      // Luego actualizar los demás estados
       setCurrentRestaurant(selected);
       setRestaurantId(selected.documentId);
-      // Forzamos que el objeto tenga 'linkMaps' (si no existe, lo asignamos como cadena vacía)
       setSelectedRestaurant({ ...selected, linkMaps: selected.linkMaps ?? '' });
     }
   };
@@ -531,10 +528,10 @@ export function TeamContent() {
         <div className="mb-4">
           <Select onValueChange={(val: string) => handleRestaurantSelect(val)}>
             <SelectTrigger className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/20 hover:border-white/40 text-white rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300">
-              {/* Usamos el placeholder para mostrar el valor seleccionado */}
-              <SelectValue
-                placeholder={selectedRestaurantName || 'Selecciona restaurante'}
-              />
+              {/* Mostrar el nombre del restaurante directamente dentro del trigger */}
+              <div className="flex-1 text-left overflow-hidden text-ellipsis whitespace-nowrap">
+                {selectedRestaurantName || 'Selecciona restaurante'}
+              </div>
             </SelectTrigger>
 
             <SelectContent className="bg-gradient-to-br from-indigo-600/90 to-purple-700/90 backdrop-blur-xl border border-indigo-300/30 text-white rounded-lg shadow-xl">
