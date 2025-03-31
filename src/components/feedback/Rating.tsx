@@ -13,6 +13,7 @@ import {
   hasSubmittedReviewToday,
   recordReviewSubmission,
 } from '../../utils/reviewLimiter';
+import { encryptId } from '../../lib/encryption';
 
 interface Props {
   restaurantId: string;
@@ -254,11 +255,25 @@ export function RatingForm({
 
               // Redirigir al flujo de Yuppie
               if (employeeDocumentId) {
-                const fullNextUrl = `${nextUrl}${
-                  nextUrl.includes('?') ? '&' : '?'
-                }employee=${employeeDocumentId}`;
-                console.log(`🔀 Redirigiendo a: ${fullNextUrl}`);
-                window.location.href = fullNextUrl;
+                // Verificar si la URL ya usa formato encriptado
+                if (nextUrl.includes('?id=') || nextUrl.includes('&id=')) {
+                  // URL ya está en formato encriptado, añadir empleado encriptado
+                  const encryptedEmployeeId = encryptId(employeeDocumentId);
+                  const fullNextUrl = `${nextUrl}${
+                    nextUrl.includes('?') ? '&' : '?'
+                  }emp=${encryptedEmployeeId}`;
+                  console.log(
+                    `🔀 Redirigiendo a URL encriptada: ${fullNextUrl}`
+                  );
+                  window.location.href = fullNextUrl;
+                } else {
+                  // URL en formato antiguo, mantener compatibilidad
+                  const fullNextUrl = `${nextUrl}${
+                    nextUrl.includes('?') ? '&' : '?'
+                  }employee=${employeeDocumentId}`;
+                  console.log(`🔀 Redirigiendo a URL antigua: ${fullNextUrl}`);
+                  window.location.href = fullNextUrl;
+                }
               } else {
                 console.log(`🔀 Redirigiendo a: ${nextUrl}`);
                 window.location.href = nextUrl;
@@ -366,9 +381,17 @@ export function RatingForm({
 
             // En caso de error, vamos al flujo seguro de Yuppie
             if (employeeDocumentId) {
-              window.location.href = `${nextUrl}${
-                nextUrl.includes('?') ? '&' : '?'
-              }employee=${employeeDocumentId}`;
+              // Verificar si la URL ya usa formato encriptado
+              if (nextUrl.includes('?id=') || nextUrl.includes('&id=')) {
+                const encryptedEmployeeId = encryptId(employeeDocumentId);
+                window.location.href = `${nextUrl}${
+                  nextUrl.includes('?') ? '&' : '?'
+                }emp=${encryptedEmployeeId}`;
+              } else {
+                window.location.href = `${nextUrl}${
+                  nextUrl.includes('?') ? '&' : '?'
+                }employee=${employeeDocumentId}`;
+              }
             } else {
               window.location.href = nextUrl;
             }
@@ -376,10 +399,21 @@ export function RatingForm({
         } else {
           // For ratings less than 5 - Redirect to next page
           if (employeeDocumentId) {
-            const fullNextUrl = `${nextUrl}${
-              nextUrl.includes('?') ? '&' : '?'
-            }employee=${employeeDocumentId}`;
-            window.location.href = fullNextUrl;
+            // Verificar si la URL ya usa formato encriptado
+            if (nextUrl.includes('?id=') || nextUrl.includes('&id=')) {
+              // URL ya está en formato encriptado, añadir empleado encriptado
+              const encryptedEmployeeId = encryptId(employeeDocumentId);
+              const fullNextUrl = `${nextUrl}${
+                nextUrl.includes('?') ? '&' : '?'
+              }emp=${encryptedEmployeeId}`;
+              window.location.href = fullNextUrl;
+            } else {
+              // URL en formato antiguo, mantener compatibilidad
+              const fullNextUrl = `${nextUrl}${
+                nextUrl.includes('?') ? '&' : '?'
+              }employee=${employeeDocumentId}`;
+              window.location.href = fullNextUrl;
+            }
           } else {
             window.location.href = nextUrl;
           }

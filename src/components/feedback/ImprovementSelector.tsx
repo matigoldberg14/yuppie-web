@@ -4,6 +4,7 @@
 import { motion } from 'framer-motion';
 import { useState, useCallback, memo } from 'react';
 import { useToast } from '../ui/use-toast';
+import { encryptId } from '../../lib/encryption';
 
 // Memoized constantes para evitar recreaciones en cada render
 const improvementOptions = [
@@ -50,11 +51,22 @@ function ImprovementSelectorComponent({
         localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
 
         // Construir URL con empleado si existe
+        // Construir URL con empleado si existe
         let targetUrl = nextUrl;
         if (employeeDocumentId) {
-          targetUrl = `${nextUrl}${
-            nextUrl.includes('?') ? '&' : '?'
-          }employee=${employeeDocumentId}`;
+          // Verificar si la URL ya usa formato encriptado
+          if (nextUrl.includes('?id=') || nextUrl.includes('&id=')) {
+            // URL ya está en formato encriptado, añadir empleado encriptado
+            const encryptedEmployeeId = encryptId(employeeDocumentId);
+            targetUrl = `${nextUrl}${
+              nextUrl.includes('?') ? '&' : '?'
+            }emp=${encryptedEmployeeId}`;
+          } else {
+            // URL en formato antiguo, mantener compatibilidad
+            targetUrl = `${nextUrl}${
+              nextUrl.includes('?') ? '&' : '?'
+            }employee=${employeeDocumentId}`;
+          }
         }
 
         // Redirigir sin verificación

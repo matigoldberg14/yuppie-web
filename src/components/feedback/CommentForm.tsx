@@ -12,6 +12,7 @@ import {
   recordReviewSubmission,
 } from '../../utils/reviewLimiter';
 import { checkEmailReviewStatus } from '../../services/api';
+import { encryptId } from '../../lib/encryption';
 
 // Resto del código sin cambios...
 // Schema para validación (optimizado para rendimiento con memoización)
@@ -254,14 +255,40 @@ export function CommentForm({
   const handleBackToOptions = useCallback(() => {
     // Obtener los parámetros de la URL actual
     const urlParams = new URLSearchParams(window.location.search);
-    const localId = urlParams.get('local');
-    const employeeId = urlParams.get('employee');
+
+    // Detectar si estamos usando el formato antiguo o nuevo
+    const isLegacy = !!urlParams.get('local');
+
+    let localId, employeeId;
+
+    if (isLegacy) {
+      // Formato antiguo
+      localId = urlParams.get('local');
+      employeeId = urlParams.get('employee');
+    } else {
+      // Formato nuevo (encriptado)
+      const encryptedId = urlParams.get('id');
+      const encryptedEmployeeId = urlParams.get('emp');
+
+      if (encryptedId) {
+        try {
+          // Usar estos IDs descifrados internamente
+          localId = encryptedId;
+          employeeId = encryptedEmployeeId;
+        } catch (error) {
+          console.error('Error descifrando IDs:', error);
+        }
+      }
+    }
 
     // Construir la URL incluyendo el parámetro del empleado si existe
     if (localId) {
-      let redirectUrl = `/improvement?local=${localId}`;
+      // Encriptar los IDs para la nueva URL
+      const encryptedLocalId = encryptId(localId);
+      let redirectUrl = `/improvement?id=${encryptedLocalId}`;
       if (employeeId) {
-        redirectUrl += `&employee=${employeeId}`;
+        const encryptedEmployeeId = encryptId(employeeId);
+        redirectUrl += `&emp=${encryptedEmployeeId}`;
       }
       window.location.href = redirectUrl;
     } else {
