@@ -1,0 +1,23 @@
+---
+// src/pages/profile.astro
+import Layout from '../layouts/Layout.astro';
+import { UserProfile } from '../components/user/UserProfile';
+import { SEO } from 'astro-seo';
+---
+
+<Layout title="Mi Perfil - Yuppie">
+  <div class="min-h-screen bg-gradient pt-20 pb-12">
+    <div class="container mx-auto px-4">
+      <h1 class="text-3xl font-bold text-center mb-8">Mi Perfil Yuppie</h1>
+      
+      <!-- Componente React que muestra el perfil del usuario -->
+      <UserProfile client:load />
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .bg-gradient {
+    background: linear-gradient(135deg, var(--blue-primary), var(--blue-dark));
+  }
+</style>

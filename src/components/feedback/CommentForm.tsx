@@ -1,4 +1,4 @@
-// /Users/Mati/Desktop/yuppie-web/src/components/feedback/CommentForm.tsx
+// src/components/feedback/CommentForm.tsx
 import { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createReview, getEmployeeNumericId } from '../../services/api';
@@ -13,8 +13,9 @@ import {
 } from '../../utils/reviewLimiter';
 import { checkEmailReviewStatus } from '../../services/api';
 import { encryptId } from '../../lib/encryption';
+import { useUserAuth } from '../../lib/UserAuthContext';
+import { addPointsForReview } from '../../services/userPointsService';
 
-// Resto del código sin cambios...
 // Schema para validación (optimizado para rendimiento con memoización)
 const commentSchema = z.object({
   email: z.string().email('Por favor, ingresa un email válido'),
@@ -108,6 +109,8 @@ export function CommentForm({
   const [improvementType, setImprovementType] = useState<string | null>(null);
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
   const { toast } = useToast();
+  const { user } = useUserAuth?.() || { user: null };
+  const [hasEarnedPoints, setHasEarnedPoints] = useState(false);
 
   // Evento especial para procesar la tecla Delete/Backspace
   const handleKeyDown = useCallback(
@@ -120,6 +123,25 @@ export function CommentForm({
     },
     []
   );
+
+  // Verificar si ya se han asignado puntos por completar todo el proceso
+  useEffect(() => {
+    const checkPointsStatus = () => {
+      try {
+        // Intentar obtener el estado de puntos del localStorage
+        const pointsStatus = localStorage.getItem(
+          `points_complete_${restaurantDocumentId}`
+        );
+        if (pointsStatus === 'earned') {
+          setHasEarnedPoints(true);
+        }
+      } catch (error) {
+        console.error('Error verificando estado de puntos completos:', error);
+      }
+    };
+
+    checkPointsStatus();
+  }, [restaurantDocumentId]);
 
   const cleanupAfterSubmit = () => {
     try {
@@ -213,12 +235,10 @@ export function CommentForm({
           }
         };
 
-        // Uso de requestIdleCallback para no bloquear el render
-        if (window.requestIdleCallback) {
-          window.requestIdleCallback(checkSubmission);
-        } else {
-          setTimeout(checkSubmission, 50);
-        }
+        // Uso de requestAnimationFrame para no bloquear el render
+        requestAnimationFrame(() => {
+          checkSubmission();
+        });
       }
 
       // Obtener tipo de mejora del localStorage
@@ -252,6 +272,7 @@ export function CommentForm({
       setIsLoadingInitialData(false);
     }
   }, [restaurantDocumentId, employeeDocumentId, toast]);
+
   const handleBackToOptions = useCallback(() => {
     // Obtener los parámetros de la URL actual
     const urlParams = new URLSearchParams(window.location.search);
@@ -448,8 +469,9 @@ export function CommentForm({
         setShowTextArea(false);
       }
     },
-    [selectedOption]
+    [selectedOption, showTextArea]
   );
+
   const handleTextAreaFocus = useCallback(() => {
     setHasInteractedWithComment(true);
   }, []);
@@ -587,6 +609,37 @@ export function CommentForm({
 
         console.log('Review enviada exitosamente a la API');
 
+        // Si el usuario está autenticado y no ha recibido puntos por completar todo el proceso
+        if (user && !hasEarnedPoints) {
+          try {
+            // Asignar puntos adicionales por completar todo el proceso (50 puntos extra)
+            await addPointsForReview(
+              restaurantDocumentId,
+              rating,
+              false,
+              false,
+              true // indicador de puntos por completar todo el proceso
+            );
+
+            // Marcar que ya se han ganado los puntos para esta reseña completa
+            localStorage.setItem(
+              `points_complete_${restaurantDocumentId}`,
+              'earned'
+            );
+
+            toast({
+              title: '¡+50 puntos!',
+              description: 'Has completado todo el proceso de feedback',
+              duration: 2000,
+            });
+          } catch (pointsError) {
+            console.error(
+              'Error asignando puntos por proceso completo:',
+              pointsError
+            );
+          }
+        }
+
         // Guardar email para futura referencia
         localStorage.setItem('yuppie_email', formData.email.trim());
 
@@ -596,8 +649,13 @@ export function CommentForm({
           duration: 2000,
         });
         cleanupAfterSubmit();
+
+        // Parámetros adicionales para tracking de puntos
+        const encryptedRestaurantId = encryptId(restaurantDocumentId);
+        let thanksUrl = `/thanks?rating=${rating}&restaurant=${encryptedRestaurantId}`;
+
         // Redirigir a página de agradecimiento
-        window.location.href = '/thanks';
+        window.location.href = thanksUrl;
       } catch (error) {
         const errorMessage = formatErrorMessage(error);
 
@@ -622,6 +680,8 @@ export function CommentForm({
       restaurantId,
       restaurantDocumentId,
       toast,
+      user,
+      hasEarnedPoints,
     ]
   );
 
@@ -660,6 +720,34 @@ export function CommentForm({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }} // Optimizado: reducido de 0.5 a 0.3
     >
+      {/* Banner de puntos para usuarios autenticados */}
+      {user && !hasEarnedPoints && (
+        <div className="w-full bg-white/10 rounded-lg p-3 text-center mb-2">
+          <div className="flex items-center justify-center">
+            <span className="text-xl mr-2">🎁</span>
+            <span className="text-white">
+              Completa este paso para ganar{' '}
+              <span className="font-bold text-yellow-300">+50 puntos</span>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Banner para usuarios no autenticados */}
+      {!user && (
+        <div className="w-full bg-white/10 rounded-lg p-3 text-center mb-2">
+          <div className="flex items-center justify-center">
+            <span className="text-xl mr-2">💡</span>
+            <span className="text-white">
+              <a href="/profile" className="underline text-yellow-300">
+                Inicia sesión
+              </a>{' '}
+              para ganar más puntos
+            </span>
+          </div>
+        </div>
+      )}
+
       <motion.h2
         className="text-2xl text-center"
         initial={{ opacity: 0 }}

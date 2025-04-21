@@ -1,10 +1,10 @@
 // src/components/feedback/ImprovementSelector.tsx
-// VERSIÓN CORREGIDA - SIN VERIFICACIÓN
-
 import { motion } from 'framer-motion';
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, memo, useEffect } from 'react';
 import { useToast } from '../ui/use-toast';
 import { encryptId } from '../../lib/encryption';
+import { useUserAuth } from '../../lib/UserAuthContext';
+import { addPointsForReview } from '../../services/userPointsService';
 
 // Memoized constantes para evitar recreaciones en cada render
 const improvementOptions = [
@@ -29,10 +29,31 @@ function ImprovementSelectorComponent({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emojisLoaded, setEmojisLoaded] = useState(true); // Optimista por defecto
   const { toast } = useToast();
+  const { user } = useUserAuth?.() || { user: null };
+  const [hasEarnedPoints, setHasEarnedPoints] = useState(false);
+
+  // Verificar si ya se han asignado puntos por esta reseña
+  useEffect(() => {
+    const checkPointsStatus = () => {
+      try {
+        // Intentar obtener el estado de puntos del localStorage
+        const pointsStatus = localStorage.getItem(
+          `points_${restaurantDocumentId}`
+        );
+        if (pointsStatus === 'earned') {
+          setHasEarnedPoints(true);
+        }
+      } catch (error) {
+        console.error('Error verificando estado de puntos:', error);
+      }
+    };
+
+    checkPointsStatus();
+  }, [restaurantDocumentId]);
 
   // Manejador simplificado - SIN verificación
   const handleSelect = useCallback(
-    (improvement: string) => {
+    async (improvement: string) => {
       if (isSubmitting) return;
 
       try {
@@ -50,7 +71,33 @@ function ImprovementSelectorComponent({
         // Guardar restaurantId para referencia
         localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
 
-        // Construir URL con empleado si existe
+        // Si el usuario está autenticado y no ha recibido puntos adicionales por completar la sección de mejoras
+        if (user && !hasEarnedPoints) {
+          try {
+            // Asignar puntos adicionales por completar la sección de mejoras (25 puntos extra)
+            const result = await addPointsForReview(
+              restaurantDocumentId,
+              parseInt(rating),
+              false,
+              true // indicador de puntos adicionales por completar sección de mejoras
+            );
+
+            if (result.success) {
+              // Marcar que ya se han ganado los puntos para esta reseña
+              localStorage.setItem(`points_${restaurantDocumentId}`, 'earned');
+
+              // Mostrar notificación de puntos ganados
+              toast({
+                title: '¡+25 puntos!',
+                description: 'Gracias por ayudarnos a mejorar nuestro servicio',
+                duration: 2000,
+              });
+            }
+          } catch (pointsError) {
+            console.error('Error asignando puntos adicionales:', pointsError);
+          }
+        }
+
         // Construir URL con empleado si existe
         let targetUrl = nextUrl;
         if (employeeDocumentId) {
@@ -69,6 +116,13 @@ function ImprovementSelectorComponent({
           }
         }
 
+        // Añadir parámetros para tracking de puntos
+        const ratingValue = parseInt(rating);
+        const encryptedRestaurantId = encryptId(restaurantDocumentId);
+        targetUrl += `${
+          targetUrl.includes('?') ? '&' : '?'
+        }rating=${ratingValue}&restaurant=${encryptedRestaurantId}`;
+
         // Redirigir sin verificación
         window.location.href = targetUrl;
       } catch (error) {
@@ -83,12 +137,48 @@ function ImprovementSelectorComponent({
         });
       }
     },
-    [isSubmitting, restaurantDocumentId, employeeDocumentId, nextUrl, toast]
+    [
+      isSubmitting,
+      restaurantDocumentId,
+      employeeDocumentId,
+      nextUrl,
+      toast,
+      user,
+      hasEarnedPoints,
+    ]
   );
 
   // Renderizado optimizado con menor carga de animación
   return (
     <div className="w-full max-w-md flex flex-col gap-3">
+      {/* Banner de puntos para usuarios autenticados */}
+      {user && !hasEarnedPoints && (
+        <div className="w-full bg-white/10 rounded-lg p-3 text-center mb-2">
+          <div className="flex items-center justify-center">
+            <span className="text-xl mr-2">🎁</span>
+            <span className="text-white">
+              Gana <span className="font-bold text-yellow-300">+25 puntos</span>{' '}
+              adicionales
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Banner para usuarios no autenticados */}
+      {!user && (
+        <div className="w-full bg-white/10 rounded-lg p-3 text-center mb-2">
+          <div className="flex items-center justify-center">
+            <span className="text-xl mr-2">💡</span>
+            <span className="text-white">
+              <a href="/profile" className="underline text-yellow-300">
+                Inicia sesión
+              </a>{' '}
+              para ganar más puntos
+            </span>
+          </div>
+        </div>
+      )}
+
       {improvementOptions.map(({ id, label, icon, fallbackIcon }, index) => (
         <motion.button
           key={id}

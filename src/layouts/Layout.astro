@@ -1,11 +1,14 @@
 ---
-//src/layouts/Layout.astro
-
+// src/layouts/Layout.astro (modificado)
 import { ViewTransitions } from 'astro:transitions';
 import { SEO } from 'astro-seo';
 import '../styles/globals.css';
 import emailjs from '@emailjs/browser';
-import Analytics from '@vercel/analytics/astro'
+import Analytics from '@vercel/analytics/astro';
+import { UserNav } from '../components/user/UserNav';
+import { UserAuthProvider } from '../lib/UserAuthContext';
+
+
 emailjs.init("3wONTqDb8Fwtqf1P0");
 
 interface Props {
@@ -24,7 +27,6 @@ const {
 
 const canonicalURL = new URL(Astro.url.pathname, 'https://yuppiecx.com.ar');
 ---
-
 
 <!DOCTYPE html>
 <html lang="es" class="scroll-smooth">
@@ -89,15 +91,50 @@ const canonicalURL = new URL(Astro.url.pathname, 'https://yuppiecx.com.ar');
         box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         border: 1px solid rgba(255, 255, 255, 0.2);
       }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .animate-fadeIn {
+        animation: fadeIn 0.3s ease-in-out forwards;
+      }
     </style>
-  </head>
-  <body class="min-h-screen bg-gradient font-['Poppins',sans-serif] text-white">
-    <slot />
-
-    <!-- Progress Bar -->
-    <div id="progress-bar" class="fixed top-0 left-0 h-1 bg-white/20 w-full z-50">
-      <div class="h-full bg-white transform-origin-left"></div>
-    </div>
+    </head>
+    <body class="min-h-screen bg-gradient font-['Poppins',sans-serif] text-white">
+      <!-- Header con navegación de usuario -->
+      <header class="fixed top-0 left-0 w-full z-40 transition-all duration-300 backdrop-blur-sm">
+        <div class="container mx-auto px-4 h-16 flex items-center justify-between">
+          <!-- Logo -->
+          <a href="/" class="flex items-center space-x-2">
+            <img 
+              src="/logo_grande.png" 
+              alt="Yuppie Logo" 
+              class="h-8 w-auto"
+              width="128"
+              height="32"
+            />
+          </a>
+          
+          <!-- User Navigation -->
+          <div class="flex items-center space-x-4">
+            <UserAuthProvider client:load>
+              <UserNav client:load />
+            </UserAuthProvider>
+          </div>
+        </div>
+      </header>
+      
+      <!-- Envolver todo el contenido con UserAuthProvider -->
+      <UserAuthProvider client:load>
+        <slot />
+      </UserAuthProvider>
+  
+      <!-- Progress Bar -->
+      <div id="progress-bar" class="fixed top-0 left-0 h-1 bg-white/20 w-full z-50">
+        <div class="h-full bg-white transform-origin-left"></div>
+      </div>
+  
 
     <script>
       // Progress Bar
@@ -111,7 +148,23 @@ const canonicalURL = new URL(Astro.url.pathname, 'https://yuppiecx.com.ar');
             progressBar.style.width = `${scrolled}%`;
           });
         }
+        
+        // Header scroll effect
+        const header = document.querySelector('header');
+        if (header) {
+          const handleScroll = () => {
+            if (window.scrollY > 50) {
+              header.classList.add('bg-black/50');
+            } else {
+              header.classList.remove('bg-black/50');
+            }
+          };
+          window.addEventListener('scroll', handleScroll);
+          handleScroll(); // Apply initial state
+        }
       });
     </script>
+    
+    <Analytics />
   </body>
 </html>

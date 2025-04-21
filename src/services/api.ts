@@ -1,4 +1,6 @@
 // src/services/api.ts
+
+import { auth } from '../lib/firebase';
 interface Restaurant {
   id: number;
   documentId: string;
@@ -1019,6 +1021,69 @@ export async function updateRestaurantCoordinates(
   } catch (error) {
     console.error('Error in updateRestaurantCoordinates:', error);
     throw error;
+  }
+}
+
+// Endpoint para verificar puntos expirados y por expirar
+export async function checkExpiringPoints() {
+  try {
+    if (!auth?.currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const token = await auth.currentUser.getIdToken();
+
+    const response = await fetch(
+      `${API_CONFIG.baseUrl}/points/expiration-check`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Error verificando puntos por expirar');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error en checkExpiringPoints:', error);
+    return {
+      expiredPoints: 0,
+      soonToExpirePoints: 0,
+      nextExpirationDate: null,
+    };
+  }
+}
+
+// Endpoint para obtener transacciones por expirar
+export async function getSoonToExpireTransactions() {
+  try {
+    if (!auth?.currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const token = await auth.currentUser.getIdToken();
+
+    const response = await fetch(
+      `${API_CONFIG.baseUrl}/points/soon-to-expire`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Error obteniendo transacciones por expirar');
+    }
+
+    const data = await response.json();
+    return data.transactions || [];
+  } catch (error) {
+    console.error('Error en getSoonToExpireTransactions:', error);
+    return [];
   }
 }
 
