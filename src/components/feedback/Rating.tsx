@@ -477,8 +477,6 @@ export function RatingForm({
           <button
             key={rating}
             onClick={() => handleRatingSelect(rating)}
-            onMouseEnter={() => handleRatingHover(rating)}
-            onTouchStart={() => handleRatingHover(rating)}
             onFocus={() => handleRatingHover(rating)}
             disabled={isSubmitting}
             className={`relative group flex flex-col items-center ${
