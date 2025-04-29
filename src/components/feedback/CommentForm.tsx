@@ -2,9 +2,9 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  createReview,
   getEmployeeNumericId,
   checkEmailReviewStatus,
+  getRestaurantNumericId,
 } from '../../services/api';
 import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
@@ -528,10 +528,31 @@ export function CommentForm({
           return;
         }
 
-        // Validar y convertir IDs
-        const restaurantIdNumber = parseInt(restaurantId, 10);
-        if (isNaN(restaurantIdNumber)) {
-          throw new Error('ID de restaurante inválido');
+        // SOLUCIÓN: Obtener el ID numérico actualizado del restaurante usando el documentId
+        console.log(
+          'Obteniendo ID numérico actualizado para restaurante:',
+          restaurantDocumentId
+        );
+        let restaurantIdNumber;
+
+        try {
+          // Usar la función getRestaurantNumericId para obtener el ID numérico actual
+          restaurantIdNumber = await getRestaurantNumericId(
+            restaurantDocumentId
+          );
+
+          if (!restaurantIdNumber) {
+            console.error(
+              'No se pudo obtener ID numérico para:',
+              restaurantDocumentId
+            );
+            throw new Error('No se pudo obtener información del restaurante');
+          }
+
+          console.log('ID numérico actualizado obtenido:', restaurantIdNumber);
+        } catch (idError) {
+          console.error('Error obteniendo ID numérico actualizado:', idError);
+          throw new Error('Error al obtener información del restaurante');
         }
 
         // Obtener ID de empleado (usando diferentes fuentes)
@@ -561,7 +582,7 @@ export function CommentForm({
         // Crear objeto para enviar a la API
         const reviewData = {
           data: {
-            restaurant: restaurantIdNumber,
+            restaurant: restaurantIdNumber, // Usamos el ID actualizado
             calification: rating,
             typeImprovement: improvementType || 'Otra',
             email: formData.email.trim(),
@@ -591,14 +612,14 @@ export function CommentForm({
         );
 
         if (!responseApi.ok) {
-          console.error(
-            'Error al enviar review a la API:',
-            await responseApi.text()
-          );
+          const errorText = await responseApi.text();
+          console.error('Error al enviar review a la API:', errorText);
           throw new Error('Error al enviar tu opinión');
         }
 
         console.log('Review enviada exitosamente a la API');
+
+        // Resto del código igual...
 
         // Guardar email para futura referencia
         localStorage.setItem('yuppie_email', formData.email.trim());
@@ -641,7 +662,7 @@ export function CommentForm({
       selectedOption,
       improvementType,
       restaurantId,
-      restaurantDocumentId,
+      restaurantDocumentId, // Ahora usamos principalmente el documentId
       toast,
       useNewUrlFormat,
       nextUrl,
