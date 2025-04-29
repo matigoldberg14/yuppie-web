@@ -882,7 +882,7 @@ export function CommentForm({
         </AnimatePresence>
       </div>
 
-      {/* Botón de envío optimizado */}
+      {/* Botón de envío optimizadooo */}
       <motion.button
         type="submit"
         disabled={isButtonDisabled || isSubmitting}
