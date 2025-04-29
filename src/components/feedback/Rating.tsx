@@ -477,7 +477,6 @@ export function RatingForm({
           <button
             key={rating}
             onClick={() => handleRatingSelect(rating)}
-            onFocus={() => handleRatingHover(rating)}
             disabled={isSubmitting}
             className={`relative group flex flex-col items-center ${
               isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
