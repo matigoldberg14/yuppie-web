@@ -477,6 +477,9 @@ export function RatingForm({
           <button
             key={rating}
             onClick={() => handleRatingSelect(rating)}
+            onMouseEnter={() => handleRatingHover(rating)}
+            onTouchStart={() => handleRatingHover(rating)}
+            onFocus={() => handleRatingHover(rating)}
             disabled={isSubmitting}
             className={`relative group flex flex-col items-center ${
               isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
@@ -487,22 +490,6 @@ export function RatingForm({
             <span className="text-4xl transform transition-transform duration-200 group-hover:scale-110">
               {emoji}
             </span>
-
-            {/* Only show label when selected to improve performance */}
-            {selectedRating === rating && (
-              <div
-                className={`absolute -bottom-12 px-3 py-1 rounded-full text-sm text-white ${color} opacity-100`}
-              >
-                {label}
-              </div>
-            )}
-
-            {/* Indicator dot when selected */}
-            {selectedRating === rating && (
-              <div
-                className={`absolute -bottom-2 w-2 h-2 rounded-full ${color} opacity-100`}
-              />
-            )}
           </button>
         ))}
       </div>
