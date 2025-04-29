@@ -19,7 +19,7 @@ console.log('Parámetros:', { restaurantName, employeeId, action });
 // Validar parámetros
 if (!restaurantName) {
   console.log('Error: Nombre de restaurante no proporcionado');
-  return Astro.redirect('/404');
+  return Astro.redirect('/');
 }
 
 // Función para normalizar el nombre del restaurante
@@ -87,8 +87,8 @@ console.log('Nombre normalizado:', normalizedName);
 const restaurant = await findRestaurantByNormalizedName(normalizedName);
 
 if (!restaurant) {
-  console.log('No se encontró el restaurante, redirigiendo a 404');
-  return Astro.redirect('/404');
+  console.log('No se encontró el restaurante, redirigiendo a ');
+  return Astro.redirect('/');
 }
 
 // Obtener datos del restaurante (adaptando a diferentes estructuras posibles)
@@ -117,8 +117,8 @@ console.log('Datos extraídos:', {
 });
 
 if (!restaurantDocumentId) {
-  console.log('No se pudo extraer documentId, redirigiendo a 404');
-  return Astro.redirect('/404');
+  console.log('No se pudo extraer documentId, redirigiendo a ');
+  return Astro.redirect('/');
 }
 
 // Incrementar contador de visitas
