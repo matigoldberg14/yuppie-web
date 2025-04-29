@@ -900,5 +900,5 @@ export function CommentForm({
   );
 }
 
-// Versión memoizada para prevenir re-renders innecesarios
+// Versión memoizada para prevenir re-renders innecesarios.
 export default memo(CommentForm);
