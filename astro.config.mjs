@@ -8,14 +8,7 @@ import icon from 'astro-icon';
 export default defineConfig({
   integrations: [tailwind(), react(), icon()],
   output: 'server',
-  adapter: vercel({
-    analytics: true,
-    webAnalytics: {
-      enabled: true,
-    },
-    maxDuration: 60,
-    regions: ['iad1'],
-  }),
+  adapter: vercel(),
   site: 'https://yuppiecx.com.ar',
   vite: {
     resolve: {
@@ -26,8 +19,5 @@ export default defineConfig({
     ssr: {
       noExternal: ['@nanostores/react'],
     },
-  },
-  redirects: {
-    '/': { status: 200 },
   },
 });

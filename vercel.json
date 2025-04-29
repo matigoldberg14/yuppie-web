@@ -29,6 +29,5 @@
         }
       ]
     }
-  ],
-  "routes": [{ "handle": "filesystem" }, { "src": "/(.*)", "dest": "/" }]
+  ]
 }
