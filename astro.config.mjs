@@ -28,6 +28,6 @@ export default defineConfig({
     },
   },
   redirects: {
-    '*': '/',
+    '/': { status: 200 },
   },
 });
