@@ -3,7 +3,6 @@
 // Página única que maneja todos los casos sin redirecciones
 
 import Layout from '../layouts/Layout.astro';
-import { RatingForm } from '../components/feedback/Rating';
 import { ImprovementSelector } from '../components/feedback/ImprovementSelector';
 import { CommentForm } from '../components/feedback/CommentForm';
 import { incrementTaps } from '../services/api';
@@ -19,7 +18,7 @@ console.log('Parámetros:', { restaurantName, employeeId, action });
 // Validar parámetros
 if (!restaurantName) {
   console.log('Error: Nombre de restaurante no proporcionado');
-  return Astro.redirect('/');
+  return Astro.redirect('/404');
 }
 
 // Función para normalizar el nombre del restaurante
@@ -87,8 +86,8 @@ console.log('Nombre normalizado:', normalizedName);
 const restaurant = await findRestaurantByNormalizedName(normalizedName);
 
 if (!restaurant) {
-  console.log('No se encontró el restaurante, redirigiendo a ');
-  return Astro.redirect('/');
+  console.log('No se encontró el restaurante, redirigiendo a 404');
+  return Astro.redirect('/404');
 }
 
 // Obtener datos del restaurante (adaptando a diferentes estructuras posibles)
@@ -117,8 +116,8 @@ console.log('Datos extraídos:', {
 });
 
 if (!restaurantDocumentId) {
-  console.log('No se pudo extraer documentId, redirigiendo a ');
-  return Astro.redirect('/');
+  console.log('No se pudo extraer documentId, redirigiendo a 404');
+  return Astro.redirect('/404');
 }
 
 // Incrementar contador de visitas

@@ -9,7 +9,7 @@ const documentId = Astro.url.searchParams.get('local');
 const employeeDocumentId = Astro.url.searchParams.get('employee');
 
 if (!documentId) {
-  return Astro.redirect('/');
+  return Astro.redirect('/404');
 }
 
 // Realizar ambas operaciones en paralelo
@@ -23,7 +23,7 @@ const [restaurant, _] = await Promise.all([
 
 // Validar después de obtener los datos
 if (!restaurant) {
-  return Astro.redirect('/');
+  return Astro.redirect('/404');
 }
 
 

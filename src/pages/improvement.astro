@@ -9,7 +9,7 @@ const documentId = Astro.url.searchParams.get('local');
 const employeeDocumentId = Astro.url.searchParams.get('employee');
 
 if (!documentId) {
-  return Astro.redirect('/');
+  return Astro.redirect('/404');
 }
 
 // Obtener datos del restaurante de forma síncrona para el SSR
@@ -22,7 +22,7 @@ try {
     restaurantName = restaurant.name;
     restaurantId = restaurant.id.toString();
   } else {
-    return Astro.redirect('/');
+    return Astro.redirect('/404');
   }
 } catch (error) {
   console.error('Error obteniendo datos del restaurante:', error);

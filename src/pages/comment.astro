@@ -9,7 +9,7 @@ const documentId = Astro.url.searchParams.get('local');
 const employeeDocumentId = Astro.url.searchParams.get('employee');
 
 if (!documentId) {
-  return Astro.redirect('/');
+  return Astro.redirect('/404');
 }
 
 // Manejo optimizado de datos del restaurante
