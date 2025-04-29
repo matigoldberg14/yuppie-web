@@ -1,10 +1,7 @@
 // src/components/feedback/ImprovementSelector.tsx
-// VERSIÓN CORREGIDA - SIN VERIFICACIÓN
-
 import { motion } from 'framer-motion';
 import { useState, useCallback, memo } from 'react';
 import { useToast } from '../ui/use-toast';
-import { encryptId } from '../../lib/encryption';
 
 // Memoized constantes para evitar recreaciones en cada render
 const improvementOptions = [
@@ -19,18 +16,27 @@ type Props = {
   restaurantDocumentId: string;
   employeeDocumentId?: string;
   nextUrl: string;
+  // Nuevos parámetros para URLs amigables
+  restaurantId?: number;
+  employeeId?: number | null;
+  useNewUrlFormat?: boolean;
+  restaurantSlug?: string;
 };
 
 function ImprovementSelectorComponent({
   restaurantDocumentId,
   employeeDocumentId,
   nextUrl,
+  restaurantId,
+  employeeId,
+  useNewUrlFormat,
+  restaurantSlug,
 }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emojisLoaded, setEmojisLoaded] = useState(true); // Optimista por defecto
   const { toast } = useToast();
 
-  // Manejador simplificado - SIN verificación
+  // Manejador simplificado
   const handleSelect = useCallback(
     (improvement: string) => {
       if (isSubmitting) return;
@@ -50,27 +56,20 @@ function ImprovementSelectorComponent({
         // Guardar restaurantId para referencia
         localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
 
-        // Construir URL con empleado si existe
-        // Construir URL con empleado si existe
-        let targetUrl = nextUrl;
-        if (employeeDocumentId) {
-          // Verificar si la URL ya usa formato encriptado
-          if (nextUrl.includes('?id=') || nextUrl.includes('&id=')) {
-            // URL ya está en formato encriptado, añadir empleado encriptado
-            const encryptedEmployeeId = encryptId(employeeDocumentId);
-            targetUrl = `${nextUrl}${
-              nextUrl.includes('?') ? '&' : '?'
-            }emp=${encryptedEmployeeId}`;
-          } else {
-            // URL en formato antiguo, mantener compatibilidad
+        // Usar URL amigable o antigua según corresponda
+        if (useNewUrlFormat) {
+          // Usar nextUrl tal como está (formato amigable)
+          window.location.href = nextUrl;
+        } else {
+          // Construir URL con formato antiguo
+          let targetUrl = nextUrl;
+          if (employeeDocumentId) {
             targetUrl = `${nextUrl}${
               nextUrl.includes('?') ? '&' : '?'
             }employee=${employeeDocumentId}`;
           }
+          window.location.href = targetUrl;
         }
-
-        // Redirigir sin verificación
-        window.location.href = targetUrl;
       } catch (error) {
         console.error('Error seleccionando mejora:', error);
         setIsSubmitting(false);
@@ -83,7 +82,14 @@ function ImprovementSelectorComponent({
         });
       }
     },
-    [isSubmitting, restaurantDocumentId, employeeDocumentId, nextUrl, toast]
+    [
+      isSubmitting,
+      restaurantDocumentId,
+      employeeDocumentId,
+      nextUrl,
+      toast,
+      useNewUrlFormat,
+    ]
   );
 
   // Renderizado optimizado con menor carga de animación

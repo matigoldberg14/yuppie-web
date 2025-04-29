@@ -1,20 +1,19 @@
-// /Users/Mati/Desktop/yuppie-web/src/components/feedback/CommentForm.tsx
+// src/components/feedback/CommentForm.tsx
 import { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createReview, getEmployeeNumericId } from '../../services/api';
-import type { CreateReviewInput } from '../../services/api'; // Importación de tipo
+import {
+  createReview,
+  getEmployeeNumericId,
+  checkEmailReviewStatus,
+} from '../../services/api';
 import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
-import emailjs from '@emailjs/browser';
 import { FiArrowLeft } from 'react-icons/fi';
 import {
   hasSubmittedReviewToday,
   recordReviewSubmission,
 } from '../../utils/reviewLimiter';
-import { checkEmailReviewStatus } from '../../services/api';
-import { encryptId } from '../../lib/encryption';
 
-// Resto del código sin cambios...
 // Schema para validación (optimizado para rendimiento con memoización)
 const commentSchema = z.object({
   email: z.string().email('Por favor, ingresa un email válido'),
@@ -50,6 +49,11 @@ type Props = {
   restaurantId: string; // ID numérico para API
   restaurantDocumentId: string; // ID del documento para tracking
   employeeDocumentId?: string;
+  // Nuevos parámetros para URLs amigables
+  employeeId?: number | null;
+  nextUrl?: string;
+  useNewUrlFormat?: boolean;
+  restaurantSlug?: string;
 };
 
 // Opciones de mejora (memoizadas para evitar recreaciones en cada render)
@@ -88,6 +92,10 @@ export function CommentForm({
   restaurantId,
   restaurantDocumentId,
   employeeDocumentId,
+  employeeId,
+  nextUrl,
+  useNewUrlFormat,
+  restaurantSlug,
 }: Props) {
   // Estado principal
   const [formData, setFormData] = useState<CommentFormData>({
@@ -252,49 +260,37 @@ export function CommentForm({
       setIsLoadingInitialData(false);
     }
   }, [restaurantDocumentId, employeeDocumentId, toast]);
+
   const handleBackToOptions = useCallback(() => {
-    // Obtener los parámetros de la URL actual
-    const urlParams = new URLSearchParams(window.location.search);
+    if (useNewUrlFormat && restaurantSlug) {
+      // Construir URL en formato amigable para improvement
+      let url = `/${restaurantSlug}?a=improvement`;
 
-    // Detectar si estamos usando el formato antiguo o nuevo
-    const isLegacy = !!urlParams.get('local');
-
-    let localId, employeeId;
-
-    if (isLegacy) {
-      // Formato antiguo
-      localId = urlParams.get('local');
-      employeeId = urlParams.get('employee');
-    } else {
-      // Formato nuevo (encriptado)
-      const encryptedId = urlParams.get('id');
-      const encryptedEmployeeId = urlParams.get('emp');
-
-      if (encryptedId) {
-        try {
-          // Usar estos IDs descifrados internamente
-          localId = encryptedId;
-          employeeId = encryptedEmployeeId;
-        } catch (error) {
-          console.error('Error descifrando IDs:', error);
-        }
-      }
-    }
-
-    // Construir la URL incluyendo el parámetro del empleado si existe
-    if (localId) {
-      // Encriptar los IDs para la nueva URL
-      const encryptedLocalId = encryptId(localId);
-      let redirectUrl = `/improvement?id=${encryptedLocalId}`;
+      // Añadir ID de empleado si existe
       if (employeeId) {
-        const encryptedEmployeeId = encryptId(employeeId);
-        redirectUrl += `&emp=${encryptedEmployeeId}`;
+        url += `&e=${employeeId}`;
       }
-      window.location.href = redirectUrl;
+
+      // Redirigir a la URL amigable
+      window.location.href = url;
     } else {
-      window.location.href = '/';
+      // Formato antiguo - Obtener los parámetros de la URL actual
+      const urlParams = new URLSearchParams(window.location.search);
+      const localId = urlParams.get('local');
+      const employeeIdParam = urlParams.get('employee');
+
+      // Construir la URL con parámetros
+      if (localId) {
+        let redirectUrl = `/improvement?local=${localId}`;
+        if (employeeIdParam) {
+          redirectUrl += `&employee=${employeeIdParam}`;
+        }
+        window.location.href = redirectUrl;
+      } else {
+        window.location.href = '/';
+      }
     }
-  }, []);
+  }, [useNewUrlFormat, restaurantSlug, employeeId]);
 
   // Validación optimizada
   useEffect(() => {
@@ -450,6 +446,7 @@ export function CommentForm({
     },
     [selectedOption]
   );
+
   const handleTextAreaFocus = useCallback(() => {
     setHasInteractedWithComment(true);
   }, []);
@@ -505,7 +502,7 @@ export function CommentForm({
           );
         }
 
-        // VERIFICACIÓN CRUCIAL: Consultar a la BDD si este email ya envió una review hoy
+        // VERIFICACIÓN: Consultar a la BDD si este email ya envió una review hoy
         const emailStatus = await checkEmailReviewStatus(
           restaurantDocumentId,
           formData.email.trim()
@@ -516,8 +513,18 @@ export function CommentForm({
             'El email ya envió una review, redirigiendo a página de gracias'
           );
           cleanupAfterSubmit();
-          // Redirigir a thanks con parámetro para mostrar mensaje de "ya opinaste"
-          window.location.href = '/thanks?already=true';
+
+          // Redirigir según el formato de URL
+          if (useNewUrlFormat && nextUrl) {
+            // URL amigable con parámetro already
+            const alreadyUrl = nextUrl.includes('?')
+              ? `${nextUrl}&already=true`
+              : `${nextUrl}?already=true`;
+            window.location.href = alreadyUrl;
+          } else {
+            // URL antigua
+            window.location.href = '/thanks?already=true';
+          }
           return;
         }
 
@@ -527,21 +534,27 @@ export function CommentForm({
           throw new Error('ID de restaurante inválido');
         }
 
-        // Verificar si existe ID de empleado en localStorage
-        const storedEmployeeId = localStorage.getItem('yuppie_employee');
-        let employeeId: number | undefined;
+        // Obtener ID de empleado (usando diferentes fuentes)
+        let finalEmployeeId: number | undefined;
 
-        if (storedEmployeeId) {
-          try {
-            // Obtener el ID numérico del empleado
-            const numericEmployeeId = await getEmployeeNumericId(
-              storedEmployeeId
-            );
-            if (numericEmployeeId) {
-              employeeId = numericEmployeeId;
+        // Prioridad 1: employeeId pasado directamente como prop
+        if (employeeId) {
+          finalEmployeeId = employeeId;
+        }
+        // Prioridad 2: employeeDocumentId almacenado en localStorage
+        else {
+          const storedEmployeeId = localStorage.getItem('yuppie_employee');
+          if (storedEmployeeId) {
+            try {
+              const numericEmployeeId = await getEmployeeNumericId(
+                storedEmployeeId
+              );
+              if (numericEmployeeId) {
+                finalEmployeeId = numericEmployeeId;
+              }
+            } catch (err) {
+              console.error('Error obteniendo ID numérico del empleado:', err);
             }
-          } catch (err) {
-            console.error('Error obteniendo ID numérico del empleado:', err);
           }
         }
 
@@ -559,8 +572,8 @@ export function CommentForm({
         };
 
         // Añadir empleado si existe
-        if (employeeId) {
-          (reviewData.data as any).employee = employeeId;
+        if (finalEmployeeId) {
+          (reviewData.data as any).employee = finalEmployeeId;
         }
 
         console.log('Enviando review a la API:', reviewData);
@@ -595,9 +608,17 @@ export function CommentForm({
           description: 'Tu feedback nos ayuda a mejorar!',
           duration: 2000,
         });
+
         cleanupAfterSubmit();
-        // Redirigir a página de agradecimiento
-        window.location.href = '/thanks';
+
+        // Redirigir según el formato de URL
+        if (useNewUrlFormat && nextUrl) {
+          // URL amigable
+          window.location.href = nextUrl;
+        } else {
+          // URL antigua
+          window.location.href = '/thanks';
+        }
       } catch (error) {
         const errorMessage = formatErrorMessage(error);
 
@@ -622,6 +643,9 @@ export function CommentForm({
       restaurantId,
       restaurantDocumentId,
       toast,
+      useNewUrlFormat,
+      nextUrl,
+      employeeId,
     ]
   );
 

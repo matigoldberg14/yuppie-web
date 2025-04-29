@@ -27,4 +27,7 @@ export default defineConfig({
       noExternal: ['@nanostores/react'],
     },
   },
+  redirects: {
+    '*': '/',
+  },
 });

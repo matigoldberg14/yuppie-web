@@ -3,27 +3,10 @@
 import Layout from '../layouts/Layout.astro';
 import { ImprovementSelector } from '../components/feedback/ImprovementSelector';
 import { getRestaurant } from '../services/api';
-import { encryptId, decryptId } from '../lib/encryption';
-// Detectar modo de compatibilidad (para URLs antiguas)
-const legacyMode = !!Astro.url.searchParams.get('local');
 
 // Obtener los IDs y validar al inicio
-let documentId;
-let employeeDocumentId;
-
-if (legacyMode) {
-  // Modo antiguo: usar parámetros 'local' y 'employee'
-  documentId = Astro.url.searchParams.get('local');
-  employeeDocumentId = Astro.url.searchParams.get('employee');
-} else {
-  // Modo nuevo: usar parámetros cifrados 'id' y 'emp'
-  const encryptedId = Astro.url.searchParams.get('id');
-  const encryptedEmployeeId = Astro.url.searchParams.get('emp');
-  
-  // Descifrar IDs
-  documentId = encryptedId ? decryptId(encryptedId) : null;
-  employeeDocumentId = encryptedEmployeeId ? decryptId(encryptedEmployeeId) : null;
-}
+const documentId = Astro.url.searchParams.get('local');
+const employeeDocumentId = Astro.url.searchParams.get('employee');
 
 if (!documentId) {
   return Astro.redirect('/404');
@@ -47,16 +30,8 @@ try {
   restaurantName = 'Restaurante';
 }
 
-// Generar URLs cifradas para nextUrl
-const encryptedDocId = encryptId(documentId);
-const encryptedEmpId = employeeDocumentId ? encryptId(employeeDocumentId) : null;
-
-// Crear URLs tanto para formato antiguo como nuevo cifrado
-const nextUrlLegacy = `/comment?local=${documentId}${employeeDocumentId ? `&employee=${employeeDocumentId}` : ''}`;
-const nextUrlEncrypted = `/comment?id=${encryptedDocId}${encryptedEmpId ? `&emp=${encryptedEmpId}` : ''}`;
-
-// Usar el formato nuevo para enlaces futuros
-const nextUrl = nextUrlEncrypted;
+// Precarga la siguiente página para reducción adicional de tiempo
+const nextUrl = `/comment?local=${documentId}${employeeDocumentId ? `&employee=${employeeDocumentId}` : ''}`;
 ---
 
 <Layout title={`¿En qué podríamos mejorar? - ${restaurantName}`}>
@@ -110,7 +85,7 @@ const nextUrl = nextUrlEncrypted;
   }
 </style>
 
-<script define:vars={{ documentId, restaurantName, encryptedDocId, encryptedEmpId }}>
+<script define:vars={{ documentId, restaurantName }}>
   // Script optimizado para actualizar nombre si es necesario
   document.addEventListener('DOMContentLoaded', async () => {
     const restaurantNameElement = document.getElementById('restaurantName');

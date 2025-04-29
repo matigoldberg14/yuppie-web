@@ -13,7 +13,6 @@ import {
   hasSubmittedReviewToday,
   recordReviewSubmission,
 } from '../../utils/reviewLimiter';
-import { encryptId } from '../../lib/encryption';
 
 interface Props {
   restaurantId: string;
@@ -21,6 +20,10 @@ interface Props {
   nextUrl: string;
   linkMaps: string;
   employeeDocumentId?: string;
+  // Nuevos parámetros para URLs amigables
+  employeeId?: number | null;
+  useNewUrlFormat?: boolean;
+  restaurantSlug?: string;
 }
 
 // Static array that won't re-render - use web-safe emoji Unicode code points
@@ -39,6 +42,9 @@ export function RatingForm({
   nextUrl,
   linkMaps,
   employeeDocumentId,
+  employeeId,
+  useNewUrlFormat,
+  restaurantSlug,
 }: Props) {
   // Parse the ID once
   const numericRestaurantId = parseInt(restaurantId, 10);
@@ -253,27 +259,20 @@ export function RatingForm({
                 duration: 2000,
               });
 
-              // Redirigir al flujo de Yuppie
+              // Si estamos usando nuevo formato, usar nextUrl tal como viene
+              if (useNewUrlFormat) {
+                console.log(`🔀 Redirigiendo a URL amigable: ${nextUrl}`);
+                window.location.href = nextUrl;
+                return;
+              }
+
+              // Redirigir al flujo de Yuppie con formato antiguo
               if (employeeDocumentId) {
-                // Verificar si la URL ya usa formato encriptado
-                if (nextUrl.includes('?id=') || nextUrl.includes('&id=')) {
-                  // URL ya está en formato encriptado, añadir empleado encriptado
-                  const encryptedEmployeeId = encryptId(employeeDocumentId);
-                  const fullNextUrl = `${nextUrl}${
-                    nextUrl.includes('?') ? '&' : '?'
-                  }emp=${encryptedEmployeeId}`;
-                  console.log(
-                    `🔀 Redirigiendo a URL encriptada: ${fullNextUrl}`
-                  );
-                  window.location.href = fullNextUrl;
-                } else {
-                  // URL en formato antiguo, mantener compatibilidad
-                  const fullNextUrl = `${nextUrl}${
-                    nextUrl.includes('?') ? '&' : '?'
-                  }employee=${employeeDocumentId}`;
-                  console.log(`🔀 Redirigiendo a URL antigua: ${fullNextUrl}`);
-                  window.location.href = fullNextUrl;
-                }
+                const fullNextUrl = `${nextUrl}${
+                  nextUrl.includes('?') ? '&' : '?'
+                }employee=${employeeDocumentId}`;
+                console.log(`🔀 Redirigiendo a: ${fullNextUrl}`);
+                window.location.href = fullNextUrl;
               } else {
                 console.log(`🔀 Redirigiendo a: ${nextUrl}`);
                 window.location.href = nextUrl;
@@ -317,7 +316,13 @@ export function RatingForm({
 
               // Get employee ID if needed
               let employeeRealId: number | undefined;
-              if (employeeDocumentId) {
+
+              // Prioridad 1: employeeId pasado directamente como prop
+              if (employeeId) {
+                employeeRealId = employeeId;
+              }
+              // Prioridad 2: employeeDocumentId para obtener ID numérico
+              else if (employeeDocumentId) {
                 try {
                   const idResult = await getEmployeeNumericId(
                     employeeDocumentId
@@ -380,41 +385,29 @@ export function RatingForm({
             setIsSubmitting(false);
 
             // En caso de error, vamos al flujo seguro de Yuppie
-            if (employeeDocumentId) {
-              // Verificar si la URL ya usa formato encriptado
-              if (nextUrl.includes('?id=') || nextUrl.includes('&id=')) {
-                const encryptedEmployeeId = encryptId(employeeDocumentId);
-                window.location.href = `${nextUrl}${
-                  nextUrl.includes('?') ? '&' : '?'
-                }emp=${encryptedEmployeeId}`;
-              } else {
-                window.location.href = `${nextUrl}${
-                  nextUrl.includes('?') ? '&' : '?'
-                }employee=${employeeDocumentId}`;
-              }
+            if (useNewUrlFormat) {
+              window.location.href = nextUrl;
+            } else if (employeeDocumentId) {
+              window.location.href = `${nextUrl}${
+                nextUrl.includes('?') ? '&' : '?'
+              }employee=${employeeDocumentId}`;
             } else {
               window.location.href = nextUrl;
             }
           }
         } else {
-          // For ratings less than 5 - Redirect to next page
-          if (employeeDocumentId) {
-            // Verificar si la URL ya usa formato encriptado
-            if (nextUrl.includes('?id=') || nextUrl.includes('&id=')) {
-              // URL ya está en formato encriptado, añadir empleado encriptado
-              const encryptedEmployeeId = encryptId(employeeDocumentId);
-              const fullNextUrl = `${nextUrl}${
-                nextUrl.includes('?') ? '&' : '?'
-              }emp=${encryptedEmployeeId}`;
-              window.location.href = fullNextUrl;
-            } else {
-              // URL en formato antiguo, mantener compatibilidad
-              const fullNextUrl = `${nextUrl}${
-                nextUrl.includes('?') ? '&' : '?'
-              }employee=${employeeDocumentId}`;
-              window.location.href = fullNextUrl;
-            }
+          // Para ratings menos de 5 - Redirigir a siguiente página
+          if (useNewUrlFormat) {
+            // Usar nextUrl tal como está para formato nuevo
+            window.location.href = nextUrl;
+          } else if (employeeDocumentId) {
+            // Formato antiguo con parámetros
+            const fullNextUrl = `${nextUrl}${
+              nextUrl.includes('?') ? '&' : '?'
+            }employee=${employeeDocumentId}`;
+            window.location.href = fullNextUrl;
           } else {
+            // Formato antiguo sin parámetros adicionales
             window.location.href = nextUrl;
           }
         }
@@ -435,9 +428,12 @@ export function RatingForm({
       restaurantDocumentId,
       numericRestaurantId,
       employeeDocumentId,
+      employeeId,
       toast,
       linkMaps,
       nextUrl,
+      useNewUrlFormat,
+      restaurantSlug,
     ]
   );
 
