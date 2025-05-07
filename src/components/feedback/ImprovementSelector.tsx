@@ -1,6 +1,6 @@
 // src/components/feedback/ImprovementSelector.tsx
 import { motion } from 'framer-motion';
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, memo, useMemo } from 'react';
 import { useToast } from '../ui/use-toast';
 
 // Memoized constantes para evitar recreaciones en cada render
@@ -35,6 +35,21 @@ function ImprovementSelectorComponent({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emojisLoaded, setEmojisLoaded] = useState(true); // Optimista por defecto
   const { toast } = useToast();
+
+  // Filtrar opciones basadas en restaurantSlug
+  const filteredOptions = useMemo(() => {
+    // Normalizar el slug para comparación (eliminar guiones y convertir a minúsculas)
+    const normalizedSlug =
+      restaurantSlug?.toLowerCase().replace(/-/g, '') || '';
+
+    // Si el restaurante es "su casa", eliminar la opción de bebidas
+    if (normalizedSlug === 'sucasa') {
+      return improvementOptions.filter((option) => option.id !== 'Bebidas');
+    }
+
+    // En caso contrario, mostrar todas las opciones
+    return improvementOptions;
+  }, [restaurantSlug]);
 
   // Manejador simplificado
   const handleSelect = useCallback(
@@ -95,7 +110,7 @@ function ImprovementSelectorComponent({
   // Renderizado optimizado con menor carga de animación
   return (
     <div className="w-full max-w-md flex flex-col gap-3">
-      {improvementOptions.map(({ id, label, icon, fallbackIcon }, index) => (
+      {filteredOptions.map(({ id, label, icon, fallbackIcon }, index) => (
         <motion.button
           key={id}
           type="button"
