@@ -27,3 +27,5 @@ pnpm-debug.log*
 package-lock.json
 
 rinkel-web.code-workspace
+
+.vercel
