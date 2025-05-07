@@ -68,8 +68,8 @@ const improvementOptions = {
   Comidas: [
     { id: 'temperatura', label: '🌡️Temperatura inadecuada' },
     { id: 'sabor', label: '🤷‍♂️Sabor no cumplió expectativas' },
-    { id: 'porcion', label: '🤏Tamaño de las porciones' },
-    { id: 'presentacion', label: '🍽️Presentación del plato' },
+    { id: 'porcion', label: '🍽️Tamaño de las porciones' },
+    { id: 'presentacion', label: '🍛Presentación del plato' },
     { id: 'otro', label: '✨Otro' },
   ],
   Atención: [
