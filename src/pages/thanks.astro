@@ -1,10 +1,14 @@
 ---
-// src/pages/thanks.astro - Simplificada para usar query parameter
-
+//src/pages/thanks.astro
 import Layout from '../layouts/Layout.astro';
+import { PointsGained } from '../components/points/PointsGained';
+import { UserAuthProvider } from '../lib/UserAuthContext';
 
 // Obtener el parámetro already de la URL
 const alreadySent = Astro.url.searchParams.get('already') === 'true';
+const restaurantId = Astro.url.searchParams.get('restaurant') || '';
+const rating = parseInt(Astro.url.searchParams.get('rating') || '0');
+const isGoogleReview = Astro.url.searchParams.get('google') === 'true';
 
 // Determinar título y mensaje según el parámetro
 const title = alreadySent 
@@ -33,7 +37,37 @@ const message = alreadySent
           {message}
         </p>
 
-        <div class="flex justify-center">
+        {/* Componente de puntos (solo si hay restaurantId y rating) */}
+        {restaurantId && rating > 0 && (
+          <div class="my-8">
+            <UserAuthProvider client:load>
+              <PointsGained 
+                client:load 
+                restaurantId={restaurantId} 
+                rating={rating} 
+                isGoogleReview={isGoogleReview}
+              />
+            </UserAuthProvider>
+          </div>
+        )}
+
+        {/* Opción para subir ticket (solo si hay restaurantId) */}
+        {restaurantId && (
+          <div class="mt-6 p-4 bg-white/5 rounded-lg">
+            <p class="mb-3">
+              <span class="text-xl mr-2">🧾</span>
+              ¿Tienes tu ticket de compra?
+            </p>
+            <a 
+              href={`/upload-ticket?id=${restaurantId}`}
+              class="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            >
+              Sube tu ticket y gana más puntos
+            </a>
+          </div>
+        )}
+
+        <div class="flex justify-center mt-6">
           <a href="https://www.instagram.com/yuppie.ar/" 
             target="_blank" 
             rel="noopener noreferrer" 
@@ -62,49 +96,12 @@ const message = alreadySent
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
-</style>
 
-<script>
-  // Añadir este script al final de thanks.astro
-  document.addEventListener('DOMContentLoaded', () => {
-    // Función para limpiar todos los datos relacionados con reviews
-    const cleanupAllReviewData = () => {
-      try {
-        // Guardamos solo el email para comodidad del usuario
-        const userEmail = localStorage.getItem('yuppie_email');
-        
-        // Lista de todas las claves que queremos limpiar
-        const keysToClean = [
-          'yuppie_rating',
-          'yuppie_improvement',
-          'yuppie_employee',
-          'yuppie_restaurant',
-          'emergency_review_data',
-          'redirecting_from_comment',
-          'yuppie_already_reviewed'
-        ];
-        
-        // Limpiar todas las claves
-        keysToClean.forEach(key => {
-          try {
-            localStorage.removeItem(key);
-          } catch (e) {
-            console.error(`Error al eliminar ${key}:`, e);
-          }
-        });
-        
-        // Restaurar solo el email si existía
-        if (userEmail) {
-          localStorage.setItem('yuppie_email', userEmail);
-        }
-        
-        console.log('Limpieza completa de datos de review realizada');
-      } catch (error) {
-        console.error('Error en limpieza final de datos:', error);
-      }
-    };
-    
-    // Ejecutar limpieza al cargar la página
-    cleanupAllReviewData();
-  });
-  </script>
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .animate-fadeIn {
+    animation: fadeIn 1s ease-in-out forwards;
+  }
+</style>

@@ -1,4 +1,6 @@
 // src/services/api.ts
+
+import { auth } from '../lib/firebase';
 interface Restaurant {
   id: number;
   documentId: string;
@@ -1022,55 +1024,67 @@ export async function updateRestaurantCoordinates(
   }
 }
 
-export function slugifyRestaurantName(name: string): string {
-  return name
-    .toString()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\w\-]+/g, '-')
-    .replace(/--+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
+// Endpoint para verificar puntos expirados y por expirar
+export async function checkExpiringPoints() {
+  try {
+    if (!auth?.currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const token = await auth.currentUser.getIdToken();
+
+    const response = await fetch(
+      `${API_CONFIG.baseUrl}/points/expiration-check`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Error verificando puntos por expirar');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error en checkExpiringPoints:', error);
+    return {
+      expiredPoints: 0,
+      soonToExpirePoints: 0,
+      nextExpirationDate: null,
+    };
+  }
 }
 
-/**
- * Genera una URL amigable para un restaurante
- * @param restaurantName Nombre del restaurante
- * @param options Opciones adicionales (empleado, acción)
- * @returns URL amigable
- */
-export function getFriendlyUrl(
-  restaurantName: string,
-  options?: {
-    employeeId?: number;
-    action?: 'rating' | 'improvement' | 'comment';
+// Endpoint para obtener transacciones por expirar
+export async function getSoonToExpireTransactions() {
+  try {
+    if (!auth?.currentUser) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    const token = await auth.currentUser.getIdToken();
+
+    const response = await fetch(
+      `${API_CONFIG.baseUrl}/points/soon-to-expire`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Error obteniendo transacciones por expirar');
+    }
+
+    const data = await response.json();
+    return data.transactions || [];
+  } catch (error) {
+    console.error('Error en getSoonToExpireTransactions:', error);
+    return [];
   }
-): string {
-  // Si no hay nombre de restaurante, devolver URL vacía
-  if (!restaurantName) return '';
-
-  // Convertir nombre a formato de URL
-  const slug = slugifyRestaurantName(restaurantName);
-  let url = `/${slug}`;
-
-  // Añadir parámetros si existen
-  const params = new URLSearchParams();
-
-  if (options?.employeeId) {
-    params.append('e', options.employeeId.toString());
-  }
-
-  if (options?.action && options.action !== 'rating') {
-    params.append('a', options.action);
-  }
-
-  // Añadir query string si hay parámetros
-  const queryString = params.toString();
-  if (queryString) {
-    url += `?${queryString}`;
-  }
-
-  return url;
 }
+
 export type { ApiError, ApiResponse, Restaurant, Review };

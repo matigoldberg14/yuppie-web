@@ -3,13 +3,30 @@
 import Layout from '../layouts/Layout.astro';
 import { ImprovementSelector } from '../components/feedback/ImprovementSelector';
 import { getRestaurant } from '../services/api';
+import { encryptId, decryptId } from '../lib/encryption';
+// Detectar modo de compatibilidad (para URLs antiguas)
+const legacyMode = !!Astro.url.searchParams.get('local');
 
 // Obtener los IDs y validar al inicio
-const documentId = Astro.url.searchParams.get('local');
-const employeeDocumentId = Astro.url.searchParams.get('employee');
+let documentId;
+let employeeDocumentId;
+
+if (legacyMode) {
+  // Modo antiguo: usar parámetros 'local' y 'employee'
+  documentId = Astro.url.searchParams.get('local');
+  employeeDocumentId = Astro.url.searchParams.get('employee');
+} else {
+  // Modo nuevo: usar parámetros cifrados 'id' y 'emp'
+  const encryptedId = Astro.url.searchParams.get('id');
+  const encryptedEmployeeId = Astro.url.searchParams.get('emp');
+  
+  // Descifrar IDs
+  documentId = encryptedId ? decryptId(encryptedId) : null;
+  employeeDocumentId = encryptedEmployeeId ? decryptId(encryptedEmployeeId) : null;
+}
 
 if (!documentId) {
-  return Astro.redirect('/');
+  return Astro.redirect('/404');
 }
 
 // Obtener datos del restaurante de forma síncrona para el SSR
@@ -22,7 +39,7 @@ try {
     restaurantName = restaurant.name;
     restaurantId = restaurant.id.toString();
   } else {
-    return Astro.redirect('/');
+    return Astro.redirect('/404');
   }
 } catch (error) {
   console.error('Error obteniendo datos del restaurante:', error);
@@ -30,8 +47,16 @@ try {
   restaurantName = 'Restaurante';
 }
 
-// Precarga la siguiente página para reducción adicional de tiempo
-const nextUrl = `/comment?local=${documentId}${employeeDocumentId ? `&employee=${employeeDocumentId}` : ''}`;
+// Generar URLs cifradas para nextUrl
+const encryptedDocId = encryptId(documentId);
+const encryptedEmpId = employeeDocumentId ? encryptId(employeeDocumentId) : null;
+
+// Crear URLs tanto para formato antiguo como nuevo cifrado
+const nextUrlLegacy = `/comment?local=${documentId}${employeeDocumentId ? `&employee=${employeeDocumentId}` : ''}`;
+const nextUrlEncrypted = `/comment?id=${encryptedDocId}${encryptedEmpId ? `&emp=${encryptedEmpId}` : ''}`;
+
+// Usar el formato nuevo para enlaces futuros
+const nextUrl = nextUrlEncrypted;
 ---
 
 <Layout title={`¿En qué podríamos mejorar? - ${restaurantName}`}>
@@ -52,7 +77,6 @@ const nextUrl = `/comment?local=${documentId}${employeeDocumentId ? `&employee=$
         restaurantDocumentId={documentId}
         employeeDocumentId={employeeDocumentId || undefined}
         nextUrl={nextUrl}
-        restaurantSlug={restaurantName || ''} 
         client:load
       />
       </div>
@@ -86,7 +110,7 @@ const nextUrl = `/comment?local=${documentId}${employeeDocumentId ? `&employee=$
   }
 </style>
 
-<script define:vars={{ documentId, restaurantName }}>
+<script define:vars={{ documentId, restaurantName, encryptedDocId, encryptedEmpId }}>
   // Script optimizado para actualizar nombre si es necesario
   document.addEventListener('DOMContentLoaded', async () => {
     const restaurantNameElement = document.getElementById('restaurantName');

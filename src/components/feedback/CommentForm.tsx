@@ -1,18 +1,20 @@
 // src/components/feedback/CommentForm.tsx
 import { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  getEmployeeNumericId,
-  checkEmailReviewStatus,
-  getRestaurantNumericId,
-} from '../../services/api';
+import { createReview, getEmployeeNumericId } from '../../services/api';
+import type { CreateReviewInput } from '../../services/api'; // Importación de tipo
 import { useToast } from '../ui/use-toast';
 import { z } from 'zod';
+import emailjs from '@emailjs/browser';
 import { FiArrowLeft } from 'react-icons/fi';
 import {
   hasSubmittedReviewToday,
   recordReviewSubmission,
 } from '../../utils/reviewLimiter';
+import { checkEmailReviewStatus } from '../../services/api';
+import { encryptId } from '../../lib/encryption';
+import { useUserAuth } from '../../lib/UserAuthContext';
+import { addPointsForReview } from '../../services/userPointsService';
 
 // Schema para validación (optimizado para rendimiento con memoización)
 const commentSchema = z.object({
@@ -49,11 +51,6 @@ type Props = {
   restaurantId: string; // ID numérico para API
   restaurantDocumentId: string; // ID del documento para tracking
   employeeDocumentId?: string;
-  // Nuevos parámetros para URLs amigables
-  employeeId?: number | null;
-  nextUrl?: string;
-  useNewUrlFormat?: boolean;
-  restaurantSlug?: string;
 };
 
 // Opciones de mejora (memoizadas para evitar recreaciones en cada render)
@@ -68,8 +65,8 @@ const improvementOptions = {
   Comidas: [
     { id: 'temperatura', label: '🌡️Temperatura inadecuada' },
     { id: 'sabor', label: '🤷‍♂️Sabor no cumplió expectativas' },
-    { id: 'porcion', label: '🍽️Tamaño de las porciones' },
-    { id: 'presentacion', label: '🍛Presentación del plato' },
+    { id: 'porcion', label: '🤏Tamaño de las porciones' },
+    { id: 'presentacion', label: '🍽️Presentación del plato' },
     { id: 'otro', label: '✨Otro' },
   ],
   Atención: [
@@ -92,10 +89,6 @@ export function CommentForm({
   restaurantId,
   restaurantDocumentId,
   employeeDocumentId,
-  employeeId,
-  nextUrl,
-  useNewUrlFormat,
-  restaurantSlug,
 }: Props) {
   // Estado principal
   const [formData, setFormData] = useState<CommentFormData>({
@@ -116,6 +109,8 @@ export function CommentForm({
   const [improvementType, setImprovementType] = useState<string | null>(null);
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
   const { toast } = useToast();
+  const { user } = useUserAuth?.() || { user: null };
+  const [hasEarnedPoints, setHasEarnedPoints] = useState(false);
 
   // Evento especial para procesar la tecla Delete/Backspace
   const handleKeyDown = useCallback(
@@ -128,6 +123,25 @@ export function CommentForm({
     },
     []
   );
+
+  // Verificar si ya se han asignado puntos por completar todo el proceso
+  useEffect(() => {
+    const checkPointsStatus = () => {
+      try {
+        // Intentar obtener el estado de puntos del localStorage
+        const pointsStatus = localStorage.getItem(
+          `points_complete_${restaurantDocumentId}`
+        );
+        if (pointsStatus === 'earned') {
+          setHasEarnedPoints(true);
+        }
+      } catch (error) {
+        console.error('Error verificando estado de puntos completos:', error);
+      }
+    };
+
+    checkPointsStatus();
+  }, [restaurantDocumentId]);
 
   const cleanupAfterSubmit = () => {
     try {
@@ -221,12 +235,10 @@ export function CommentForm({
           }
         };
 
-        // Uso de requestIdleCallback para no bloquear el render
-        if (window.requestIdleCallback) {
-          window.requestIdleCallback(checkSubmission);
-        } else {
-          setTimeout(checkSubmission, 50);
-        }
+        // Uso de requestAnimationFrame para no bloquear el render
+        requestAnimationFrame(() => {
+          checkSubmission();
+        });
       }
 
       // Obtener tipo de mejora del localStorage
@@ -262,35 +274,48 @@ export function CommentForm({
   }, [restaurantDocumentId, employeeDocumentId, toast]);
 
   const handleBackToOptions = useCallback(() => {
-    if (useNewUrlFormat && restaurantSlug) {
-      // Construir URL en formato amigable para improvement
-      let url = `/${restaurantSlug}?a=improvement`;
+    // Obtener los parámetros de la URL actual
+    const urlParams = new URLSearchParams(window.location.search);
 
-      // Añadir ID de empleado si existe
-      if (employeeId) {
-        url += `&e=${employeeId}`;
-      }
+    // Detectar si estamos usando el formato antiguo o nuevo
+    const isLegacy = !!urlParams.get('local');
 
-      // Redirigir a la URL amigable
-      window.location.href = url;
+    let localId, employeeId;
+
+    if (isLegacy) {
+      // Formato antiguo
+      localId = urlParams.get('local');
+      employeeId = urlParams.get('employee');
     } else {
-      // Formato antiguo - Obtener los parámetros de la URL actual
-      const urlParams = new URLSearchParams(window.location.search);
-      const localId = urlParams.get('local');
-      const employeeIdParam = urlParams.get('employee');
+      // Formato nuevo (encriptado)
+      const encryptedId = urlParams.get('id');
+      const encryptedEmployeeId = urlParams.get('emp');
 
-      // Construir la URL con parámetros
-      if (localId) {
-        let redirectUrl = `/improvement?local=${localId}`;
-        if (employeeIdParam) {
-          redirectUrl += `&employee=${employeeIdParam}`;
+      if (encryptedId) {
+        try {
+          // Usar estos IDs descifrados internamente
+          localId = encryptedId;
+          employeeId = encryptedEmployeeId;
+        } catch (error) {
+          console.error('Error descifrando IDs:', error);
         }
-        window.location.href = redirectUrl;
-      } else {
-        window.location.href = '/';
       }
     }
-  }, [useNewUrlFormat, restaurantSlug, employeeId]);
+
+    // Construir la URL incluyendo el parámetro del empleado si existe
+    if (localId) {
+      // Encriptar los IDs para la nueva URL
+      const encryptedLocalId = encryptId(localId);
+      let redirectUrl = `/improvement?id=${encryptedLocalId}`;
+      if (employeeId) {
+        const encryptedEmployeeId = encryptId(employeeId);
+        redirectUrl += `&emp=${encryptedEmployeeId}`;
+      }
+      window.location.href = redirectUrl;
+    } else {
+      window.location.href = '/';
+    }
+  }, []);
 
   // Validación optimizada
   useEffect(() => {
@@ -444,7 +469,7 @@ export function CommentForm({
         setShowTextArea(false);
       }
     },
-    [selectedOption]
+    [selectedOption, showTextArea]
   );
 
   const handleTextAreaFocus = useCallback(() => {
@@ -502,7 +527,7 @@ export function CommentForm({
           );
         }
 
-        // VERIFICACIÓN: Consultar a la BDD si este email ya envió una review hoy
+        // VERIFICACIÓN CRUCIAL: Consultar a la BDD si este email ya envió una review hoy
         const emailStatus = await checkEmailReviewStatus(
           restaurantDocumentId,
           formData.email.trim()
@@ -513,76 +538,39 @@ export function CommentForm({
             'El email ya envió una review, redirigiendo a página de gracias'
           );
           cleanupAfterSubmit();
-
-          // Redirigir según el formato de URL
-          if (useNewUrlFormat && nextUrl) {
-            // URL amigable con parámetro already
-            const alreadyUrl = nextUrl.includes('?')
-              ? `${nextUrl}&already=true`
-              : `${nextUrl}?already=true`;
-            window.location.href = alreadyUrl;
-          } else {
-            // URL antigua
-            window.location.href = '/thanks?already=true';
-          }
+          // Redirigir a thanks con parámetro para mostrar mensaje de "ya opinaste"
+          window.location.href = '/thanks?already=true';
           return;
         }
 
-        // SOLUCIÓN: Obtener el ID numérico actualizado del restaurante usando el documentId
-        console.log(
-          'Obteniendo ID numérico actualizado para restaurante:',
-          restaurantDocumentId
-        );
-        let restaurantIdNumber;
+        // Validar y convertir IDs
+        const restaurantIdNumber = parseInt(restaurantId, 10);
+        if (isNaN(restaurantIdNumber)) {
+          throw new Error('ID de restaurante inválido');
+        }
 
-        try {
-          // Usar la función getRestaurantNumericId para obtener el ID numérico actual
-          restaurantIdNumber = await getRestaurantNumericId(
-            restaurantDocumentId
-          );
+        // Verificar si existe ID de empleado en localStorage
+        const storedEmployeeId = localStorage.getItem('yuppie_employee');
+        let employeeId: number | undefined;
 
-          if (!restaurantIdNumber) {
-            console.error(
-              'No se pudo obtener ID numérico para:',
-              restaurantDocumentId
+        if (storedEmployeeId) {
+          try {
+            // Obtener el ID numérico del empleado
+            const numericEmployeeId = await getEmployeeNumericId(
+              storedEmployeeId
             );
-            throw new Error('No se pudo obtener información del restaurante');
-          }
-
-          console.log('ID numérico actualizado obtenido:', restaurantIdNumber);
-        } catch (idError) {
-          console.error('Error obteniendo ID numérico actualizado:', idError);
-          throw new Error('Error al obtener información del restaurante');
-        }
-
-        // Obtener ID de empleado (usando diferentes fuentes)
-        let finalEmployeeId: number | undefined;
-
-        // Prioridad 1: employeeId pasado directamente como prop
-        if (employeeId) {
-          finalEmployeeId = employeeId;
-        }
-        // Prioridad 2: employeeDocumentId almacenado en localStorage
-        else {
-          const storedEmployeeId = localStorage.getItem('yuppie_employee');
-          if (storedEmployeeId) {
-            try {
-              const numericEmployeeId = await getEmployeeNumericId(
-                storedEmployeeId
-              );
-              if (numericEmployeeId) {
-                finalEmployeeId = numericEmployeeId;
-              }
-            } catch (err) {
-              console.error('Error obteniendo ID numérico del empleado:', err);
+            if (numericEmployeeId) {
+              employeeId = numericEmployeeId;
             }
+          } catch (err) {
+            console.error('Error obteniendo ID numérico del empleado:', err);
           }
         }
 
         // Crear objeto para enviar a la API
         const reviewData = {
           data: {
-            restaurant: restaurantIdNumber, // Usamos el ID actualizado
+            restaurant: restaurantIdNumber,
             calification: rating,
             typeImprovement: improvementType || 'Otra',
             email: formData.email.trim(),
@@ -593,8 +581,8 @@ export function CommentForm({
         };
 
         // Añadir empleado si existe
-        if (finalEmployeeId) {
-          (reviewData.data as any).employee = finalEmployeeId;
+        if (employeeId) {
+          (reviewData.data as any).employee = employeeId;
         }
 
         console.log('Enviando review a la API:', reviewData);
@@ -612,14 +600,45 @@ export function CommentForm({
         );
 
         if (!responseApi.ok) {
-          const errorText = await responseApi.text();
-          console.error('Error al enviar review a la API:', errorText);
+          console.error(
+            'Error al enviar review a la API:',
+            await responseApi.text()
+          );
           throw new Error('Error al enviar tu opinión');
         }
 
         console.log('Review enviada exitosamente a la API');
 
-        // Resto del código igual...
+        // Si el usuario está autenticado y no ha recibido puntos por completar todo el proceso
+        if (user && !hasEarnedPoints) {
+          try {
+            // Asignar puntos adicionales por completar todo el proceso (50 puntos extra)
+            await addPointsForReview(
+              restaurantDocumentId,
+              rating,
+              false,
+              false,
+              true // indicador de puntos por completar todo el proceso
+            );
+
+            // Marcar que ya se han ganado los puntos para esta reseña completa
+            localStorage.setItem(
+              `points_complete_${restaurantDocumentId}`,
+              'earned'
+            );
+
+            toast({
+              title: '¡+50 puntos!',
+              description: 'Has completado todo el proceso de feedback',
+              duration: 2000,
+            });
+          } catch (pointsError) {
+            console.error(
+              'Error asignando puntos por proceso completo:',
+              pointsError
+            );
+          }
+        }
 
         // Guardar email para futura referencia
         localStorage.setItem('yuppie_email', formData.email.trim());
@@ -629,17 +648,14 @@ export function CommentForm({
           description: 'Tu feedback nos ayuda a mejorar!',
           duration: 2000,
         });
-
         cleanupAfterSubmit();
 
-        // Redirigir según el formato de URL
-        if (useNewUrlFormat && nextUrl) {
-          // URL amigable
-          window.location.href = nextUrl;
-        } else {
-          // URL antigua
-          window.location.href = '/thanks';
-        }
+        // Parámetros adicionales para tracking de puntos
+        const encryptedRestaurantId = encryptId(restaurantDocumentId);
+        let thanksUrl = `/thanks?rating=${rating}&restaurant=${encryptedRestaurantId}`;
+
+        // Redirigir a página de agradecimiento
+        window.location.href = thanksUrl;
       } catch (error) {
         const errorMessage = formatErrorMessage(error);
 
@@ -662,11 +678,10 @@ export function CommentForm({
       selectedOption,
       improvementType,
       restaurantId,
-      restaurantDocumentId, // Ahora usamos principalmente el documentId
+      restaurantDocumentId,
       toast,
-      useNewUrlFormat,
-      nextUrl,
-      employeeId,
+      user,
+      hasEarnedPoints,
     ]
   );
 
@@ -705,6 +720,34 @@ export function CommentForm({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }} // Optimizado: reducido de 0.5 a 0.3
     >
+      {/* Banner de puntos para usuarios autenticados */}
+      {user && !hasEarnedPoints && (
+        <div className="w-full bg-white/10 rounded-lg p-3 text-center mb-2">
+          <div className="flex items-center justify-center">
+            <span className="text-xl mr-2">🎁</span>
+            <span className="text-white">
+              Completa este paso para ganar{' '}
+              <span className="font-bold text-yellow-300">+50 puntos</span>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Banner para usuarios no autenticados */}
+      {!user && (
+        <div className="w-full bg-white/10 rounded-lg p-3 text-center mb-2">
+          <div className="flex items-center justify-center">
+            <span className="text-xl mr-2">💡</span>
+            <span className="text-white">
+              <a href="/profile" className="underline text-yellow-300">
+                Inicia sesión
+              </a>{' '}
+              para ganar más puntos
+            </span>
+          </div>
+        </div>
+      )}
+
       <motion.h2
         className="text-2xl text-center"
         initial={{ opacity: 0 }}
@@ -882,7 +925,7 @@ export function CommentForm({
         </AnimatePresence>
       </div>
 
-      {/* Botón de envío optimizadooo */}
+      {/* Botón de envío optimizado */}
       <motion.button
         type="submit"
         disabled={isButtonDisabled || isSubmitting}
@@ -900,5 +943,5 @@ export function CommentForm({
   );
 }
 
-// Versión memoizada para prevenir re-renders innecesarios.
+// Versión memoizada para prevenir re-renders innecesarios
 export default memo(CommentForm);

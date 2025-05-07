@@ -202,7 +202,7 @@ export function ReviewsContent() {
       discount_percentage: discount,
       coupon_code: couponCode,
       restaurant: restaurantName,
-      reply_to: 'info@yuppiecx.com.ar',
+      reply_to: 'info@yuppiecx.com.ar.com.ar',
     };
 
     emailjs

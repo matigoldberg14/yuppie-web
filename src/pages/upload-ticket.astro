@@ -1,0 +1,76 @@
+---
+// src/pages/upload-ticket.astro
+import Layout from '../layouts/Layout.astro';
+import { TicketUploader } from '../components/points/TicketUploader';
+import { UserAuthProvider } from '../lib/UserAuthContext';
+import { decryptId } from '../lib/encryption';
+
+// Obtener el ID del restaurante de la URL
+const encryptedId = Astro.url.searchParams.get('id');
+let restaurantId = '';
+let restaurantName = 'Restaurante';
+
+// Intentar descifrar el ID si existe
+if (encryptedId) {
+  try {
+    restaurantId = decryptId(encryptedId);
+  } catch (error) {
+    console.error('Error descifrando ID:', error);
+    return Astro.redirect('/404');
+  }
+}
+
+// Si no hay ID válido, redirigir a error
+if (!restaurantId) {
+  return Astro.redirect('/404');
+}
+
+// Obtener información del restaurante
+try {
+  const apiUrl = `${import.meta.env.PUBLIC_API_URL}/restaurants?filters[documentId][$eq]=${restaurantId}`;
+  const response = await fetch(apiUrl);
+  
+  if (response.ok) {
+    const data = await response.json();
+    if (data.data && data.data.length > 0) {
+      restaurantName = data.data[0].name || 'Restaurante';
+    }
+  }
+} catch (error) {
+  console.error('Error obteniendo datos del restaurante:', error);
+}
+---
+
+<Layout title={`Subir Ticket - ${restaurantName}`}>
+  <div class="min-h-screen bg-gradient pt-20 pb-12">
+    <div class="container mx-auto px-4">
+      <h1 class="text-3xl font-bold text-center mb-8">Subir Ticket</h1>
+      
+      <div class="mb-8 text-center">
+        <p class="text-white/80 max-w-xl mx-auto">
+          Sube el ticket de tu visita a {restaurantName} para ganar puntos adicionales basados en el monto de tu compra.
+        </p>
+      </div>
+      
+      <UserAuthProvider client:load>
+        <TicketUploader 
+          client:load 
+          restaurantId={restaurantId} 
+          restaurantName={restaurantName}
+        />
+      </UserAuthProvider>
+      
+      <div class="mt-8 text-center">
+        <a href="/profile" class="text-white/70 hover:text-white transition-colors">
+          Ver mi perfil y puntos acumulados
+        </a>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .bg-gradient {
+    background: linear-gradient(135deg, var(--blue-primary), var(--blue-dark));
+  }
+</style>

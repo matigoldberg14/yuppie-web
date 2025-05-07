@@ -3,13 +3,30 @@
 import Layout from '../layouts/Layout.astro';
 import { RatingForm } from '../components/feedback/Rating';
 import { getRestaurant, incrementTaps } from '../services/api';
+import { encryptId, decryptId } from '../lib/encryption';
+// Detectar modo de compatibilidad (para URLs antiguas)
+const legacyMode = !!Astro.url.searchParams.get('local');
 
 // Obtener los IDs y validar al inicio
-const documentId = Astro.url.searchParams.get('local');
-const employeeDocumentId = Astro.url.searchParams.get('employee');
+let documentId;
+let employeeDocumentId;
+
+if (legacyMode) {
+  // Modo antiguo: usar parámetros 'local' y 'employee'
+  documentId = Astro.url.searchParams.get('local');
+  employeeDocumentId = Astro.url.searchParams.get('employee');
+} else {
+  // Modo nuevo: usar parámetros cifrados 'id' y 'emp'
+  const encryptedId = Astro.url.searchParams.get('id');
+  const encryptedEmployeeId = Astro.url.searchParams.get('emp');
+  
+  // Descifrar IDs
+  documentId = encryptedId ? decryptId(encryptedId) : null;
+  employeeDocumentId = encryptedEmployeeId ? decryptId(encryptedEmployeeId) : null;
+}
 
 if (!documentId) {
-  return Astro.redirect('/');
+  return Astro.redirect('/404');
 }
 
 // Realizar ambas operaciones en paralelo
@@ -23,12 +40,19 @@ const [restaurant, _] = await Promise.all([
 
 // Validar después de obtener los datos
 if (!restaurant) {
-  return Astro.redirect('/');
+  return Astro.redirect('/404');
 }
 
+// Generar URLs cifradas para nextUrl
+const encryptedDocId = encryptId(documentId);
+const encryptedEmpId = employeeDocumentId ? encryptId(employeeDocumentId) : null;
 
-// Precargamos la siguiente página para reducir tiempo de transición
-const nextUrl = `/improvement?local=${documentId}${employeeDocumentId ? `&employee=${employeeDocumentId}` : ''}`;
+// Crear URLs tanto para formato antiguo como nuevo cifrado
+const nextUrlLegacy = `/improvement?local=${documentId}${employeeDocumentId ? `&employee=${employeeDocumentId}` : ''}`;
+const nextUrlEncrypted = `/improvement?id=${encryptedDocId}${encryptedEmpId ? `&emp=${encryptedEmpId}` : ''}`;
+
+// Usar el formato nuevo para enlaces futuros
+const nextUrl = nextUrlEncrypted;
 ---
 
 <Layout title="Califica tu experiencia">
@@ -134,7 +158,7 @@ const nextUrl = `/improvement?local=${documentId}${employeeDocumentId ? `&employ
   }
 </style>
 
-<script define:vars={{ documentId, employeeDocumentId }}>
+<script define:vars={{ documentId, employeeDocumentId, encryptedDocId, encryptedEmpId }}>
   // Script de precarga de emojis mejorado para dispositivos móviles
   document.addEventListener('DOMContentLoaded', () => {
     // Preload emojis with optimized technique
@@ -204,7 +228,7 @@ const nextUrl = `/improvement?local=${documentId}${employeeDocumentId ? `&employ
     // Prefetch the next page - Usar formato cifrado para prefetch
     const prefetchImprovement = document.createElement('link');
     prefetchImprovement.rel = 'prefetch';
-    prefetchImprovement.href = '/improvement?local=' + params.get('local');
+    prefetchImprovement.href = `/improvement?id=${encryptedDocId}${encryptedEmpId ? `&emp=${encryptedEmpId}` : ''}`;
     document.head.appendChild(prefetchImprovement);
   });
 </script>

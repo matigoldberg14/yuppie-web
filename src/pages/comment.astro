@@ -3,13 +3,30 @@
 import Layout from '../layouts/Layout.astro';
 import { CommentForm } from '../components/feedback/CommentForm';
 import { getRestaurant } from '../services/api';
+import { encryptId, decryptId } from '../lib/encryption';
+// Detectar modo de compatibilidad (para URLs antiguas)
+const legacyMode = !!Astro.url.searchParams.get('local');
 
 // Obtener los IDs y validar
-const documentId = Astro.url.searchParams.get('local');
-const employeeDocumentId = Astro.url.searchParams.get('employee');
+let documentId;
+let employeeDocumentId;
+
+if (legacyMode) {
+  // Modo antiguo: usar parámetros 'local' y 'employee'
+  documentId = Astro.url.searchParams.get('local');
+  employeeDocumentId = Astro.url.searchParams.get('employee');
+} else {
+  // Modo nuevo: usar parámetros cifrados 'id' y 'emp'
+  const encryptedId = Astro.url.searchParams.get('id');
+  const encryptedEmployeeId = Astro.url.searchParams.get('emp');
+  
+  // Descifrar IDs
+  documentId = encryptedId ? decryptId(encryptedId) : null;
+  employeeDocumentId = encryptedEmployeeId ? decryptId(encryptedEmployeeId) : null;
+}
 
 if (!documentId) {
-  return Astro.redirect('/');
+  return Astro.redirect('/404');
 }
 
 // Manejo optimizado de datos del restaurante
@@ -31,6 +48,10 @@ const restaurantPromise = getRestaurant(documentId).catch(error => {
 const restaurant = await restaurantPromise;
 const restaurantId = restaurant ? restaurant.id.toString() : '';
 const restaurantName = restaurant?.name || 'Restaurante';
+
+// Generar IDs cifrados para scripts
+const encryptedDocId = encryptId(documentId);
+const encryptedEmpId = employeeDocumentId ? encryptId(employeeDocumentId) : null;
 ---
 
 <Layout title={`Deja tu comentario - ${restaurantName}`}>
@@ -53,7 +74,7 @@ const restaurantName = restaurant?.name || 'Restaurante';
   </div>
 </Layout>
 
-<script define:vars={{ documentId }}>
+<script define:vars={{ documentId, encryptedDocId, encryptedEmpId }}>
   // Protegerse contra redirects infinitos
   document.addEventListener('DOMContentLoaded', () => {
     // Verificar si hay un redirect loop

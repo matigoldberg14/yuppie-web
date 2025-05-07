@@ -1,6 +1,10 @@
 // src/lib/firebase.ts
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import {
+  getAuth,
+  setPersistence,
+  browserLocalPersistence,
+} from 'firebase/auth';
 import type { Auth } from 'firebase/auth';
 
 let auth: Auth | undefined;
@@ -19,6 +23,16 @@ if (typeof window !== 'undefined') {
 
     const app = initializeApp(firebaseConfig);
     auth = getAuth(app);
+
+    // Configurar persistencia local para mantener la sesión entre recargas
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        console.log('Firebase: Persistencia local configurada correctamente');
+      })
+      .catch((error) => {
+        console.error('Error configurando persistencia:', error);
+      });
+
     console.log('Firebase inicializado en el cliente');
   } catch (error) {
     console.error('Error inicializando Firebase:', error);
