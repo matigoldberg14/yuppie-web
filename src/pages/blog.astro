@@ -1,0 +1,159 @@
+---
+// src/pages/blog.astro
+import Layout from '../layouts/Layout.astro';
+import { Card } from '../components/ui/card';
+
+const posts = [
+  {
+    id: 1,
+    title: "Cómo aumentar tus reseñas positivas en Google",
+    excerpt: "Descubre las mejores estrategias para incentivar a tus clientes a dejar reseñas positivas y mejorar tu presencia online.",
+    category: "Marketing Digital",
+    date: "2024-02-01",
+    readTime: "5 min",
+    image: "/blog/positive-reviews.jpg",
+    author: {
+      name: "María González",
+      role: "Marketing Manager",
+      avatar: "/team/maria.jpg"
+    }
+  },
+  {
+    id: 2,
+    title: "La importancia del NFC en la experiencia del cliente",
+    excerpt: "El NFC está revolucionando la forma en que los negocios interactúan con sus clientes. Te explicamos cómo aprovecharlo.",
+    category: "Tecnología",
+    date: "2024-01-28",
+    readTime: "4 min",
+    image: "/blog/nfc-technology.jpg",
+    author: {
+      name: "Carlos Rodríguez",
+      role: "Tech Lead",
+      avatar: "/team/carlos.jpg"
+    }
+  },
+  {
+    id: 3,
+    title: "Gestión de crisis: Cómo manejar reseñas negativas",
+    excerpt: "Una guía completa sobre cómo convertir las críticas negativas en oportunidades de mejora para tu negocio.",
+    category: "Gestión de Reputación",
+    date: "2024-01-25",
+    readTime: "6 min",
+    image: "/blog/crisis-management.jpg",
+    author: {
+      name: "Ana Martínez",
+      role: "Customer Success",
+      avatar: "/team/ana.jpg"
+    }
+  }
+];
+return Astro.redirect('/');
+---
+
+<Layout title="Blog | Yuppie">
+  <div class="min-h-screen">
+    <!-- Header -->
+    <header class="px-8 lg:px-12 h-20 flex items-center bg-white border-b border-gray-200">
+      <a class="flex items-center justify-center" href="/">
+        <img
+          src="/logo_grande.png"
+          alt="Yuppie Logo"
+          class="h-10 w-auto"
+        />
+      </a>
+      <nav class="ml-auto flex gap-6 sm:gap-8">
+        <a class="text-base font-medium text-primary hover:text-primary-light transition-colors" href="/">
+          Inicio
+        </a>
+      </nav>
+    </header>
+
+    <main>
+      <!-- Hero Section -->
+      <section class="bg-primary py-20">
+        <div class="container mx-auto px-4">
+          <div class="max-w-2xl mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">
+              Blog de Yuppie
+            </h1>
+            <p class="text-xl text-white/80">
+              Aprende sobre gestión de reseñas, experiencia del cliente y las últimas tendencias en reputación online
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Posts Grid -->
+      <section class="py-20">
+        <div class="container mx-auto px-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {posts.map(post => (
+              <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                <a href={`/blog/${post.id}`} class="block">
+                  <img 
+                    src={post.image} 
+                    alt={post.title}
+                    class="w-full h-48 object-cover"
+                  />
+                  <div class="p-6">
+                    <div class="flex items-center gap-4 mb-4">
+                      <span class="text-sm font-medium text-primary">
+                        {post.category}
+                      </span>
+                      <span class="text-sm text-gray-500">
+                        {new Date(post.date).toLocaleDateString('es-ES', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </span>
+                      <span class="text-sm text-gray-500">
+                        {post.readTime}
+                      </span>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900 mb-2 hover:text-primary transition-colors">
+                      {post.title}
+                    </h2>
+                    <p class="text-gray-600 mb-4">
+                      {post.excerpt}
+                    </p>
+                    <div class="flex items-center gap-3">
+                      <img 
+                        src={post.author.avatar} 
+                        alt={post.author.name}
+                        class="w-10 h-10 rounded-full object-cover"
+                      />
+                      <div>
+                        <p class="font-medium text-gray-900">
+                          {post.author.name}
+                        </p>
+                        <p class="text-sm text-gray-500">
+                          {post.author.role}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-primary py-12">
+      <div class="container mx-auto px-4">
+        <div class="text-center text-white/80">
+          <p>© 2024 Yuppie. Todos los derechos reservados.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+</Layout>
+
+<style>
+  .container {
+    max-width: 1200px;
+  }
+</style>

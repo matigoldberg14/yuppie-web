@@ -1,0 +1,17 @@
+---
+// src/pages/dashboard/restaurants.astro
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { Sidebar } from '../../components/dashboard/Sidebar';
+import { RestaurantsOverview } from '../../components/dashboard/RestaurantsOverview';
+import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
+---
+<DashboardLayout title="Restaurantes | Yuppie" showRestaurantHeader={false}>
+  <ProtectedRoute client:load>
+    <div class="min-h-screen flex">
+      <Sidebar client:load />
+      <main class="transition-all duration-300 p-4 md:pl-64 w-full">
+        <RestaurantsOverview client:load />
+      </main>
+    </div>
+  </ProtectedRoute>
+</DashboardLayout>

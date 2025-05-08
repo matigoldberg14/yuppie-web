@@ -1,0 +1,147 @@
+---
+// src/pages/privacy.astro
+import SharedLayout from '../layouts/SharedLayout.astro';
+import { Card } from '../components/ui/card';
+
+---
+
+<SharedLayout title="Política de Privacidad | Yuppie">
+  <div class="min-h-screen">
+    <!-- Hero Section -->
+    <section class="py-20 relative overflow-hidden">
+      <div class="container mx-auto px-4">
+        <div class="max-w-3xl mx-auto text-center">
+          <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">
+            Política de Privacidad
+          </h1>
+          <p class="text-xl text-white/80">
+            Última actualización: 08/02/2025
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Content Section -->
+    <section class="py-12">
+      <div class="container mx-auto px-4">
+        <Card className="max-w-4xl mx-auto bg-black/40 backdrop-blur-xl border border-white/10">
+          <div class="p-8 space-y-8 prose prose-invert prose-lg max-w-none">
+            <p class="text-white/80 leading-relaxed">
+              Esta Política de Privacidad describe cómo Yuppie (en adelante "Yuppie", "nosotros" o "la Plataforma") recopila, utiliza y protege la información personal que obtenemos de los usuarios (dueños, gerentes de locales comerciales y clientes finales que dejan reseñas).
+            </p>
+
+            <div class="space-y-6">
+              <h2 class="text-2xl font-bold text-white">1. Identidad y Datos de Contacto</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Responsable del Tratamiento de Datos: Yuppie (nombre comercial).</li>
+                <li>Correo de Contacto para Protección de Datos: notificaciones@yuppiecx.com.ar</li>
+                <li>Correo de Contacto General: info@yuppiecx.com.ar</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">2. Datos Personales que Recopilamos</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Datos de Identificación: Nombre y correo electrónico.</li>
+                <li>Datos de Interacción: Reseñas dejadas por clientes finales (incluye la calificación y el comentario).</li>
+                <li>Otros Datos Proporcionados Voluntariamente: Al responder encuestas NFC en locales, el usuario puede dejar comentarios, sugerencias u otro tipo de información.</li>
+              </ul>
+              <p class="text-white/80">No recopilamos números de teléfono ni ubicación de forma directa o automática.</p>
+
+              <h2 class="text-2xl font-bold text-white">3. Cómo Recopilamos los Datos</h2>
+              <ol class="list-decimal pl-6 text-white/80">
+                <li>Encuestas NFC y Reseñas: Cuando el cliente final escanea el chip NFC y deja una reseña rápida.</li>
+                <li>Registro de Locales: Cuando el dueño o gerente contrata el servicio y nos facilita su nombre y correo.</li>
+                <li>No Recopilación Automática: No utilizamos cookies de seguimiento ni realizamos tracking automático para recabar datos personales.</li>
+              </ol>
+
+              <h2 class="text-2xl font-bold text-white">4. Finalidad del Tratamiento</h2>
+              <p class="text-white/80">Utilizamos los datos personales para:</p>
+              <ol class="list-decimal pl-6 text-white/80">
+                <li>Proveer el Servicio: Gestionar reseñas y valoraciones en la plataforma.</li>
+                <li>Mejorar el Servicio: Analizar de forma interna la satisfacción y el rendimiento de las funcionalidades.</li>
+                <li>Enviar Notificaciones: Alertar sobre reseñas negativas o cualquier incidencia que requiera atención inmediata.</li>
+                <li>Analíticas Internas: Medir la eficacia de la plataforma y generar estadísticas anónimas.</li>
+              </ol>
+
+              <h2 class="text-2xl font-bold text-white">5. Base Legal para el Tratamiento</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Consentimiento: Al utilizar la funcionalidad de reseñas o facilitar datos para el registro, los usuarios dan su consentimiento para el tratamiento de sus datos.</li>
+                <li>Ejecución Contractual: Para proveer el servicio a locales comerciales y cumplir con las funciones inherentes al contrato.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">6. Colaboración con Proveedores Externos</h2>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Servicios de Hosting y Plataforma: Vercel (alojamiento web), Railway (base de datos PostgreSQL), EmailJS (envío de correos).</li>
+                <li>Tratamiento Interno: Los datos se almacenan y procesan en estas plataformas para permitir el funcionamiento y la mejora del servicio.</li>
+                <li>No Compartimos con Terceros No Involucrados: No proporcionamos datos a Google, Meta u otros aliados comerciales, salvo requerimiento legal.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">7. Transferencia Internacional de Datos</h2>
+              <p class="text-white/80">Los datos pueden alojarse en servidores ubicados fuera del país de origen (por ejemplo, EE.UU. o Europa) a través de Vercel, Railway u otros proveedores que utilicemos. Garantizamos que estos proveedores cumplen con estándares de seguridad adecuados.</p>
+
+              <h2 class="text-2xl font-bold text-white">8. Conservación de los Datos</h2>
+              <p class="text-white/80">Conservamos los datos indefinidamente mientras se mantenga la relación con Yuppie o hasta que el usuario solicite su eliminación.</p>
+
+              <h2 class="text-2xl font-bold text-white">9. Medidas de Seguridad</h2>
+              <p class="text-white/80">Implementamos medidas técnicas y organizativas para la protección de los datos, tales como:</p>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Cifrado de la información en tránsito,</li>
+                <li>Firewalls y controles de acceso,</li>
+                <li>Protocolos de seguridad propios de Vercel, Railway y EmailJS.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">10. Derechos de los Usuarios</h2>
+              <p class="text-white/80">Los usuarios pueden ejercer sus derechos enviando una solicitud a notificaciones@yuppiecx.com.ar:</p>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>Acceso: Solicitar información sobre los datos que guardamos.</li>
+                <li>Rectificación: Corregir o actualizar información inexacta.</li>
+                <li>Supresión (o "Derecho al Olvido"): Solicitar la eliminación de datos personales cuando sea posible.</li>
+                <li>Oposición: Oponerse al tratamiento de sus datos por motivos legítimos.</li>
+              </ul>
+
+              <h2 class="text-2xl font-bold text-white">11. Menores de Edad</h2>
+              <p class="text-white/80">La plataforma no está dirigida específicamente a menores de edad. Sin embargo, podrían llegar a usarla al dejar una reseña en un local comercial. No implementamos mecanismos de verificación de edad ni requerimos consentimiento paterno actualmente.</p>
+
+              <h2 class="text-2xl font-bold text-white">12. Cambios en la Política de Privacidad</h2>
+              <p class="text-white/80">Podemos modificar esta Política de Privacidad en cualquier momento. Notificaremos a los usuarios a través de correo electrónico y publicaremos la versión actualizada en www.yuppiecx.com.ar/privacy. El uso continuado de la Plataforma tras la notificación implicará la aceptación de los cambios.</p>
+
+              <h2 class="text-2xl font-bold text-white">13. Contacto</h2>
+              <p class="text-white/80">Para cualquier duda, consulta o ejercicio de derechos en materia de protección de datos, puedes contactarnos a:</p>
+              <ul class="list-disc pl-6 text-white/80">
+                <li>info@yuppiecx.com.ar</li>
+                <li>notificaciones@yuppiecx.com.ar</li>
+              </ul>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </section>
+  </div>
+</SharedLayout>
+
+<style>
+  .prose h2 {
+    @apply text-white border-b border-white/10 pb-4 mb-6;
+  }
+
+  .prose p {
+    @apply text-white/80;
+  }
+
+  .prose ul, .prose ol {
+    @apply text-white/80;
+  }
+
+  .prose li {
+    @apply mb-2;
+  }
+
+  @media (max-width: 640px) {
+    .prose {
+      font-size: 1rem;
+    }
+    
+    .prose h2 {
+      font-size: 1.5rem;
+    }
+  }
+</style>

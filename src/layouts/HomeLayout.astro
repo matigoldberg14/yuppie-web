@@ -1,0 +1,60 @@
+---
+// src/layouts/HomeLayout.astro
+import { ViewTransitions } from 'astro:transitions';
+import Head from '../components/common/Head.astro';
+import '../styles/globals.css';
+import Analytics from '@vercel/analytics/astro'
+
+interface Props {
+  title: string;
+  description?: string;
+  lang?: string;
+}
+
+const { 
+  title, 
+  description = "Yuppie - Tu plataforma de feedback",
+  lang = "es"
+} = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang={lang}>
+  <head>
+    <Head title={title} description={description} />
+    <ViewTransitions />
+    <script>
+      // Inicializar el idioma
+      if (!localStorage.getItem('language')) {
+        localStorage.setItem('language', 'es');
+      }
+    </script>
+  </head>
+  <body class="min-h-screen bg-gradient font-['Poppins',sans-serif] text-white">
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --blue-primary: #2F02CC;
+    --blue-light: #5F50E5;
+    --blue-dark: #1D0158;
+  }
+  
+  .bg-gradient {
+    background: linear-gradient(135deg, var(--blue-primary), var(--blue-dark));
+  }
+  
+  .text-shadow {
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  }
+  
+  .card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+</style>

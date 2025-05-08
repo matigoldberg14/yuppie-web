@@ -1,0 +1,54 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { motion } from 'framer-motion';
+import { FiHome } from 'react-icons/fi';
+---
+
+<Layout title="Página no encontrada">
+  <div class="min-h-screen bg-gradient flex flex-col items-center justify-center p-4">
+    <div class="w-full max-w-md">
+      <h1 class="text-4xl font-bold mb-6 text-center text-shadow">
+        Yuppie
+      </h1>
+      
+      <div class="card p-6">
+        <div class="text-center">
+          <div class="text-9xl font-bold mb-4 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+            
+          </div>
+          <h2 class="text-2xl font-semibold mb-4">
+            Lo sentimos, la página se encuentra en remodelación.
+          </h2>
+          <p class="text-gray-400 mb-8">
+            Pronto ya podras visitarnos!
+          </p>
+          
+          <a 
+            href="/"
+            class="inline-flex items-center gap-2 bg-white text-black py-3 px-6 rounded-full font-medium transition-all duration-200 hover:bg-gray-100 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <FiHome />
+            Volver al inicio
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .card {
+    transition: transform 0.3s ease;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+  }
+  
+  .bg-gradient {
+    background: linear-gradient(to bottom right, #1a1a1a, #000000);
+  }
+
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+</style>

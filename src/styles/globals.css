@@ -1,0 +1,84 @@
+/*//src/styles/globals.css*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-black text-white min-h-screen;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Estilos para el tema oscuro */
+@layer base {
+  body {
+    @apply antialiased;
+  }
+}
+
+/* Estilos personalizados para componentes */
+@layer components {
+  .card {
+    @apply bg-gray-900 rounded-lg p-6 shadow-xl;
+  }
+
+  .input {
+    @apply bg-gray-800 border border-gray-700 rounded-lg p-3 
+           text-white placeholder-gray-400 
+           focus:outline-none focus:ring-2 focus:ring-blue-500;
+  }
+
+  .button {
+    @apply bg-white text-black rounded-full px-6 py-3 
+           font-medium transition-all hover:bg-gray-100
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+}
+
+/* Utilidades personalizadas */
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500;
+  }
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.bg-gradient {
+  background: linear-gradient(135deg, var(--blue-primary), var(--blue-dark));
+}
+/* Animaciones */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@layer utilities {
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .glass-effect {
+    @apply bg-white/10 backdrop-blur-md border border-white/20;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-300 hover:scale-105;
+  }
+}

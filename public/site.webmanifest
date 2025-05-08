@@ -1,0 +1,19 @@
+{
+  "name": "Yuppie",
+  "short_name": "Yuppie",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#4318FF",
+  "background_color": "#1D0158",
+  "display": "standalone"
+}

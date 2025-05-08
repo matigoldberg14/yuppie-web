@@ -1,0 +1,18 @@
+---
+// src/pages/dashboard/reviews.astro
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { Sidebar } from '../../components/dashboard/Sidebar';
+import { ReviewsContent } from '../../components/dashboard/ReviewsContent';
+import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
+---
+
+<DashboardLayout title="Reseñas | Yuppie">
+  <ProtectedRoute client:load>
+    <div class="min-h-screen">
+      <Sidebar client:load />
+      <main class="pl-64">
+        <ReviewsContent client:load />
+      </main>
+    </div>
+  </ProtectedRoute>
+</DashboardLayout>
