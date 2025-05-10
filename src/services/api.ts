@@ -225,7 +225,6 @@ export async function createReview(
       },
     };
 
-    alert(reviewData.restaurantId);
     // Añadir el ID del empleado solo si existe
     if (reviewData.employeeId) {
       console.log('Añadiendo empleado ID:', reviewData.employeeId);
