@@ -138,10 +138,15 @@ if (employeeId) {
   if (!isNaN(employeeIdNum)) {
     console.log('Buscando empleado con ID:', employeeIdNum);
     
-    // Buscar el documentId del empleado
+    //
+    
     try {
+      let url = `${import.meta.env.PUBLIC_API_URL}/employees?filters[id][$eq]=${employeeIdNum}&populate=*`
+      if (restaurantDocumentId === 'zm66841un2bkqmq8lkk92bon') {
+        url = `${import.meta.env.PUBLIC_API_URL}/employees?filters[firstName][$startsWith]=${employeeIdNum}&populate=*`
+      }
       const employeeResponse = await fetch(
-        `${import.meta.env.PUBLIC_API_URL}/employees?filters[id][$eq]=${employeeIdNum}&populate=*`
+        url
       );
       
       if (employeeResponse.ok) {

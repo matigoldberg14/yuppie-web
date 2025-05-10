@@ -225,10 +225,12 @@ export async function createReview(
       },
     };
 
+    alert(reviewData.restaurantId);
     // Añadir el ID del empleado solo si existe
     if (reviewData.employeeId) {
       console.log('Añadiendo empleado ID:', reviewData.employeeId);
-      formattedData.data.employee = reviewData.employeeId;
+      // const employee = await getEmployee(reviewData.employeeId);
+      // formattedData.data.employee = employee.documentId;
     } else {
       console.log('No se incluyó ID de empleado en la solicitud');
     }
@@ -277,6 +279,8 @@ export async function createReview(
     throw new Error('Error al crear la review');
   }
 }
+
+export async function getEmployee(employeeId: number) {}
 
 // Función para verificar si un email ya ha enviado una review al restaurante en las últimas 24 horas
 export async function checkEmailReviewStatus(

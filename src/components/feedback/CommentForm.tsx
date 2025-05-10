@@ -593,8 +593,8 @@ export function CommentForm({
         };
 
         // Añadir empleado si existe
-        if (finalEmployeeId) {
-          (reviewData.data as any).employee = finalEmployeeId;
+        if (employeeDocumentId) {
+          (reviewData.data as any).employee = employeeDocumentId;
         }
 
         console.log('Enviando review a la API:', reviewData);
@@ -685,12 +685,12 @@ export function CommentForm({
   // Pantalla de carga (para mejorar percepción de velocidad)
   if (isLoadingInitialData) {
     return (
-      <div className="w-full max-w-md flex flex-col gap-6 animate-pulse">
-        <div className="h-8 bg-white/10 rounded w-3/4 mx-auto mb-4"></div>
-        <div className="space-y-3">
-          <div className="h-12 bg-white/10 rounded"></div>
-          <div className="h-12 bg-white/10 rounded"></div>
-          <div className="h-12 bg-white/10 rounded"></div>
+      <div className='w-full max-w-md flex flex-col gap-6 animate-pulse'>
+        <div className='h-8 bg-white/10 rounded w-3/4 mx-auto mb-4'></div>
+        <div className='space-y-3'>
+          <div className='h-12 bg-white/10 rounded'></div>
+          <div className='h-12 bg-white/10 rounded'></div>
+          <div className='h-12 bg-white/10 rounded'></div>
         </div>
       </div>
     );
@@ -700,13 +700,13 @@ export function CommentForm({
   return (
     <motion.form
       onSubmit={handleSubmit}
-      className="w-full max-w-md flex flex-col gap-6"
+      className='w-full max-w-md flex flex-col gap-6'
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }} // Optimizado: reducido de 0.5 a 0.3
     >
       <motion.h2
-        className="text-2xl text-center"
+        className='text-2xl text-center'
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }} // Optimizado: reducido de 0.2 a 0.1
@@ -718,13 +718,13 @@ export function CommentForm({
 
       {/* Lista de opciones específicas (renderizado condicional) */}
       {!showTextArea && improvementType && improvementType !== 'Otra' && (
-        <div className="flex flex-col gap-3">
+        <div className='flex flex-col gap-3'>
           {improvementOptions[
             improvementType as keyof typeof improvementOptions
           ]?.map((option, index) => (
             <motion.button
               key={option.id}
-              type="button"
+              type='button'
               onClick={() => handleOptionSelect(option.id)}
               className={`w-full p-4 rounded-lg text-left transition-all duration-200 ${
                 selectedOption === option.id
@@ -747,14 +747,14 @@ export function CommentForm({
       )}
 
       {showTextArea && (
-        <div className="flex flex-col gap-2">
-          <div className="relative">
+        <div className='flex flex-col gap-2'>
+          <div className='relative'>
             {/* Botón para volver a las opciones */}
             {/* Botón para volver a las opciones - siempre visible */}
             <motion.button
-              type="button"
+              type='button'
               onClick={handleBackToOptions}
-              className="absolute -top-8 left-0 text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+              className='absolute -top-8 left-0 text-gray-400 hover:text-white transition-colors flex items-center gap-1'
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
@@ -762,17 +762,17 @@ export function CommentForm({
             </motion.button>
             {/* Textarea optimizado */}
             <motion.div
-              className="relative"
+              className='relative'
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }} // Optimizado: reducido de 0.3 a 0.1
             >
               <textarea
-                name="comment"
+                name='comment'
                 value={formData.comment}
                 onChange={handleChange}
                 onFocus={handleTextAreaFocus}
-                placeholder="Cuéntanos tu experiencia (mínimo 10 caracteres)"
+                placeholder='Cuéntanos tu experiencia (mínimo 10 caracteres)'
                 className={`w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 resize-none h-40 transition-all duration-200 ${
                   errors.comment
                     ? 'border-2 border-red-500'
@@ -801,7 +801,7 @@ export function CommentForm({
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.2 }} // Optimizado: reducido de 0.3 a 0.2
-                  className="text-red-400 text-sm"
+                  className='text-red-400 text-sm'
                 >
                   {errors.comment}
                 </motion.p>
@@ -812,23 +812,23 @@ export function CommentForm({
       )}
 
       {/* Campo de email (común a ambos estados) - Ahora obligatorio */}
-      <div className="flex flex-col gap-2">
-        <motion.div className="relative">
-          <motion.div className="relative flex items-center">
+      <div className='flex flex-col gap-2'>
+        <motion.div className='relative'>
+          <motion.div className='relative flex items-center'>
             {/* Indicador de campo obligatorio - ahora a la izquierda del campo */}
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 font-bold">
+            <span className='absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 font-bold'>
               *
             </span>
 
             <motion.input
-              type="email"
-              name="email"
+              type='email'
+              name='email'
               value={formData.email}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
               onFocus={handleEmailFocus}
               onBlur={handleEmailBlur}
-              placeholder="Tu email"
+              placeholder='Tu email'
               className={`w-full p-4 pl-8 pr-12 rounded-lg bg-white/5 text-white placeholder-gray-400 transition-all duration-200 ${
                 errors.email && hasInteractedWithEmail
                   ? 'border-2 border-red-500'
@@ -843,10 +843,10 @@ export function CommentForm({
 
             {formData.email && (
               <button
-                type="button"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"
+                type='button'
+                className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center'
                 onClick={clearEmail}
-                aria-label="Borrar email"
+                aria-label='Borrar email'
                 tabIndex={0}
               >
                 ✕
@@ -860,11 +860,11 @@ export function CommentForm({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="text-sm text-gray-400 italic text-center"
+          className='text-sm text-gray-400 italic text-center'
         >
           Ingresa tu email para recibir descuentos exclusivos y recompensas
           especiales{' '}
-          <span className="text-red-400 not-italic">(campo obligatorio)</span>
+          <span className='text-red-400 not-italic'>(campo obligatorio)</span>
         </motion.p>
 
         {/* Mensaje de error para email - solo después de interacción */}
@@ -874,7 +874,7 @@ export function CommentForm({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="text-red-400 text-sm"
+              className='text-red-400 text-sm'
             >
               {errors.email}
             </motion.p>
@@ -884,7 +884,7 @@ export function CommentForm({
 
       {/* Botón de envío optimizadooo */}
       <motion.button
-        type="submit"
+        type='submit'
         disabled={isButtonDisabled || isSubmitting}
         className={`w-full py-3 px-6 bg-white text-black rounded-full font-medium transition-all duration-200 ease-in-out ${
           isButtonDisabled || isSubmitting
