@@ -1,29 +1,16 @@
 // src/components/feedback/Rating.tsx
 import { useState, useEffect, useCallback, memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 import {
   createReview,
   getRestaurantNumericId,
   getEmployeeNumericId,
-  checkEmailReviewStatus,
   checkIfEmailHasFiveStarReview,
 } from '../../services/api';
-import {
-  hasSubmittedReviewToday,
-  recordReviewSubmission,
-} from '../../utils/reviewLimiter';
+import { hasSubmittedReviewToday } from '../../utils/reviewLimiter';
 
 interface Props {
-  restaurantId: string;
-  restaurantDocumentId: string;
-  nextUrl: string;
-  linkMaps: string;
-  employeeDocumentId?: string;
-  // Nuevos parámetros para URLs amigables
-  employeeId?: number | null;
-  useNewUrlFormat?: boolean;
-  restaurantSlug?: string;
+  onClick: (rating: number) => void;
 }
 
 // Static array that won't re-render - use web-safe emoji Unicode code points
@@ -36,19 +23,8 @@ const ratingOptions = [
 ] as const;
 
 // Optimize component for better performance on mobile
-export function RatingForm({
-  restaurantId,
-  restaurantDocumentId,
-  nextUrl,
-  linkMaps,
-  employeeDocumentId,
-  employeeId,
-  useNewUrlFormat,
-  restaurantSlug,
-}: Props) {
-  // Parse the ID once
-  const numericRestaurantId = parseInt(restaurantId, 10);
-
+export function RatingForm({ onClick }: Props) {}
+{
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
@@ -226,8 +202,6 @@ export function RatingForm({
 
       try {
         setIsSubmitting(true);
-        console.log(`===== Processing rating: ${rating} =====`);
-
         // Store in localStorage (quick sync operation)
         localStorage.setItem('yuppie_rating', rating.toString());
         localStorage.setItem('yuppie_restaurant', restaurantDocumentId);
@@ -235,23 +209,15 @@ export function RatingForm({
         // For 5-star ratings only, we'll decide if redirect to Google or follow Yuppie flow
         if (rating === 5) {
           localStorage.setItem('yuppie_improvement', 'Otra');
-          console.log(`==== FLUJO DE RATING 5 ESTRELLAS INICIADO ====`);
 
           try {
             // VERIFICACIÓN CRUCIAL - Si ya existe una review de 5 estrellas previa para este restaurante
-            console.log(
-              `🔍 Verificando si ya existe una review de 5 estrellas previa...`
-            );
-            // Usamos una bandera específica para reviews de 5 estrellas
+            // Usamos una flag específica para reviews de 5 estrellas
             const hasFiveStarReviewFlag = localStorage.getItem(
               `review_google_5stars_${restaurantDocumentId}`
             );
 
             if (hasFiveStarReviewFlag === 'true') {
-              console.log(
-                `⚠️ REVIEW DE 5 ESTRELLAS PREVIA ENCONTRADA - Redirigiendo a flujo Yuppie`
-              );
-
               toast({
                 title: '¡Gracias!',
                 description:
@@ -312,29 +278,6 @@ export function RatingForm({
             );
 
             if (realRestaurantId) {
-              console.log(`✅ ID obtenido: ${realRestaurantId}`);
-
-              // Get employee ID if needed
-              let employeeRealId: number | undefined;
-
-              // Prioridad 1: employeeId pasado directamente como prop
-              if (employeeId) {
-                employeeRealId = employeeId;
-              }
-              // Prioridad 2: employeeDocumentId para obtener ID numérico
-              else if (employeeDocumentId) {
-                try {
-                  const idResult = await getEmployeeNumericId(
-                    employeeDocumentId
-                  );
-                  // Convertimos null a undefined para asegurar compatibilidad de tipos
-                  employeeRealId = idResult || undefined;
-                } catch (empError) {
-                  console.error('Error obteniendo ID empleado:', empError);
-                  employeeRealId = undefined; // Explícitamente asignamos undefined en caso de error
-                }
-              }
-
               // Crear la review con el email correspondiente
               try {
                 console.log(
@@ -343,7 +286,7 @@ export function RatingForm({
                 await createReviewWithData(
                   5,
                   realRestaurantId,
-                  employeeRealId,
+                  employeeDocumentId,
                   reviewEmail
                 );
               } catch (error) {
@@ -424,11 +367,8 @@ export function RatingForm({
     [
       isSubmitting,
       alreadySubmitted,
-      restaurantId,
       restaurantDocumentId,
-      numericRestaurantId,
       employeeDocumentId,
-      employeeId,
       toast,
       linkMaps,
       nextUrl,
@@ -440,8 +380,8 @@ export function RatingForm({
   // If already submitted, show fallback
   if (alreadySubmitted) {
     return (
-      <div className="w-full text-center py-4">
-        <p className="text-white text-opacity-80">
+      <div className='w-full text-center py-4'>
+        <p className='text-white text-opacity-80'>
           Ya has enviado tu valoración. Gracias.
         </p>
       </div>
@@ -451,14 +391,14 @@ export function RatingForm({
   // Show loading state
   if (!isLoaded || !emojisLoaded) {
     return (
-      <div className="w-full max-w-md flex flex-col items-center gap-8">
-        <h2 className="text-2xl font-medium text-white text-center">
+      <div className='w-full max-w-md flex flex-col items-center gap-8'>
+        <h2 className='text-2xl font-medium text-white text-center'>
           ¿Qué tan satisfecho quedaste con el servicio?
         </h2>
-        <div className="flex justify-between w-full px-4">
+        <div className='flex justify-between w-full px-4'>
           {ratingOptions.map(({ rating, emoji }) => (
-            <div key={rating} className="flex flex-col items-center opacity-70">
-              <span className="text-4xl">{emoji}</span>
+            <div key={rating} className='flex flex-col items-center opacity-70'>
+              <span className='text-4xl'>{emoji}</span>
             </div>
           ))}
         </div>
@@ -467,16 +407,16 @@ export function RatingForm({
   }
 
   return (
-    <div className="w-full max-w-md flex flex-col items-center gap-8">
-      <h2 className="text-2xl font-medium text-white text-center">
+    <div className='w-full max-w-md flex flex-col items-center gap-8'>
+      <h2 className='text-2xl font-medium text-white text-center'>
         ¿Qué tan satisfecho quedaste con el servicio?
       </h2>
 
-      <div className="flex justify-between w-full px-4 relative">
+      <div className='flex justify-between w-full px-4 relative'>
         {ratingOptions.map(({ rating, emoji, label, color }) => (
           <button
             key={rating}
-            onClick={() => handleRatingSelect(rating)}
+            onClick={onClick}
             onMouseEnter={() => handleRatingHover(rating)}
             onTouchStart={() => handleRatingHover(rating)}
             onFocus={() => handleRatingHover(rating)}
@@ -487,7 +427,7 @@ export function RatingForm({
             aria-label={label}
           >
             {/* Use a simpler approach for the emoji display */}
-            <span className="text-4xl transform transition-transform duration-200 group-hover:scale-110">
+            <span className='text-4xl transform transition-transform duration-200 group-hover:scale-110'>
               {emoji}
             </span>
           </button>
@@ -495,7 +435,7 @@ export function RatingForm({
       </div>
 
       {isSubmitting && (
-        <div className="text-center text-white/80">
+        <div className='text-center text-white/80'>
           Procesando tu calificación...
         </div>
       )}

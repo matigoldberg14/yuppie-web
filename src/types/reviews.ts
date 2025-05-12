@@ -8,6 +8,32 @@ export interface ReviewEmployee {
   position: string;
 }
 
+export type RatingValue = 1 | 2 | 3 | 4 | 5;
+
+export type ImprovementValue =
+  | 'atencion'
+  | 'comidas'
+  | 'bebidas'
+  | 'ambiente'
+  | 'otra';
+
+export type CommentValue =
+  | 'temperatura'
+  | 'variedad'
+  | 'precio'
+  | 'calidad'
+  | 'otro'
+  | 'sabor'
+  | 'porcion'
+  | 'presentacion'
+  | 'tiempo'
+  | 'amabilidad'
+  | 'pedido'
+  | 'disponibilidad'
+  | 'ruido'
+  | 'limpieza'
+  | 'comodidad';
+
 // Tipo para las reseñas
 export interface Review {
   id: number;
