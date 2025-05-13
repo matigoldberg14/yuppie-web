@@ -1,8 +1,8 @@
 ---
 import Layout from '@/layouts/Layout.astro';
 import Review from '@/sections/Review';
-import { findRestaurantBySlug } from '@/services/api/restaurants';
-import { findEmployeeById } from '@/services/api/employees';
+import { getRestaurantBySlug } from '@/services/api/restaurants';
+import { getEmployeeByEid } from '@/services/api/employees';
 
 const { restaurant: restaurantSlug } = Astro.params;
 
@@ -10,7 +10,7 @@ if (!restaurantSlug) {
   Astro.redirect('/');
 }
 
-const restaurant = await findRestaurantBySlug(restaurantSlug!);
+const restaurant = await getRestaurantBySlug(restaurantSlug!);
 
 if (!restaurant) {
   return Astro.redirect('/');
@@ -22,7 +22,7 @@ if (!employeeId) {
   return Astro.redirect('/');
 }
 
-const employee = await findEmployeeById(employeeId, restaurant.documentId);
+const employee = await getEmployeeByEid(employeeId, restaurant.documentId);
 
 if (!employee) {
   return Astro.redirect('/');

@@ -1,5 +1,8 @@
 // src/types/reviews.ts
 
+import type { Employee } from './employee';
+import type { Restaurant } from './restaurant';
+
 // Tipo para los empleados asociados a reseñas
 export interface ReviewEmployee {
   documentId: string;
@@ -34,20 +37,20 @@ export type CommentValue =
   | 'limpieza'
   | 'comodidad';
 
-// Tipo para las reseñas
 export interface Review {
   id: number;
   documentId: string;
-  calification: number;
-  typeImprovement: string;
-  comment: string;
-  email: string;
   googleSent: boolean;
+  typeImprovement: 'Atención' | 'Comidas' | 'Bebidas' | 'Ambiente' | 'Otra';
+  email: string;
   date: string;
+  comment: string;
+  calification: number;
+  restaurant: Restaurant;
+  employee?: Employee;
   createdAt: string;
-  couponCode?: string;
-  couponUsed?: boolean;
-  employee?: ReviewEmployee;
+  updatedAt: string;
+  publishedAt: string;
 }
 
 // Tipo para la respuesta de la API al crear reseñas

@@ -34,6 +34,7 @@ export interface Restaurant {
   clientes?: number;
   satisfaccion?: number;
   ocupacion?: number;
+  socialNetwork?: string;
 }
 
 // Para el tipo RestaurantData usado en componentes

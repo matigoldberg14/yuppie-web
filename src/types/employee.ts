@@ -15,6 +15,7 @@ export interface Employee {
   lastName: string;
   position: string;
   active: boolean;
+  taps: number;
   photo?: {
     url: string;
     formats: {

@@ -2,9 +2,9 @@ import type {
   ApiResponse,
   CreateReviewInput,
   ErrorResponse,
-  Review,
 } from '@/types/api';
 import { API_CONFIG } from '../api';
+import type { Review } from '@/types/reviews';
 
 export async function createReview(
   reviewData: CreateReviewInput

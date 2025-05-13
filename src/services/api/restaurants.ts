@@ -3,7 +3,7 @@
 import type { Restaurant } from '@/types/restaurant';
 
 // Buscar restaurante por slug
-export async function findRestaurantBySlug(restaurantSlug: string) {
+export async function getRestaurantBySlug(restaurantSlug: string) {
   try {
     const url = `${
       import.meta.env.PUBLIC_API_URL
@@ -23,15 +23,7 @@ export async function findRestaurantBySlug(restaurantSlug: string) {
       return null;
     }
 
-    const restaurant = restaurantsData[0] as Restaurant;
-
-    console.log(
-      restaurant
-        ? `Restaurante encontrado: ${restaurant.name}`
-        : 'No se encontró ningún restaurante'
-    );
-
-    return restaurant;
+    return restaurantsData[0] as Restaurant;
   } catch (error) {
     console.error('Error buscando restaurante:', error);
     return null;
