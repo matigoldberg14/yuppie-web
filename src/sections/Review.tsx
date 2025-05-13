@@ -1,40 +1,87 @@
 import CommentForm from '@/components/feedback/CommentForm';
 import ImprovementForm from '@/components/feedback/ImprovementForm';
 import RatingForm from '@/components/feedback/RatingForm';
-import type { Restaurant } from '@/types';
+import type { Employee } from '@/types/employee';
 import type {
   CommentValue,
   ImprovementValue,
   RatingValue,
 } from '@/types/reviews';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createReview } from '@/services/api/reviews';
+import type { Restaurant } from '@/types/restaurant';
+import { validateEmail } from '@/utils/validation';
+import { API_CONFIG } from '@/services/api';
 
 type Pages = 'rating' | 'improvement' | 'comment' | 'thanks';
 
-const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-
 interface Props {
   restaurant: Restaurant;
+  employee: Employee;
 }
 
-export default function Review({ restaurant }: Props) {
+export default function Review({ restaurant, employee }: Props) {
   const [page, setPage] = useState<Pages>('rating');
   const [rating, setRating] = useState<RatingValue | 0>(0);
   const [improvement, setImprovement] = useState<ImprovementValue | ''>('');
   const [comment, setComment] = useState<CommentValue | ''>('');
   const [email, setEmail] = useState('');
+  const [emailFromLS, setEmailFromLS] = useState<string>('');
   const [customComment, setCustomComment] = useState('');
   const [showCustomComment, setShowCustomComment] = useState(false);
   const [sendButtonDisabled, setSendButtonDisabled] = useState(true);
   const [emailError, setEmailError] = useState('');
 
+  const reviewData = useMemo(
+    () => ({
+      restaurant: restaurant.documentId,
+      employee: employee.documentId,
+      calification: rating,
+      typeImprovement: improvement,
+      email:
+        email || emailFromLS || 'prefirio-no-dar-su-email@nodiosuemail.com',
+      comment: comment ? comment : customComment,
+      googleSent: false,
+      date: new Date().toISOString(),
+    }),
+    [
+      restaurant.documentId,
+      employee.documentId,
+      rating,
+      improvement,
+      email,
+      emailFromLS,
+      comment,
+      customComment,
+    ]
+  );
+
   useEffect(() => {
-    const email = localStorage.getItem('yuppie_email');
-    if (email) {
-      setEmail(email);
+    const alreadyVisited = localStorage.getItem(
+      `visit-${restaurant.slug}-${employee.eid}`
+    );
+
+    if (alreadyVisited) {
+      // TODO: change alert to a modal
+      alert('Ya has dejado una review para este empleado hoy');
+      window.location.href = import.meta.env.PUBLIC_SITE_URL;
     }
+
+    setEmailFromLS(localStorage.getItem('yuppie_email') || '');
   }, []);
+
+  useEffect(() => {
+    if (emailFromLS) {
+      setEmail(emailFromLS);
+    }
+  }, [emailFromLS]);
+
+  useEffect(() => {
+    if (page !== 'comment') {
+      setEmail(emailFromLS);
+    }
+  }, [page]);
 
   useEffect(() => {
     setSendButtonDisabled(
@@ -44,78 +91,108 @@ export default function Review({ restaurant }: Props) {
           comment === 'otro' &&
           customComment.length < 10)
     );
-  }, [customComment, rating, comment, improvement]);
+  }, [customComment, comment, improvement]);
 
-  const handleRatingSelect = (rating: RatingValue) => {
-    if (rating === 5) {
-      window.location.href = restaurant.linkMaps;
-      return;
-    }
+  const handleRatingSelect = useCallback(
+    async (rating: RatingValue) => {
+      const googleReviewDone =
+        localStorage.getItem(`google-review-${restaurant.slug}`) === 'true';
+      const googleReview = rating === 5 && !googleReviewDone;
 
-    setRating(rating);
-    setPage('improvement');
-  };
+      if (googleReview) {
+        setImprovement('otra');
+        await handleSubmit(true);
+        window.location.href = restaurant.linkMaps;
+        return;
+      }
 
-  const handleImprovementSelect = (improvement: ImprovementValue) => {
-    setImprovement(improvement);
-    const isCustomComment = improvement === 'otra';
-    setShowCustomComment(isCustomComment);
-    setPage('comment');
-  };
+      setRating(rating);
+      setPage('improvement');
+    },
+    [restaurant.slug]
+  );
 
-  const handleCommentSubmit = (comment: CommentValue) => {
+  const handleImprovementSelect = useCallback(
+    (improvement: ImprovementValue) => {
+      setImprovement(improvement);
+      setShowCustomComment(improvement === 'otra');
+      setPage('comment');
+    },
+    []
+  );
+
+  const handleCommentSubmit = useCallback((comment: CommentValue) => {
     setComment(comment);
-    const isCustomComment = comment === 'otro';
-    setShowCustomComment(isCustomComment);
-    if (!isCustomComment) {
-      //   setPage('thanks');
-    }
-  };
+    setShowCustomComment(comment === 'otro');
+  }, []);
 
-  const handleCustomCommentChange = (
-    e: React.ChangeEvent<HTMLTextAreaElement>
-  ) => {
-    setCustomComment(e.target.value);
-  };
+  const handleCustomCommentChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setCustomComment(e.target.value);
+    },
+    []
+  );
 
-  const handleChangeEmail = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmailError('');
-    setEmail(e.target.value);
-  };
+  const handleChangeEmail = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (emailError) {
+        setEmailError('');
+      }
+      setEmail(e.target.value);
+    },
+    [emailError]
+  );
 
-  const handleSubmit = () => {
-    let isEmailValid = true;
-    const perfectRating = rating === 5;
+  const saveReviewInLS = useCallback(
+    (googleReview: boolean = false) => {
+      const key = `visit-${restaurant.slug}-${employee.eid}`;
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem(key, today);
+      if (googleReview) {
+        localStorage.setItem(`google-review-${restaurant.slug}`, 'true');
+      }
+    },
+    [restaurant.slug]
+  );
 
-    if (!perfectRating && email) {
-      isEmailValid = EMAIL_REGEX.test(email);
-      setEmailError(isEmailValid ? '' : 'Email inválido');
-
-      if (isEmailValid) {
+  const handleSubmit = useCallback(
+    async (googleReview: boolean = false) => {
+      if (email && email !== emailFromLS) {
+        const isEmailValid = validateEmail(email);
+        if (!isEmailValid) {
+          setEmailError('Email inválido');
+          return;
+        }
         localStorage.setItem('yuppie_email', email);
       }
-    }
 
-    if (isEmailValid) {
-      let reviewData: any = {
-        restaurantId: restaurant.documentId,
-        calification: rating,
-        typeImprovement: perfectRating ? 'otra' : improvement,
-        email: email,
-        comment: perfectRating
+      const finalReviewData = {
+        ...reviewData,
+        comment: googleReview
           ? 'Google Review: 5 estrellas. Review enviada a Google!'
-          : comment
-          ? comment
-          : customComment,
-        googleSent: perfectRating,
+          : reviewData.comment,
+        googleSent: googleReview,
       };
 
-      setPage('thanks');
-    }
-  };
+      const review = await createReview(finalReviewData);
 
-  const handleBack = () => {
+      if ('error' in review) {
+        console.error('Error creating review:', review.message);
+        // TODO: change alert to a modal
+        alert('Error al crear la review');
+        window.location.reload();
+        return;
+      }
+
+      saveReviewInLS(googleReview);
+      setPage('thanks');
+    },
+    [reviewData, email, emailFromLS, restaurant.slug, saveReviewInLS]
+  );
+
+  const handleBack = useCallback(() => {
     if (page === 'rating' || page === 'thanks') return;
+
     setPage(page === 'improvement' ? 'rating' : 'improvement');
     if (page === 'improvement') {
       setRating(0);
@@ -127,47 +204,11 @@ export default function Review({ restaurant }: Props) {
     }
     setEmailError('');
     setSendButtonDisabled(true);
-  };
+  }, [page]);
 
-  const createReview = async (
-    rating: number,
-    restaurantRealId: number,
-    employeeRealId?: number,
-    email: string = 'prefirio-no-dar-su-email@nodiosuemail.com'
-  ) => {
-    console.log(`=== INICIO createReviewWithData ===`);
-    console.log(
-      `📊 Datos: restaurante=${restaurantRealId}, rating=${rating}, email=${email}${
-        employeeRealId ? `, empleado=${employeeRealId}` : ', sin empleado'
-      }`
-    );
-
-    const reviewData: any = {
-      restaurantId: restaurantRealId,
-      calification: rating,
-      typeImprovement: 'Otra',
-      email: email,
-      comment: 'Google Review: 5 estrellas. Review enviada a Google!',
-      googleSent: true,
-    };
-
-    if (employeeRealId) {
-      reviewData.employeeId = employeeRealId;
-    }
-
-    console.log(`📤 Enviando datos a API:`, JSON.stringify(reviewData));
-
-    try {
-      const result = await createReview(reviewData);
-      console.log(`✅ Review creada exitosamente:`, result);
-      return true;
-    } catch (apiError) {
-      console.error(`❌ Error en createReview:`, apiError);
-      throw apiError;
-    } finally {
-      console.log(`=== FIN createReviewWithData ===`);
-    }
-  };
+  const clearEmail = useCallback(() => {
+    setEmail('');
+  }, []);
 
   return (
     <div className='w-full max-w-md overflow-hidden'>
@@ -238,6 +279,16 @@ export default function Review({ restaurant }: Props) {
                 {emailError}
               </span>
             )}
+            {email && (
+              <button
+                type='button'
+                className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center'
+                onClick={clearEmail}
+                aria-label='Borrar email'
+              >
+                ✕
+              </button>
+            )}
           </div>
           <p className='text-sm text-gray-400 italic text-center'>
             Ingresa tu email para recibir descuentos exclusivos y recompensas
@@ -246,7 +297,7 @@ export default function Review({ restaurant }: Props) {
           <button
             type='submit'
             disabled={sendButtonDisabled}
-            onClick={handleSubmit}
+            onClick={() => handleSubmit()}
             className={`w-full py-3 px-6 bg-white text-black rounded-full font-medium transition-all duration-200 ease-in-out ${
               sendButtonDisabled
                 ? 'opacity-50 cursor-not-allowed'

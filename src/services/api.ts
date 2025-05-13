@@ -228,8 +228,8 @@ export async function createReview(
     // Añadir el ID del empleado solo si existe
     if (reviewData.employeeId) {
       console.log('Añadiendo empleado ID:', reviewData.employeeId);
-      // const employee = await getEmployee(reviewData.employeeId);
-      // formattedData.data.employee = employee.documentId;
+      const employee = await getEmployee(reviewData.employeeId);
+      formattedData.data.employee = employee.documentId;
     } else {
       console.log('No se incluyó ID de empleado en la solicitud');
     }

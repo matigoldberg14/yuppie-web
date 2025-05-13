@@ -3,7 +3,6 @@ import Layout from '@/layouts/Layout.astro';
 import Review from '@/sections/Review';
 import { findRestaurantBySlug } from '@/services/api/restaurants';
 import { findEmployeeById } from '@/services/api/employees';
-import type { Employee, Restaurant } from '@/types';
 
 const { restaurant: restaurantSlug } = Astro.params;
 
@@ -18,16 +17,18 @@ if (!restaurant) {
 }
 
 const employeeId = Astro.url.searchParams.get('e');
-let employee: Employee | null = null;
 
-if (employeeId) {
-  employee = await findEmployeeById(employeeId, restaurant.documentId);
-
-  if (!employee) {
-    return Astro.redirect('/');
-  }
+if (!employeeId) {
+  return Astro.redirect('/');
 }
 
+const employee = await findEmployeeById(employeeId, restaurant.documentId);
+
+if (!employee) {
+  return Astro.redirect('/');
+}
+
+// TODO: check if we want to change between pages
 let pageTitle = `Califica tu experiencia - ${restaurantSlug}`;
 ---
 
@@ -40,7 +41,7 @@ let pageTitle = `Califica tu experiencia - ${restaurantSlug}`;
         {restaurant.name}
       </h1>
 
-      <Review client:load restaurant={restaurant} />
+      <Review client:load restaurant={restaurant} employee={employee} />
     </div>
   </div>
 </Layout>

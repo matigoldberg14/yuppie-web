@@ -84,3 +84,19 @@ export interface ApiResponse<T> {
     };
   };
 }
+
+export interface CreateReviewInput {
+  restaurant: string;
+  employee: string;
+  calification: number;
+  typeImprovement: string;
+  email: string;
+  comment: string;
+  googleSent: boolean;
+  date: string;
+}
+
+export interface ErrorResponse {
+  error: true;
+  message: string;
+}

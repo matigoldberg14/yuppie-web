@@ -10,6 +10,7 @@ export interface Schedule {
 export interface Employee {
   id: number;
   documentId: string;
+  eid: string;
   firstName: string;
   lastName: string;
   position: string;

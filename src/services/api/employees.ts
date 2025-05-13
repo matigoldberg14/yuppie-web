@@ -1,11 +1,11 @@
 import { API_CONFIG } from '../api';
-import type { Employee } from '@/types';
+import type { Employee } from '@/types/employee';
 export async function findEmployeeById(
   employeeId: string,
   restaurantId: string
 ) {
   try {
-    const url = `${API_CONFIG.baseUrl}/employees?filters[_id][$eq]=${employeeId}&filters[restaurant][documentId][$eq]=${restaurantId}`;
+    const url = `${API_CONFIG.baseUrl}/employees?filters[eid][$eq]=${employeeId}&filters[restaurant][documentId][$eq]=${restaurantId}`;
     const response = await fetch(url);
 
     if (!response.ok) {
