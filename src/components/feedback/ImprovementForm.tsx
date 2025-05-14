@@ -5,11 +5,11 @@ interface Props {
 }
 
 const improvementOptions = [
-  { id: 'atencion', label: 'Atención', icon: '🤝' },
-  { id: 'comidas', label: 'Comidas', icon: '🍽️' },
-  { id: 'bebidas', label: 'Bebidas', icon: '🥤' },
-  { id: 'ambiente', label: 'Ambiente', icon: '🎵' },
-  { id: 'otra', label: 'Otra', icon: '✨' },
+  { id: 'Atención', label: 'Atención', icon: '🤝' },
+  { id: 'Comidas', label: 'Comidas', icon: '🍽️' },
+  { id: 'Bebidas', label: 'Bebidas', icon: '🥤' },
+  { id: 'Ambiente', label: 'Ambiente', icon: '🎵' },
+  { id: 'Otra', label: 'Otra', icon: '✨' },
 ];
 
 export default function ImprovementForm({ onClick }: Props) {

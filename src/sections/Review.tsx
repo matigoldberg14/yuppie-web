@@ -62,8 +62,9 @@ export default function Review({ restaurant, employee }: Props) {
     const alreadyVisited = localStorage.getItem(
       `visit-${restaurant.slug}-${employee.eid}`
     );
+    const today = new Date().toISOString().split('T')[0];
 
-    if (alreadyVisited) {
+    if (alreadyVisited && alreadyVisited === today) {
       // TODO: change alert to a modal
       alert('Ya has dejado una review para este empleado hoy');
       window.location.href = import.meta.env.PUBLIC_SITE_URL;
@@ -91,9 +92,9 @@ export default function Review({ restaurant, employee }: Props) {
 
   useEffect(() => {
     setSendButtonDisabled(
-      (improvement === 'otra' && customComment.length < 10) ||
-        (improvement !== 'otra' && comment === '') ||
-        (improvement !== 'otra' &&
+      (improvement === 'Otra' && customComment.length < 10) ||
+        (improvement !== 'Otra' && comment === '') ||
+        (improvement !== 'Otra' &&
           comment === 'otro' &&
           customComment.length < 10)
     );
@@ -106,7 +107,6 @@ export default function Review({ restaurant, employee }: Props) {
       const googleReview = rating === 5 && !googleReviewDone;
 
       if (googleReview) {
-        setImprovement('otra');
         await handleSubmit(true);
         window.location.href = restaurant.linkMaps;
         return;
@@ -121,7 +121,7 @@ export default function Review({ restaurant, employee }: Props) {
   const handleImprovementSelect = useCallback(
     (improvement: ImprovementValue) => {
       setImprovement(improvement);
-      setShowCustomComment(improvement === 'otra');
+      setShowCustomComment(improvement === 'Otra');
       setPage('comment');
     },
     []
@@ -178,6 +178,8 @@ export default function Review({ restaurant, employee }: Props) {
           ? 'Google Review: 5 estrellas. Review enviada a Google!'
           : reviewData.comment,
         googleSent: googleReview,
+        typeImprovement: googleReview ? 'Otra' : improvement,
+        calification: googleReview ? 5 : rating,
       };
 
       const review = await createReview(finalReviewData);
@@ -317,11 +319,11 @@ export default function Review({ restaurant, employee }: Props) {
           <h2 className='text-3xl font-bold text-white text-center'>
             ¡Gracias por ayudarnos a mejorar!
           </h2>
-          <p className='text-lg text-gray-200 mt-4 text-center'>
+          <p className='text-lg text-gray-200 text-center'>
             Tu opinión es muy valiosa para nosotros y nos ayuda a ofrecer una
             mejor experiencia.
           </p>
-          <div className='flex justify-center mt-6'>
+          <div className='flex justify-center gap-4'>
             <a
               href='https://www.instagram.com/yuppie.ar/'
               target='_blank'

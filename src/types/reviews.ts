@@ -14,11 +14,11 @@ export interface ReviewEmployee {
 export type RatingValue = 1 | 2 | 3 | 4 | 5;
 
 export type ImprovementValue =
-  | 'atencion'
-  | 'comidas'
-  | 'bebidas'
-  | 'ambiente'
-  | 'otra';
+  | 'Atención'
+  | 'Comidas'
+  | 'Bebidas'
+  | 'Ambiente'
+  | 'Otra';
 
 export type CommentValue =
   | 'temperatura'

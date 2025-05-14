@@ -11,27 +11,27 @@ interface Props {
   onClick: (comment: CommentValue) => void;
 }
 
-type ImprovementCategory = Exclude<ImprovementValue, 'otra'>;
+type ImprovementCategory = Exclude<ImprovementValue, 'Otra'>;
 
 const improvementOptions: Record<
   ImprovementCategory,
   { id: CommentValue; icon: string; label: string }[]
 > = {
-  bebidas: [
+  Bebidas: [
     { id: 'temperatura', icon: '🌡️', label: 'Temperatura inadecuada' },
     { id: 'variedad', icon: '🥤', label: 'Poca variedad' },
     { id: 'precio', icon: '💵', label: 'Precio elevado' },
     { id: 'calidad', icon: '🍸', label: 'Calidad de las bebidas' },
     { id: 'otro', icon: '✨', label: 'Otro' },
   ],
-  comidas: [
+  Comidas: [
     { id: 'temperatura', icon: '🌡️', label: 'Temperatura inadecuada' },
     { id: 'sabor', icon: '🤷‍♂️', label: 'Sabor no cumplió expectativas' },
     { id: 'porcion', icon: '🍽️', label: 'Tamaño de las porciones' },
     { id: 'presentacion', icon: '🍛', label: 'Presentación del plato' },
     { id: 'otro', icon: '✨', label: 'Otro' },
   ],
-  atencion: [
+  Atención: [
     { id: 'tiempo', icon: '⌛️', label: 'Tiempo de espera muy largo' },
     { id: 'amabilidad', icon: '👩‍💼', label: 'Falta de amabilidad del personal' },
     { id: 'pedido', icon: '📝', label: 'Errores en el pedido' },
@@ -42,7 +42,7 @@ const improvementOptions: Record<
     },
     { id: 'otro', icon: '✨', label: 'Otro' },
   ],
-  ambiente: [
+  Ambiente: [
     { id: 'ruido', icon: '🔊', label: 'Nivel de ruido elevado' },
     { id: 'temperatura', icon: '🌡️', label: 'Temperatura del local' },
     { id: 'limpieza', icon: '🧹', label: 'Limpieza del local' },
