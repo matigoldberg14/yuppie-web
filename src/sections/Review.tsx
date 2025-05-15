@@ -11,13 +11,14 @@ import type {
 } from '@/types/reviews';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { createReview } from '@/services/api/reviews';
+import { createReview, existsReviewWithEmail } from '@/services/api/reviews';
 import type { Restaurant } from '@/types/restaurant';
 import { validateEmail } from '@/utils/validation';
 import useLoading from '@/hooks/useLoading';
 import { incrementTapsForEmployee } from '@/services/api/employees';
 import InstagramIcon from '@/components/icons/InstagramIcon';
 import { commentOptions } from '@/data/Reviews';
+import ErrorModal from '@/components/ui/Modal';
 
 type Pages = 'rating' | 'improvement' | 'comment' | 'thanks';
 
@@ -37,6 +38,7 @@ export default function Review({ restaurant, employee }: Props) {
   const [showCustomComment, setShowCustomComment] = useState(false);
   const [sendButtonDisabled, setSendButtonDisabled] = useState(true);
   const [emailError, setEmailError] = useState('');
+  const [error, setError] = useState({ type: '', message: '' });
   const { loading, startLoading, stopLoading } = useLoading();
 
   useEffect(() => {
@@ -46,9 +48,11 @@ export default function Review({ restaurant, employee }: Props) {
     const today = new Date().toISOString().split('T')[0];
 
     if (alreadyVisited && alreadyVisited === today) {
-      // TODO: change alert to a modal
-      alert('Ya has dejado una review para este empleado hoy');
-      window.location.href = import.meta.env.PUBLIC_SITE_URL;
+      setError({
+        type: 'user-error',
+        message: 'Ya has dejado una review para este empleado hoy',
+      });
+      return;
     }
 
     const incrementTaps = async () => {
@@ -88,7 +92,7 @@ export default function Review({ restaurant, employee }: Props) {
       const googleReview = rating === 5 && !googleReviewDone;
 
       if (googleReview) {
-        handleSubmit(true);
+        await handleSubmit(true);
         window.location.href = restaurant.linkMaps;
         return;
       }
@@ -131,7 +135,8 @@ export default function Review({ restaurant, employee }: Props) {
   );
 
   const saveReviewInLS = useCallback(
-    (googleReview: boolean = false) => {
+    (googleReview: boolean = false, email: string) => {
+      localStorage.setItem('yuppie_email', email);
       const key = `visit-${restaurant.slug}-${employee.eid}`;
       const today = new Date().toISOString().split('T')[0];
       localStorage.setItem(key, today);
@@ -144,13 +149,35 @@ export default function Review({ restaurant, employee }: Props) {
 
   const handleSubmit = useCallback(
     async (googleReview: boolean = false) => {
-      if (email && email !== emailFromLS) {
-        const isEmailValid = validateEmail(email);
-        if (!isEmailValid) {
-          setEmailError('Email inválido');
+      if (email) {
+        if (email !== emailFromLS) {
+          const isEmailValid = validateEmail(email);
+          if (!isEmailValid) {
+            setEmailError('Email inválido');
+            return;
+          }
+        }
+
+        const alreadyReviewedWithEmail = await existsReviewWithEmail(
+          restaurant.documentId,
+          employee.documentId,
+          email
+        );
+
+        if (alreadyReviewedWithEmail) {
+          if (typeof alreadyReviewedWithEmail === 'object') {
+            setError({
+              type: 'server-error',
+              message: 'Error al buscar la review',
+            });
+          } else {
+            setError({
+              type: 'user-error',
+              message: 'Ya has dejado una review para este empleado hoy',
+            });
+          }
           return;
         }
-        localStorage.setItem('yuppie_email', email);
       }
 
       /**
@@ -176,8 +203,7 @@ export default function Review({ restaurant, employee }: Props) {
         employee: employee.documentId,
         calification: googleReview ? 5 : rating,
         typeImprovement: googleReview ? 'Otra' : improvement,
-        email:
-          email || emailFromLS || 'prefirio-no-dar-su-email@nodiosuemail.com',
+        email: email || 'prefirio-no-dar-su-email@nodiosuemail.com',
         comment: commentToSend,
         googleSent: googleReview,
         date: new Date().toISOString(),
@@ -186,15 +212,19 @@ export default function Review({ restaurant, employee }: Props) {
       startLoading();
       const review = await createReview(reviewData);
       stopLoading();
+
       if ('error' in review) {
-        console.error('Error creating review:', review.message);
-        // TODO: change alert to a modal
-        alert('Error al crear la review');
-        window.location.reload();
+        setError({
+          type: 'server-error',
+          message: 'Error al crear la review',
+        });
         return;
       }
 
-      saveReviewInLS(googleReview);
+      saveReviewInLS(googleReview, email);
+      if (googleReview) {
+        return;
+      }
       setPage('thanks');
     },
     [
@@ -232,6 +262,15 @@ export default function Review({ restaurant, employee }: Props) {
   const clearEmail = useCallback(() => {
     setEmail('');
   }, []);
+
+  const handleCloseModal = useCallback(() => {
+    if (error.type === 'user-error') {
+      window.location.href = import.meta.env.PUBLIC_SITE_URL;
+    } else {
+      window.location.reload();
+    }
+    setError({ type: '', message: '' });
+  }, [error.type]);
 
   return (
     <div className='w-full max-w-md overflow-hidden'>
@@ -377,6 +416,13 @@ export default function Review({ restaurant, employee }: Props) {
           }`}
         />
       </div>
+
+      <ErrorModal
+        isOpen={error.message !== ''}
+        onClose={handleCloseModal}
+        title={error.type === 'user-error' ? 'Error' : 'Error del servidor'}
+        message={error.message}
+      />
     </div>
   );
 }

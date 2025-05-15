@@ -32,3 +32,32 @@ export async function createReview(
     };
   }
 }
+
+export async function existsReviewWithEmail(
+  restaurant: string,
+  employee: string,
+  email: string
+): Promise<Boolean | ErrorResponse> {
+  try {
+    const url = `${
+      import.meta.env.PUBLIC_API_URL
+    }/reviews?filters[restaurant][documentId][$eq]=${restaurant}&filters[employee][documentId][$eq]=${employee}&filters[email][$eq]=${email}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error('Error al buscar la review');
+    }
+
+    const { data: reviewsData } = await response.json();
+    const today = new Date().toISOString().split('T')[0];
+
+    return reviewsData.some(
+      (review: Review) => review.date.split('T')[0] === today
+    );
+  } catch (error) {
+    return {
+      error: true,
+      message: error as string,
+    };
+  }
+}
