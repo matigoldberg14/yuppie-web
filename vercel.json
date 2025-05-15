@@ -157,6 +157,30 @@
       "permanent": true
     },
     {
+      "source": "/monti-barracas",
+      "has": [{ "type": "query", "key": "e", "value": "164" }],
+      "destination": "/monti-barracas?e=1",
+      "permanent": true
+    },
+    {
+      "source": "/monti-barracas",
+      "has": [{ "type": "query", "key": "e", "value": "166" }],
+      "destination": "/monti-barracas?e=2",
+      "permanent": true
+    },
+    {
+      "source": "/monti-barracas",
+      "has": [{ "type": "query", "key": "e", "value": "168" }],
+      "destination": "/monti-barracas?e=3",
+      "permanent": true
+    },
+    {
+      "source": "/monti-barracas",
+      "has": [{ "type": "query", "key": "e", "value": "170" }],
+      "destination": "/monti-barracas?e=4",
+      "permanent": true
+    },
+    {
       "source": "/rating",
       "has": [
         {
