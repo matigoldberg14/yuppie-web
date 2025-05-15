@@ -1,16 +1,9 @@
+import { improvementOptions } from '@/data/Reviews';
 import type { ImprovementValue } from '@/types/reviews';
 
 interface Props {
   onClick: (improvement: ImprovementValue) => void;
 }
-
-const improvementOptions = [
-  { id: 'Atención', label: 'Atención', icon: '🤝' },
-  { id: 'Comidas', label: 'Comidas', icon: '🍽️' },
-  { id: 'Bebidas', label: 'Bebidas', icon: '🥤' },
-  { id: 'Ambiente', label: 'Ambiente', icon: '🎵' },
-  { id: 'Otra', label: 'Otra', icon: '✨' },
-];
 
 export default function ImprovementForm({ onClick }: Props) {
   return (

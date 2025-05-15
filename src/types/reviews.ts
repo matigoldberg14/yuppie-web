@@ -13,12 +13,26 @@ export interface ReviewEmployee {
 
 export type RatingValue = 1 | 2 | 3 | 4 | 5;
 
+export interface RatingOption {
+  rating: RatingValue;
+  icon: string;
+  label: string;
+}
+
 export type ImprovementValue =
   | 'Atención'
   | 'Comidas'
   | 'Bebidas'
   | 'Ambiente'
   | 'Otra';
+
+export interface ImprovementOption {
+  id: ImprovementValue;
+  icon: string;
+  label: string;
+}
+
+export type CommentCategory = Exclude<ImprovementValue, 'Otra'>;
 
 export type CommentValue =
   | 'temperatura'
@@ -36,6 +50,12 @@ export type CommentValue =
   | 'ruido'
   | 'limpieza'
   | 'comodidad';
+
+export interface CommentOption {
+  id: CommentValue;
+  icon: string;
+  label: string;
+}
 
 export interface Review {
   id: number;

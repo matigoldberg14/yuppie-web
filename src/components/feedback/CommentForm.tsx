@@ -1,4 +1,9 @@
-import type { CommentValue, ImprovementValue } from '@/types/reviews';
+import { commentOptions } from '@/data/Reviews';
+import type {
+  CommentCategory,
+  CommentValue,
+  ImprovementValue,
+} from '@/types/reviews';
 
 interface Props {
   comment: string;
@@ -11,47 +16,6 @@ interface Props {
   onClick: (comment: CommentValue) => void;
 }
 
-type ImprovementCategory = Exclude<ImprovementValue, 'Otra'>;
-
-const improvementOptions: Record<
-  ImprovementCategory,
-  { id: CommentValue; icon: string; label: string }[]
-> = {
-  Bebidas: [
-    { id: 'temperatura', icon: '🌡️', label: 'Temperatura inadecuada' },
-    { id: 'variedad', icon: '🥤', label: 'Poca variedad' },
-    { id: 'precio', icon: '💵', label: 'Precio elevado' },
-    { id: 'calidad', icon: '🍸', label: 'Calidad de las bebidas' },
-    { id: 'otro', icon: '✨', label: 'Otro' },
-  ],
-  Comidas: [
-    { id: 'temperatura', icon: '🌡️', label: 'Temperatura inadecuada' },
-    { id: 'sabor', icon: '🤷‍♂️', label: 'Sabor no cumplió expectativas' },
-    { id: 'porcion', icon: '🍽️', label: 'Tamaño de las porciones' },
-    { id: 'presentacion', icon: '🍛', label: 'Presentación del plato' },
-    { id: 'otro', icon: '✨', label: 'Otro' },
-  ],
-  Atención: [
-    { id: 'tiempo', icon: '⌛️', label: 'Tiempo de espera muy largo' },
-    { id: 'amabilidad', icon: '👩‍💼', label: 'Falta de amabilidad del personal' },
-    { id: 'pedido', icon: '📝', label: 'Errores en el pedido' },
-    {
-      id: 'disponibilidad',
-      icon: '🤵‍♂️',
-      label: 'Poca disponibilidad del personal',
-    },
-    { id: 'otro', icon: '✨', label: 'Otro' },
-  ],
-  Ambiente: [
-    { id: 'ruido', icon: '🔊', label: 'Nivel de ruido elevado' },
-    { id: 'temperatura', icon: '🌡️', label: 'Temperatura del local' },
-    { id: 'limpieza', icon: '🧹', label: 'Limpieza del local' },
-    { id: 'comodidad', icon: '🪑', label: 'Comodidad del mobiliario' },
-    { id: 'otro', icon: '✨', label: 'Otro' },
-  ],
-};
-
-// TODO: Manage min 10 chars
 export default function CommentForm({
   comment,
   customComment,
@@ -85,7 +49,7 @@ export default function CommentForm({
           </span>
         </div>
       ) : (
-        improvementOptions[improvement as ImprovementCategory]?.map(
+        commentOptions[improvement as CommentCategory]?.map(
           ({ id, icon, label }) => {
             return (
               <button

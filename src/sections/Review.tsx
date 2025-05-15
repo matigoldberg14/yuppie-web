@@ -3,6 +3,8 @@ import ImprovementForm from '@/components/feedback/ImprovementForm';
 import RatingForm from '@/components/feedback/RatingForm';
 import type { Employee } from '@/types/employee';
 import type {
+  CommentCategory,
+  CommentOption,
   CommentValue,
   ImprovementValue,
   RatingValue,
@@ -12,8 +14,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createReview } from '@/services/api/reviews';
 import type { Restaurant } from '@/types/restaurant';
 import { validateEmail } from '@/utils/validation';
+import useLoading from '@/hooks/useLoading';
 import { incrementTapsForEmployee } from '@/services/api/employees';
 import InstagramIcon from '@/components/icons/InstagramIcon';
+import { commentOptions } from '@/data/Reviews';
 
 type Pages = 'rating' | 'improvement' | 'comment' | 'thanks';
 
@@ -33,30 +37,7 @@ export default function Review({ restaurant, employee }: Props) {
   const [showCustomComment, setShowCustomComment] = useState(false);
   const [sendButtonDisabled, setSendButtonDisabled] = useState(true);
   const [emailError, setEmailError] = useState('');
-
-  const reviewData = useMemo(
-    () => ({
-      restaurant: restaurant.documentId,
-      employee: employee.documentId,
-      calification: rating,
-      typeImprovement: improvement,
-      email:
-        email || emailFromLS || 'prefirio-no-dar-su-email@nodiosuemail.com',
-      comment: comment ? comment : customComment,
-      googleSent: false,
-      date: new Date().toISOString(),
-    }),
-    [
-      restaurant.documentId,
-      employee.documentId,
-      rating,
-      improvement,
-      email,
-      emailFromLS,
-      comment,
-      customComment,
-    ]
-  );
+  const { loading, startLoading, stopLoading } = useLoading();
 
   useEffect(() => {
     const alreadyVisited = localStorage.getItem(
@@ -107,7 +88,7 @@ export default function Review({ restaurant, employee }: Props) {
       const googleReview = rating === 5 && !googleReviewDone;
 
       if (googleReview) {
-        await handleSubmit(true);
+        handleSubmit(true);
         window.location.href = restaurant.linkMaps;
         return;
       }
@@ -172,18 +153,39 @@ export default function Review({ restaurant, employee }: Props) {
         localStorage.setItem('yuppie_email', email);
       }
 
-      const finalReviewData = {
-        ...reviewData,
-        comment: googleReview
-          ? 'Google Review: 5 estrellas. Review enviada a Google!'
-          : reviewData.comment,
-        googleSent: googleReview,
-        typeImprovement: googleReview ? 'Otra' : improvement,
+      /**
+       * TODO: when the refactor of the dashboard is done
+       * we should set the comment ids
+       * */
+
+      let commentToSend = '';
+
+      if (googleReview) {
+        commentToSend = 'Google Review: 5 estrellas. Review enviada a Google!';
+      } else if (comment) {
+        const commentOption = commentOptions[
+          improvement as CommentCategory
+        ].find((option: CommentOption) => option.id === comment);
+        commentToSend = `${commentOption?.icon} ${commentOption?.label}`;
+      } else {
+        commentToSend = customComment;
+      }
+
+      const reviewData = {
+        restaurant: restaurant.documentId,
+        employee: employee.documentId,
         calification: googleReview ? 5 : rating,
+        typeImprovement: googleReview ? 'Otra' : improvement,
+        email:
+          email || emailFromLS || 'prefirio-no-dar-su-email@nodiosuemail.com',
+        comment: commentToSend,
+        googleSent: googleReview,
+        date: new Date().toISOString(),
       };
 
-      const review = await createReview(finalReviewData);
-
+      startLoading();
+      const review = await createReview(reviewData);
+      stopLoading();
       if ('error' in review) {
         console.error('Error creating review:', review.message);
         // TODO: change alert to a modal
@@ -195,7 +197,20 @@ export default function Review({ restaurant, employee }: Props) {
       saveReviewInLS(googleReview);
       setPage('thanks');
     },
-    [reviewData, email, emailFromLS, restaurant.slug, saveReviewInLS]
+    [
+      email,
+      emailFromLS,
+      restaurant.slug,
+      saveReviewInLS,
+      restaurant.documentId,
+      employee.documentId,
+      rating,
+      improvement,
+      comment,
+      customComment,
+      startLoading,
+      stopLoading,
+    ]
   );
 
   const handleBack = useCallback(() => {
@@ -312,7 +327,7 @@ export default function Review({ restaurant, employee }: Props) {
                 : 'hover:bg-gray-100 hover:scale-[1.01] active:scale-[0.99]'
             }`}
           >
-            Enviar
+            {loading ? 'Enviando...' : 'Enviar'}
           </button>
         </div>
         <div className='card p-6 min-w-full flex flex-col gap-6'>

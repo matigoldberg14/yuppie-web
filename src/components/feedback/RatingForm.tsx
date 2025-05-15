@@ -1,20 +1,9 @@
+import { ratingOptions } from '@/data/Reviews';
 import type { RatingValue } from '@/types/reviews';
 
 interface Props {
   onClick: (rating: RatingValue) => void;
 }
-
-const ratingOptions = [
-  { rating: 1, emoji: '😠', label: 'Muy insatisfecho' },
-  { rating: 2, emoji: '🙁', label: 'Insatisfecho' },
-  { rating: 3, emoji: '😐', label: 'Neutral' },
-  { rating: 4, emoji: '🙂', label: 'Satisfecho' },
-  {
-    rating: 5,
-    emoji: '😁',
-    label: 'Muy satisfecho',
-  },
-];
 
 export default function RatingForm({ onClick }: Props) {
   return (
@@ -24,7 +13,7 @@ export default function RatingForm({ onClick }: Props) {
       </h2>
 
       <div className='flex justify-between w-full px-4 relative'>
-        {ratingOptions.map(({ rating, emoji, label }) => (
+        {ratingOptions.map(({ rating, icon, label }) => (
           <button
             key={rating}
             onClick={() => onClick(rating as RatingValue)}
@@ -33,7 +22,7 @@ export default function RatingForm({ onClick }: Props) {
           >
             {/* Use a simpler approach for the emoji display */}
             <span className='text-4xl transform transition-transform duration-200 group-hover:scale-110'>
-              {emoji}
+              {icon}
             </span>
           </button>
         ))}
