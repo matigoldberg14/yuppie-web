@@ -1,0 +1,47 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import Review from '@/sections/Review';
+import { getRestaurantBySlug } from '@/services/api/restaurants';
+import { getEmployeeByEid } from '@/services/api/employees';
+
+const { restaurant: restaurantSlug } = Astro.params;
+
+if (!restaurantSlug) {
+  Astro.redirect('/');
+}
+
+const restaurant = await getRestaurantBySlug(restaurantSlug!);
+
+if (!restaurant) {
+  return Astro.redirect('/');
+}
+
+const employeeId = Astro.url.searchParams.get('e');
+
+if (!employeeId) {
+  return Astro.redirect('/');
+}
+
+const employee = await getEmployeeByEid(employeeId, restaurant.documentId);
+
+if (!employee) {
+  return Astro.redirect('/');
+}
+
+// TODO: check if we want to change between pages
+let pageTitle = `Califica tu experiencia - ${restaurantSlug}`;
+---
+
+<Layout title={pageTitle}>
+  <div
+    class='min-h-screen bg-gradient flex flex-col items-center justify-center p-4'
+  >
+    <div class='w-full max-w-md flex flex-col items-center gap-4'>
+      <h1 class='text-4xl font-bold text-center text-shadow'>
+        {restaurant.name}
+      </h1>
+
+      <Review client:load restaurant={restaurant} employee={employee} />
+    </div>
+  </div>
+</Layout>

@@ -82,6 +82,7 @@ export interface EnrichedEmployee extends BasicEmployee {
   lastReviewDate?: string | null;
   daysWithoutReview?: number | null;
   schedules: LocalSchedule[];
+  taps?: number | null;
 }
 
 interface WorkSchedule {
@@ -227,41 +228,71 @@ export function TeamContent() {
         setReviews(reviewsData);
 
         const enrichedEmployees: EnrichedEmployee[] = employeesData.map(
-          (employee: any): EnrichedEmployee => {
-            const employeeReviews = reviewsData.filter(
+          (employee: any): EnrichedEmployee => ({
+            ...employee,
+            reviewCount: reviewsData.filter(
               (review: ReviewExt) =>
                 review.employee?.documentId === employee.documentId
-            );
-            const reviewCount = employeeReviews.length;
-            const totalRating = employeeReviews.reduce(
-              (sum: number, review: ReviewExt) => sum + review.calification,
-              0
-            );
-            const averageRating =
-              reviewCount > 0 ? totalRating / reviewCount : 0;
-            const sortedReviews = [...employeeReviews].sort(
-              (a: ReviewExt, b: ReviewExt) =>
-                new Date(b.createdAt).getTime() -
-                new Date(a.createdAt).getTime()
-            );
-            const lastReviewDate =
-              sortedReviews.length > 0 ? sortedReviews[0].createdAt : null;
-            const daysWithoutReview = lastReviewDate
-              ? Math.floor(
-                  (new Date().getTime() - new Date(lastReviewDate).getTime()) /
-                    (1000 * 60 * 60 * 24)
+            ).length,
+            averageRating: (() => {
+              const employeeReviews = reviewsData.filter(
+                (review: ReviewExt) =>
+                  review.employee?.documentId === employee.documentId
+              );
+              return employeeReviews.length > 0
+                ? employeeReviews.reduce(
+                    (sum: number, review: ReviewExt) =>
+                      sum + review.calification,
+                    0
+                  ) / employeeReviews.length
+                : 0;
+            })(),
+            reviews: reviewsData.filter(
+              (review: ReviewExt) =>
+                review.employee?.documentId === employee.documentId
+            ),
+            lastReviewDate: (() => {
+              const sortedReviews = reviewsData
+                .filter(
+                  (review: ReviewExt) =>
+                    review.employee?.documentId === employee.documentId
                 )
-              : null;
-            return {
-              ...employee,
-              reviewCount,
-              averageRating,
-              reviews: employeeReviews,
-              lastReviewDate,
-              daysWithoutReview,
-              schedules: employee.schedules || [],
-            };
-          }
+                .sort(
+                  (a: ReviewExt, b: ReviewExt) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime()
+                );
+              return sortedReviews.length > 0
+                ? sortedReviews[0].createdAt
+                : null;
+            })(),
+            daysWithoutReview: (() => {
+              const sortedReviews = reviewsData
+                .filter(
+                  (review: ReviewExt) =>
+                    review.employee?.documentId === employee.documentId
+                )
+                .sort(
+                  (a: ReviewExt, b: ReviewExt) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime()
+                );
+              const lastReviewDate =
+                sortedReviews.length > 0 ? sortedReviews[0].createdAt : null;
+              return lastReviewDate
+                ? Math.floor(
+                    (new Date().getTime() -
+                      new Date(lastReviewDate).getTime()) /
+                      (1000 * 60 * 60 * 24)
+                  )
+                : null;
+            })(),
+            schedules: employee.schedules || [],
+            taps:
+              typeof employee.taps === 'number'
+                ? employee.taps
+                : Number(employee.taps) || 0,
+          })
         );
         setEmployees(enrichedEmployees);
       } catch (error) {
@@ -382,6 +413,10 @@ export function TeamContent() {
             lastReviewDate: null,
             daysWithoutReview: null,
             schedules: employee.schedules || [],
+            taps:
+              typeof employee.taps === 'number'
+                ? employee.taps
+                : Number(employee.taps) || 0,
           })
         );
         setEmployees(enrichedEmployees);
@@ -434,6 +469,10 @@ export function TeamContent() {
               lastReviewDate: existingEmployee?.lastReviewDate || null,
               daysWithoutReview: existingEmployee?.daysWithoutReview || null,
               schedules: employee.schedules || [],
+              taps:
+                typeof employee.taps === 'number'
+                  ? employee.taps
+                  : Number(employee.taps) || 0,
             };
           }
         );
@@ -732,7 +771,10 @@ export function TeamContent() {
                   <div
                     key={employee.documentId}
                     className="p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
-                    onClick={() => setSelectedEmployee(employee)}
+                    onClick={() => {
+                      console.log('Empleado seleccionado:', employee);
+                      setSelectedEmployee(employee);
+                    }}
                   >
                     <div className="flex items-center gap-3 mb-3">
                       <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
@@ -920,7 +962,10 @@ export function TeamContent() {
                       <Button
                         variant="ghost"
                         className="flex-1 rounded-none border-r border-white/10 text-white/80 h-12"
-                        onClick={() => setSelectedEmployee(employee)}
+                        onClick={() => {
+                          console.log('Empleado seleccionado:', employee);
+                          setSelectedEmployee(employee);
+                        }}
                       >
                         Ver detalles
                       </Button>
@@ -1004,7 +1049,13 @@ export function TeamContent() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => setSelectedEmployee(employee)}
+                                  onClick={() => {
+                                    console.log(
+                                      'Empleado seleccionado:',
+                                      employee
+                                    );
+                                    setSelectedEmployee(employee);
+                                  }}
                                   className="text-white/80 hover:text-white hover:bg-white/10"
                                 >
                                   Detalles
@@ -1012,7 +1063,10 @@ export function TeamContent() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => setEditingEmployee(employee)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingEmployee(employee);
+                                  }}
                                   className="text-blue-400 hover:text-blue-500 hover:bg-blue-400/10"
                                 >
                                   <Edit2 className="h-4 w-4" />
@@ -1548,13 +1602,11 @@ export function TeamContent() {
                         </span>
                         <span className="text-white font-medium">
                           {reviews.length
-                            ? (
-                                (reviews.filter((r) => r.calification === 5)
-                                  .length /
-                                  reviews.length) *
-                                100
-                              ).toFixed(0)
-                            : '0'}
+                            ? (reviews.filter((r) => r.calification === 5)
+                                .length /
+                                reviews.length) *
+                              100
+                            : 0}
                           %
                         </span>
                       </div>
@@ -1706,6 +1758,24 @@ export function TeamContent() {
                             <Star className="h-5 w-5 text-yellow-400 ml-1" />
                           )}
                         </div>
+                      </div>
+                      <div>
+                        <p className="text-white/60 text-sm">Taps</p>
+                        <p className="text-white text-xl font-semibold">
+                          {selectedEmployee.taps ?? 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-white/60 text-sm">Tasa de rechazo</p>
+                        <p className="text-white text-xl font-semibold">
+                          {(selectedEmployee.taps ?? 0) > 0
+                            ? `${(
+                                ((selectedEmployee.reviewCount || 0) /
+                                  (selectedEmployee.taps ?? 1)) *
+                                100
+                              ).toFixed(1)}%`
+                            : '0%'}
+                        </p>
                       </div>
                     </div>
                   </div>

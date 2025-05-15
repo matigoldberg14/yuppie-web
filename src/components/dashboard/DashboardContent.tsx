@@ -36,7 +36,7 @@ async function fetchRestaurantData(restaurantId: string) {
   try {
     const apiUrl = `${
       import.meta.env.PUBLIC_API_URL
-    }/restaurants/${restaurantId}`;
+    }/restaurants/${restaurantId}?populate=employees`;
     console.log(`Solicitando datos frescos del restaurante a: ${apiUrl}`);
 
     const response = await fetch(apiUrl, { cache: 'no-store' });
@@ -44,6 +44,11 @@ async function fetchRestaurantData(restaurantId: string) {
       throw new Error(`Error HTTP: ${response.status}`);
     }
     const result = await response.json();
+
+    console.log(
+      'Datos del restaurante recibidos:',
+      JSON.stringify(result.data, null, 2)
+    );
 
     // Suponiendo que result.data tiene la info del restaurante
     return result.data;
@@ -101,6 +106,26 @@ async function fetchReviewsDirectly(
     return reviews;
   } catch (error) {
     console.error('Error al obtener reseñas directamente:', error);
+    throw error;
+  }
+}
+
+//traerme los emplados de un retaurant
+async function fetchEmployeesByRestaurant(restaurantDocumentId: string) {
+  try {
+    const apiUrl = `${
+      import.meta.env.PUBLIC_API_URL
+    }/employees?filters[restaurant][documentId][$eq]=${restaurantDocumentId}`;
+    console.log(`Solicitando empleados del restaurante a: ${apiUrl}`);
+    const response = await fetch(apiUrl, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Error HTTP: ${response.status}`);
+    }
+    const result = await response.json();
+    console.log('Empleados recibidos:', result.data);
+    return result.data;
+  } catch (error) {
+    console.error('Error al obtener empleados del restaurante:', error);
     throw error;
   }
 }
@@ -180,6 +205,7 @@ export function DashboardContent() {
 
   // Función para actualizar datos
   const handleRefreshData = async () => {
+    console.log('Entrando a handleRefreshData', currentRestaurant);
     if (!currentRestaurant || loading) return;
 
     setLoading(true);
@@ -221,6 +247,25 @@ export function DashboardContent() {
         `Obtenidas ${reviews.length} reseñas frescas (solicitud directa)`
       );
 
+      const empleados = await fetchEmployeesByRestaurant(
+        updatedRestaurant.documentId
+      );
+      console.log('Empleados del restaurante:', empleados);
+
+      // la suma de toods
+      const totalTapsEmpleados = empleados.reduce((acc: number, emp: any) => {
+        if (typeof emp.taps === 'number') {
+          return acc + emp.taps;
+        }
+        return acc;
+      }, 0);
+
+      // Sumar los taps de los empleados + los del restaurante
+      const tapsRestaurante = parseInt(updatedRestaurant.taps) || 0;
+      const currentTaps = totalTapsEmpleados + tapsRestaurante;
+      const currentResponseRate =
+        currentTaps > 0 ? (reviews.length / currentTaps) * 100 : 0;
+
       // Procesa las reseñas y actualiza los stats
       const totalReviews = reviews.length;
       const ratingDistribution = reviews.reduce(
@@ -258,10 +303,6 @@ export function DashboardContent() {
           ? reviews.reduce((acc: number, r: any) => acc + r.calification, 0) /
             totalReviews
           : 0;
-
-      const currentTaps = parseInt(updatedRestaurant.taps);
-      const currentResponseRate =
-        currentTaps > 0 ? (totalReviews / currentTaps) * 100 : 0;
 
       setStats({
         totalReviews,

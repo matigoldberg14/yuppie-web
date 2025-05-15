@@ -20,25 +20,6 @@ interface Restaurant {
   };
 }
 
-export interface CreateReviewInput {
-  restaurantId: number;
-  calification: number;
-  typeImprovement: string;
-  email: string;
-  comment: string;
-  googleSent: boolean;
-  employeeId?: number;
-}
-interface RestaurantData {
-  id: number;
-  documentId: string;
-  name: string;
-  owner: {
-    firstName: string;
-    lastName: string;
-  };
-}
-
 interface Review {
   restaurantId: number;
   documentId: string;
@@ -71,10 +52,6 @@ export const API_CONFIG = {
   retryAttempts: 3,
   retryDelay: 1000,
 } as const;
-const handleError = (error: unknown) => {
-  console.error('API Error:', error);
-  throw error instanceof Error ? error : new Error('Unknown error occurred');
-};
 
 const withRetry = async <T>(
   fn: () => Promise<T>,
@@ -127,272 +104,6 @@ export async function getAllRestaurants() {
   } catch (error) {
     console.error('Error fetching restaurants:', error);
     return { data: [], meta: { pagination: { total: 0 } } };
-  }
-}
-
-export async function incrementTaps(documentId: string) {
-  try {
-    // Paso 1: Obtener la información actual del restaurante para conocer el valor actual de taps
-    const response = await fetch(
-      `${
-        import.meta.env.PUBLIC_API_URL
-      }/restaurants?filters[documentId][$eq]=${documentId}`
-    );
-
-    if (!response.ok) {
-      console.error(
-        'Error al obtener información del restaurante',
-        await response.text()
-      );
-      return null;
-    }
-
-    const data = await response.json();
-    if (!data.data || data.data.length === 0) {
-      console.error(
-        'No se encontró el restaurante con documentId:',
-        documentId
-      );
-      return null;
-    }
-
-    // Extraer el valor actual de taps y calcular el nuevo valor
-    const restaurant = data.data[0];
-    let currentTaps = parseInt(restaurant.taps || '0');
-    if (isNaN(currentTaps)) currentTaps = 0;
-
-    const newTaps = currentTaps + 1;
-    console.log(
-      `Incrementando taps de ${currentTaps} a ${newTaps} para restaurante: ${restaurant.name}`
-    );
-
-    // Paso 2: IMPORTANTE: Usar el documentId directamente en la URL
-    // Actualizamos usando una solicitud directa sin pasar por ninguna función intermedia
-    const updateResponse = await fetch(
-      `${import.meta.env.PUBLIC_API_URL}/restaurants/${documentId}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          data: {
-            taps: newTaps.toString(),
-          },
-        }),
-      }
-    );
-
-    // Verificar si la actualización fue exitosa
-    if (!updateResponse.ok) {
-      console.error('Error al actualizar taps:', await updateResponse.text());
-      return null;
-    }
-
-    console.log('¡Taps actualizado exitosamente!');
-    return await updateResponse.json();
-  } catch (error) {
-    console.error('Error en incrementTaps:', error);
-    return null;
-  }
-}
-export interface CreateReviewInput {
-  restaurantId: number;
-  calification: number;
-  typeImprovement: string;
-  email: string;
-  comment: string;
-  googleSent: boolean;
-  employeeId?: number; // Empleado como opcional
-}
-
-export async function createReview(
-  reviewData: CreateReviewInput
-): Promise<ApiResponse<Review>> {
-  try {
-    console.log('createReview llamado con datos:', JSON.stringify(reviewData));
-
-    // Construir el objeto de datos para la API
-    const formattedData: any = {
-      data: {
-        restaurant: reviewData.restaurantId,
-        calification: reviewData.calification,
-        typeImprovement: reviewData.typeImprovement,
-        email: reviewData.email,
-        comment: reviewData.comment,
-        googleSent: reviewData.googleSent,
-        date: new Date().toISOString(),
-      },
-    };
-
-    // Añadir el ID del empleado solo si existe
-    if (reviewData.employeeId) {
-      console.log('Añadiendo empleado ID:', reviewData.employeeId);
-      // const employee = await getEmployee(reviewData.employeeId);
-      // formattedData.data.employee = employee.documentId;
-    } else {
-      console.log('No se incluyó ID de empleado en la solicitud');
-    }
-
-    console.log(
-      'Enviando solicitud a API:',
-      JSON.stringify(formattedData, null, 2)
-    );
-
-    const response = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(formattedData),
-    });
-
-    // Obtener la respuesta como texto primero para depuración
-    const responseText = await response.text();
-    console.log('Respuesta como texto:', responseText);
-
-    // Intentar parsear la respuesta como JSON
-    let data;
-    try {
-      data = JSON.parse(responseText);
-      console.log('Respuesta parseada:', data);
-    } catch (parseError) {
-      console.error('Error al parsear respuesta:', parseError);
-      throw new Error(`Error al parsear respuesta: ${responseText}`);
-    }
-
-    if (!response.ok) {
-      console.error('Error en respuesta HTTP:', response.status, data);
-      throw new Error(
-        data.error?.message || data.message || `Error HTTP ${response.status}`
-      );
-    }
-
-    console.log('Review creada con éxito:', data);
-    return data;
-  } catch (error) {
-    console.error('Error en createReview:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Error al crear la review');
-  }
-}
-
-export async function getEmployee(employeeId: number) {}
-
-// Función para verificar si un email ya ha enviado una review al restaurante en las últimas 24 horas
-export async function checkEmailReviewStatus(
-  restaurantDocumentId: string,
-  email: string
-): Promise<{ hasReviewed: boolean; lastReviewDate?: string }> {
-  try {
-    if (!restaurantDocumentId || !email) {
-      console.warn('Faltan parámetros para la verificación de email');
-      return { hasReviewed: false };
-    }
-
-    // Calcular la fecha de hace 24 horas
-    const ayer = new Date();
-    ayer.setHours(ayer.getHours() - 24);
-
-    // Endpoint para buscar reviews filtradas por restaurante, email y fecha
-    const url = `${
-      API_CONFIG.baseUrl
-    }/reviews?filters[restaurant][documentId][$eq]=${restaurantDocumentId}&filters[email][$eq]=${encodeURIComponent(
-      email
-    )}&filters[createdAt][$gte]=${ayer.toISOString()}&sort=createdAt:desc`;
-
-    console.log('[API] Verificando reviews recientes:', url);
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`Error en la verificación de email: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const reviews = data.data || [];
-
-    // Si hay al menos una review en las últimas 24 horas
-    if (reviews.length > 0) {
-      console.log('Se encontró una review reciente para este email');
-      return {
-        hasReviewed: true,
-        lastReviewDate: reviews[0].createdAt,
-      };
-    }
-
-    // No hay reviews recientes de este email
-    console.log('No se encontraron reviews recientes para este email');
-    return { hasReviewed: false };
-  } catch (error) {
-    console.error('Error verificando estado de email:', error);
-    // En caso de error, permitimos el envío (política de apertura para evitar bloqueos)
-    return { hasReviewed: false };
-  }
-}
-
-export async function checkIfEmailHasFiveStarReview(
-  restaurantDocumentId: string,
-  email: string
-): Promise<boolean> {
-  console.log(`=== INICIO checkIfEmailHasFiveStarReview ===`);
-
-  try {
-    if (!restaurantDocumentId) {
-      return false;
-    }
-
-    // Verificar si ya hay una review de 5 estrellas guardada en localStorage
-    const hasFiveStarReviewFlag = localStorage.getItem(
-      `review_google_5stars_${restaurantDocumentId}`
-    );
-
-    if (hasFiveStarReviewFlag === 'true') {
-      console.log(`🚨 Se encontró bandera de review de 5 estrellas previa`);
-      return true; // Ya hay una review de 5 estrellas previa
-    }
-
-    console.log(`🚫 No se encontró bandera de review de 5 estrellas previa`);
-    return false;
-  } catch (error) {
-    console.error('❌ Error verificando reviews:', error);
-    return false;
-  } finally {
-    console.log(`=== FIN checkIfEmailHasFiveStarReview ===`);
-  }
-}
-
-export async function getRestaurant(documentId: string) {
-  try {
-    // En modo development, no se aplica el filtro publishedAt
-    const publishedFilter =
-      import.meta.env.MODE === 'development'
-        ? ''
-        : '&filters[publishedAt][$notNull]=true';
-
-    const url = `${API_CONFIG.baseUrl}/restaurants?filters[documentId][$eq]=${documentId}${publishedFilter}&populate=*`;
-    console.log('getRestaurant -> URL:', url);
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.error('getRestaurant -> response not ok:', response.status);
-      return null;
-    }
-    const json = await response.json();
-
-    if (!json.data || json.data.length === 0) {
-      console.error(
-        `getRestaurant -> No se encontró restaurante con documentId: ${documentId}`
-      );
-      return null;
-    }
-    // Devuelve directamente el primer restaurante
-    return json.data[0];
-  } catch (error) {
-    console.error(`Error fetching restaurant ${documentId}:`, error);
-    return null;
   }
 }
 
@@ -542,6 +253,10 @@ export async function getEmployeesByRestaurant(restaurantId: string) {
       active: employee.active,
       photo: employee.photo,
       schedules: employee.schedules,
+      taps:
+        typeof employee.taps === 'number'
+          ? employee.taps
+          : Number(employee.taps) || 0,
     }));
   } catch (error) {
     console.error('Error in getEmployeesByRestaurant:', error);
@@ -858,47 +573,6 @@ export async function updateReview(
   }
 }
 
-// Función para obtener el ID numérico de Strapi usando el documentId.
-export async function getRestaurantNumericId(
-  documentId: string
-): Promise<number | null> {
-  try {
-    const url = `${API_CONFIG.baseUrl}/restaurants?filters[documentId][$eq]=${documentId}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error('Error fetching restaurant numeric id');
-    }
-    const data = await response.json();
-    if (data.data && data.data.length > 0) {
-      return data.data[0].id; // Aquí se obtiene el ID numérico interno
-    }
-    return null;
-  } catch (error) {
-    console.error('Error in getRestaurantNumericId:', error);
-    return null;
-  }
-}
-
-export async function getEmployeeNumericId(
-  documentId: string
-): Promise<number | null> {
-  try {
-    const url = `${API_CONFIG.baseUrl}/employees?filters[documentId][$eq]=${documentId}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error('Error obteniendo ID numérico del empleado');
-    }
-    const data = await response.json();
-    if (data.data && data.data.length > 0) {
-      return data.data[0].id; // Obtiene el ID numérico interno
-    }
-    return null;
-  } catch (error) {
-    console.error('Error en getEmployeeNumericId:', error);
-    return null;
-  }
-}
-
 // Función para obtener todos los restaurantes de un owner dado su firebaseUID
 export async function getOwnerRestaurants(firebaseUID: string) {
   try {
@@ -1025,55 +699,4 @@ export async function updateRestaurantCoordinates(
   }
 }
 
-export function slugifyRestaurantName(name: string): string {
-  return name
-    .toString()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\w\-]+/g, '-')
-    .replace(/--+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
-}
-
-/**
- * Genera una URL amigable para un restaurante
- * @param restaurantName Nombre del restaurante
- * @param options Opciones adicionales (empleado, acción)
- * @returns URL amigable
- */
-export function getFriendlyUrl(
-  restaurantName: string,
-  options?: {
-    employeeId?: number;
-    action?: 'rating' | 'improvement' | 'comment';
-  }
-): string {
-  // Si no hay nombre de restaurante, devolver URL vacía
-  if (!restaurantName) return '';
-
-  // Convertir nombre a formato de URL
-  const slug = slugifyRestaurantName(restaurantName);
-  let url = `/${slug}`;
-
-  // Añadir parámetros si existen
-  const params = new URLSearchParams();
-
-  if (options?.employeeId) {
-    params.append('e', options.employeeId.toString());
-  }
-
-  if (options?.action && options.action !== 'rating') {
-    params.append('a', options.action);
-  }
-
-  // Añadir query string si hay parámetros
-  const queryString = params.toString();
-  if (queryString) {
-    url += `?${queryString}`;
-  }
-
-  return url;
-}
 export type { ApiError, ApiResponse, Restaurant, Review };

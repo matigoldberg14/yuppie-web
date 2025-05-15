@@ -20,6 +20,7 @@ export interface Restaurant {
   id: number;
   documentId: string;
   name: string;
+  slug: string;
   taps: string;
   linkMaps: string; // Requerido
   owner: {
@@ -33,6 +34,7 @@ export interface Restaurant {
   clientes?: number;
   satisfaccion?: number;
   ocupacion?: number;
+  socialNetwork?: string;
 }
 
 // Para el tipo RestaurantData usado en componentes
