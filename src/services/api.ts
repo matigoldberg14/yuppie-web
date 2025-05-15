@@ -253,6 +253,10 @@ export async function getEmployeesByRestaurant(restaurantId: string) {
       active: employee.active,
       photo: employee.photo,
       schedules: employee.schedules,
+      taps:
+        typeof employee.taps === 'number'
+          ? employee.taps
+          : Number(employee.taps) || 0,
     }));
   } catch (error) {
     console.error('Error in getEmployeesByRestaurant:', error);
