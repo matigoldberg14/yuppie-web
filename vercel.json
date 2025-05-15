@@ -3,6 +3,297 @@
   "buildCommand": "npm ci && astro telemetry disable && npm run build",
   "devCommand": "npm run dev",
   "framework": "astro",
+  "redirects": [
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "126" }],
+      "destination": "/su-casa?e=1",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "128" }],
+      "destination": "/su-casa?e=2",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "130" }],
+      "destination": "/su-casa?e=3",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "132" }],
+      "destination": "/su-casa?e=4",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "134" }],
+      "destination": "/su-casa?e=5",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "136" }],
+      "destination": "/su-casa?e=6",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "138" }],
+      "destination": "/su-casa?e=7",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "140" }],
+      "destination": "/su-casa?e=8",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "142" }],
+      "destination": "/su-casa?e=9",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "146" }],
+      "destination": "/su-casa?e=10",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "149" }],
+      "destination": "/su-casa?e=11",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "150" }],
+      "destination": "/su-casa?e=12",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "152" }],
+      "destination": "/su-casa?e=13",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "154" }],
+      "destination": "/su-casa?e=14",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "162" }],
+      "destination": "/su-casa?e=15",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "161" }],
+      "destination": "/su-casa?e=16",
+      "permanent": true
+    },
+    {
+      "source": "/su-casa",
+      "has": [{ "type": "query", "key": "e", "value": "160" }],
+      "destination": "/su-casa?e=17",
+      "permanent": true
+    },
+
+    {
+      "source": "/los-maestros-uriburu",
+      "has": [{ "type": "query", "key": "e", "value": "172" }],
+      "destination": "/los-maestros-uriburu?e=1",
+      "permanent": true
+    },
+    {
+      "source": "/los-maestros-uriburu",
+      "has": [{ "type": "query", "key": "e", "value": "174" }],
+      "destination": "/los-maestros-uriburu?e=2",
+      "permanent": true
+    },
+    {
+      "source": "/los-maestros-uriburu",
+      "has": [{ "type": "query", "key": "e", "value": "176" }],
+      "destination": "/los-maestros-uriburu?e=3",
+      "permanent": true
+    },
+    {
+      "source": "/los-maestros-uriburu",
+      "has": [{ "type": "query", "key": "e", "value": "178" }],
+      "destination": "/los-maestros-uriburu?e=4",
+      "permanent": true
+    },
+
+    {
+      "source": "/los-maestros-parana",
+      "has": [{ "type": "query", "key": "e", "value": "180" }],
+      "destination": "/los-maestros-parana?e=1",
+      "permanent": true
+    },
+    {
+      "source": "/los-maestros-parana",
+      "has": [{ "type": "query", "key": "e", "value": "182" }],
+      "destination": "/los-maestros-parana?e=2",
+      "permanent": true
+    },
+    {
+      "source": "/los-maestros-parana",
+      "has": [{ "type": "query", "key": "e", "value": "184" }],
+      "destination": "/los-maestros-parana?e=3",
+      "permanent": true
+    },
+    {
+      "source": "/los-maestros-parana",
+      "has": [{ "type": "query", "key": "e", "value": "186" }],
+      "destination": "/los-maestros-parana?e=4",
+      "permanent": true
+    },
+    {
+      "source": "/rating",
+      "has": [
+        {
+          "type": "query",
+          "key": "local",
+          "value": "oe8jinyojdesps910f9lftg7"
+        },
+        {
+          "type": "query",
+          "key": "employee",
+          "value": "fj31j7tlb2lcgsktw6itsx83"
+        }
+      ],
+      "destination": "/sheikob-s-bagels-arce?e=1",
+      "permanent": true
+    },
+    {
+      "source": "/rating",
+      "has": [
+        {
+          "type": "query",
+          "key": "local",
+          "value": "oe8jinyojdesps910f9lftg7"
+        },
+        {
+          "type": "query",
+          "key": "employee",
+          "value": "qy1hwmvfc83z12pr3gzwvkup"
+        }
+      ],
+      "destination": "/sheikob-s-bagels-arce?e=2",
+      "permanent": true
+    },
+    {
+      "source": "/rating",
+      "has": [
+        {
+          "type": "query",
+          "key": "local",
+          "value": "oe8jinyojdesps910f9lftg7"
+        },
+        {
+          "type": "query",
+          "key": "employee",
+          "value": "c0pgzw64a9dudwmlk3xt85ex"
+        }
+      ],
+      "destination": "/sheikob-s-bagels-arce?e=3",
+      "permanent": true
+    },
+    {
+      "source": "/rating",
+      "has": [
+        {
+          "type": "query",
+          "key": "local",
+          "value": "oe8jinyojdesps910f9lftg7"
+        },
+        {
+          "type": "query",
+          "key": "employee",
+          "value": "yu3gcxtlg9ry4y3n7435klo4"
+        }
+      ],
+      "destination": "/sheikob-s-bagels-arce?e=4",
+      "permanent": true
+    },
+    {
+      "source": "/rating",
+      "has": [
+        {
+          "type": "query",
+          "key": "local",
+          "value": "oe8jinyojdesps910f9lftg7"
+        },
+        {
+          "type": "query",
+          "key": "employee",
+          "value": "wqcgsqo5b256kgbp2ywdsrql"
+        }
+      ],
+      "destination": "/sheikob-s-bagels-arce?e=5",
+      "permanent": true
+    },
+    {
+      "source": "/rating",
+      "has": [
+        {
+          "type": "query",
+          "key": "local",
+          "value": "oe8jinyojdesps910f9lftg7"
+        },
+        {
+          "type": "query",
+          "key": "employee",
+          "value": "gqxtiqz008l4vrrkzdrw14os"
+        }
+      ],
+      "destination": "/sheikob-s-bagels-arce?e=6",
+      "permanent": true
+    },
+    {
+      "source": "/rating",
+      "has": [
+        {
+          "type": "query",
+          "key": "local",
+          "value": "oe8jinyojdesps910f9lftg7"
+        },
+        {
+          "type": "query",
+          "key": "employee",
+          "value": "ryrhonvgm9kuk6ane4kuzx99"
+        }
+      ],
+      "destination": "/sheikob-s-bagels-arce?e=7",
+      "permanent": true
+    },
+    {
+      "source": "/rating",
+      "has": [
+        {
+          "type": "query",
+          "key": "local",
+          "value": "oe8jinyojdesps910f9lftg7"
+        },
+        {
+          "type": "query",
+          "key": "employee",
+          "value": "aa0sehod03luphxa3dn3x59w"
+        }
+      ],
+      "destination": "/sheikob-s-bagels-arce?e=8",
+      "permanent": true
+    }
+  ],
+
   "headers": [
     {
       "source": "/(.*)",
