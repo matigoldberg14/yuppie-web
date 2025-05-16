@@ -293,6 +293,23 @@
         {
           "type": "query",
           "key": "employee",
+          "value": "ruxnhw3jcdduqwf523nb0qvc"
+        }
+      ],
+      "destination": "/sheikob-s-bagels-arce?e=6",
+      "permanent": true
+    },
+    {
+      "source": "/rating",
+      "has": [
+        {
+          "type": "query",
+          "key": "local",
+          "value": "oe8jinyojdesps910f9lftg7"
+        },
+        {
+          "type": "query",
+          "key": "employee",
           "value": "ryrhonvgm9kuk6ane4kuzx99"
         }
       ],
