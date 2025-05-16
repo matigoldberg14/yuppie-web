@@ -26,6 +26,7 @@ export interface Restaurant {
   owner: {
     firstName: string;
     lastName: string;
+    email: string; // Email del dueño del restaurante
   };
   location?: Location; // Opcional, pero cuando existe debe tener todos los campos
   coordinates?: Coordinates;
@@ -74,6 +75,7 @@ export function convertToRestaurant(data: RestaurantData): Restaurant {
     owner: {
       firstName: data.owner?.firstName || '',
       lastName: data.owner?.lastName || '',
+      email: '', // Assuming email is not provided in the data
     },
     // Convertir location solo si todos los campos requeridos están presentes
     location:

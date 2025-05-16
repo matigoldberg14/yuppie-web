@@ -19,6 +19,7 @@ import { incrementTapsForEmployee } from '@/services/api/employees';
 import InstagramIcon from '@/components/icons/InstagramIcon';
 import { commentOptions } from '@/data/Reviews';
 import ErrorModal from '@/components/ui/Modal';
+import emailjs from '@emailjs/browser';
 
 type Pages = 'rating' | 'improvement' | 'comment' | 'thanks';
 
@@ -180,11 +181,6 @@ export default function Review({ restaurant, employee }: Props) {
         }
       }
 
-      /**
-       * TODO: when the refactor of the dashboard is done
-       * we should set the comment ids
-       * */
-
       let commentToSend = '';
 
       if (googleReview) {
@@ -221,6 +217,27 @@ export default function Review({ restaurant, employee }: Props) {
         return;
       }
 
+      // Enviar email si la calificación es 1 o 2 estrellas
+      if (!googleReview && (rating === 1 || rating === 2)) {
+        try {
+          await emailjs.send(
+            import.meta.env.PUBLIC_EMAILJS_SERVICE_ID,
+            import.meta.env.PUBLIC_EMAILJS_COMMENT_TEMPLATE_ID,
+            {
+              rating: rating,
+              improvement_type: improvement,
+              comment: commentToSend,
+              customer_email: email || 'No proporcionado',
+              restaurant_name: restaurant.name,
+              to_email: restaurant.owner.email,
+            },
+            import.meta.env.PUBLIC_EMAILJS_PUBLIC_KEY
+          );
+        } catch (error) {
+          console.error('Error al enviar el email:', error);
+        }
+      }
+
       saveReviewInLS(googleReview, email);
       if (googleReview) {
         return;
@@ -240,6 +257,8 @@ export default function Review({ restaurant, employee }: Props) {
       customComment,
       startLoading,
       stopLoading,
+      restaurant.name,
+      restaurant.owner.email,
     ]
   );
 
@@ -273,14 +292,14 @@ export default function Review({ restaurant, employee }: Props) {
   }, [error.type]);
 
   return (
-    <div className='w-full max-w-md overflow-hidden'>
+    <div className="w-full max-w-md overflow-hidden">
       <span
         onClick={handleBack}
         className={`absolute top-4 left-4 text-sm text-white transition-opacity duration-300 ease-in-out ${
           page === 'rating' || page === 'thanks' ? 'opacity-0' : 'opacity-100'
         }`}
       >
-        <ArrowLeftIcon className='w-4 h-4' /> Back
+        <ArrowLeftIcon className="w-4 h-4" /> Back
       </span>
       <div
         className={`flex items-center gap-6 h-fit transition-transform duration-300 ease-in-out ${
@@ -293,22 +312,22 @@ export default function Review({ restaurant, employee }: Props) {
             : '-translate-x-[calc(300%_+_4.5rem)]'
         }`}
       >
-        <div className='card p-6 min-w-full flex flex-col gap-6'>
-          <h2 className='text-2xl font-semibold text-center'>
+        <div className="card p-6 min-w-full flex flex-col gap-6">
+          <h2 className="text-2xl font-semibold text-center">
             Califica tu experiencia
           </h2>
-          <div className='emoji-container'>
+          <div className="emoji-container">
             <RatingForm onClick={handleRatingSelect} />
           </div>
         </div>
-        <div className='card p-6 min-w-full flex flex-col gap-6'>
-          <h2 className='text-2xl font-semibold text-center'>
+        <div className="card p-6 min-w-full flex flex-col gap-6">
+          <h2 className="text-2xl font-semibold text-center">
             ¿En qué podríamos mejorar?
           </h2>
           <ImprovementForm onClick={handleImprovementSelect} />
         </div>
-        <div className='card p-6 min-w-full flex flex-col gap-6'>
-          <h2 className='text-2xl font-semibold text-center'>
+        <div className="card p-6 min-w-full flex flex-col gap-6">
+          <h2 className="text-2xl font-semibold text-center">
             Déjanos tu comentario
           </h2>
           <CommentForm
@@ -321,11 +340,11 @@ export default function Review({ restaurant, employee }: Props) {
             minLength={10}
             maxLength={500}
           />
-          <div className='w-full relative'>
+          <div className="w-full relative">
             <input
-              type='email'
-              name='email'
-              placeholder='Tu email'
+              type="email"
+              name="email"
+              placeholder="Tu email"
               onChange={handleChangeEmail}
               value={email}
               required
@@ -334,32 +353,32 @@ export default function Review({ restaurant, employee }: Props) {
               }`}
             />
             {restaurant.slug !== 'los-maestros-parana' && (
-              <span className='absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 font-bold'>
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 font-bold">
                 *
               </span>
             )}
             {emailError && (
-              <span className='absolute right-3 top-1/2 transform -translate-y-1/2 text-red-400 text-sm'>
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-400 text-sm">
                 {emailError}
               </span>
             )}
             {email && (
               <button
-                type='button'
-                className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center'
+                type="button"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"
                 onClick={clearEmail}
-                aria-label='Borrar email'
+                aria-label="Borrar email"
               >
                 ✕
               </button>
             )}
           </div>
-          <p className='text-sm text-gray-400 italic text-center'>
+          <p className="text-sm text-gray-400 italic text-center">
             Ingresa tu email para recibir descuentos exclusivos y recompensas
             especiales
           </p>
           <button
-            type='submit'
+            type="submit"
             disabled={sendButtonDisabled}
             onClick={() => handleSubmit()}
             className={`w-full py-3 px-6 bg-white text-black rounded-full font-medium transition-all duration-200 ease-in-out ${
@@ -371,32 +390,32 @@ export default function Review({ restaurant, employee }: Props) {
             {loading ? 'Enviando...' : 'Enviar'}
           </button>
         </div>
-        <div className='card p-6 min-w-full flex flex-col gap-6'>
-          <h2 className='text-3xl font-bold text-white text-center'>
+        <div className="card p-6 min-w-full flex flex-col gap-6">
+          <h2 className="text-3xl font-bold text-white text-center">
             ¡Gracias por ayudarnos a mejorar!
           </h2>
-          <p className='text-lg text-gray-200 text-center'>
+          <p className="text-lg text-gray-200 text-center">
             Tu opinión es muy valiosa para nosotros y nos ayuda a ofrecer una
             mejor experiencia.
           </p>
-          <div className='flex justify-center gap-4'>
+          <div className="flex justify-center gap-4">
             <a
-              href='https://www.instagram.com/yuppie.ar/'
-              target='_blank'
-              rel='noopener noreferrer'
-              className='text-gray-300 hover:text-white flex items-center gap-2 transform hover:translate-x-1 hover:scale-105 transition-all duration-200'
+              href="https://www.instagram.com/yuppie.ar/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-300 hover:text-white flex items-center gap-2 transform hover:translate-x-1 hover:scale-105 transition-all duration-200"
             >
-              <InstagramIcon className='w-5 h-5' />
+              <InstagramIcon className="w-5 h-5" />
               yuppie.ar
             </a>
             {restaurant.socialNetwork && (
               <a
                 href={restaurant.socialNetwork}
-                target='_blank'
-                rel='noopener noreferrer'
-                className='text-gray-300 hover:text-white flex items-center gap-2 transform hover:translate-x-1 hover:scale-105 transition-all duration-200'
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-300 hover:text-white flex items-center gap-2 transform hover:translate-x-1 hover:scale-105 transition-all duration-200"
               >
-                <InstagramIcon className='w-5 h-5' />
+                <InstagramIcon className="w-5 h-5" />
                 {restaurant.name}
               </a>
             )}
@@ -405,7 +424,7 @@ export default function Review({ restaurant, employee }: Props) {
       </div>
 
       {/* Progress Bar */}
-      <div className='fixed top-0 left-0 h-1 bg-white/20 w-full z-50'>
+      <div className="fixed top-0 left-0 h-1 bg-white/20 w-full z-50">
         <span
           className={`h-full bg-white absolute inset-0 transition-all duration-200 ease-in-out transform-origin-left ${
             page === 'rating'
