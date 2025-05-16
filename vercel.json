@@ -3,6 +3,7 @@
   "buildCommand": "npm ci && astro telemetry disable && npm run build",
   "devCommand": "npm run dev",
   "framework": "astro",
+
   "redirects": [
     {
       "source": "/su-casa",
@@ -156,6 +157,7 @@
       "destination": "/los-maestros-parana?e=4",
       "permanent": true
     },
+
     {
       "source": "/monti-barracas",
       "has": [{ "type": "query", "key": "e", "value": "164" }],
@@ -180,6 +182,7 @@
       "destination": "/monti-barracas?e=4",
       "permanent": true
     },
+
     {
       "source": "/rating",
       "has": [
@@ -194,7 +197,7 @@
           "value": "fj31j7tlb2lcgsktw6itsx83"
         }
       ],
-      "destination": "/sheikob-s-bagels-arce?e=1",
+      "destination": "/sheikob-s-bagels-arce?e=1&local=&employee=",
       "permanent": true
     },
     {
@@ -211,7 +214,7 @@
           "value": "qy1hwmvfc83z12pr3gzwvkup"
         }
       ],
-      "destination": "/sheikob-s-bagels-arce?e=2",
+      "destination": "/sheikob-s-bagels-arce?e=2&local=&employee=",
       "permanent": true
     },
     {
@@ -228,7 +231,7 @@
           "value": "c0pgzw64a9dudwmlk3xt85ex"
         }
       ],
-      "destination": "/sheikob-s-bagels-arce?e=3",
+      "destination": "/sheikob-s-bagels-arce?e=3&local=&employee=",
       "permanent": true
     },
     {
@@ -245,7 +248,7 @@
           "value": "yu3gcxtlg9ry4y3n7435klo4"
         }
       ],
-      "destination": "/sheikob-s-bagels-arce?e=4",
+      "destination": "/sheikob-s-bagels-arce?e=4&local=&employee=",
       "permanent": true
     },
     {
@@ -259,44 +262,10 @@
         {
           "type": "query",
           "key": "employee",
-          "value": "wqcgsqo5b256kgbp2ywdsrql"
+          "value": "=kimaqjtepvc9tv2i0o6lkkgk"
         }
       ],
-      "destination": "/sheikob-s-bagels-arce?e=5",
-      "permanent": true
-    },
-    {
-      "source": "/rating",
-      "has": [
-        {
-          "type": "query",
-          "key": "local",
-          "value": "oe8jinyojdesps910f9lftg7"
-        },
-        {
-          "type": "query",
-          "key": "employee",
-          "value": "gqxtiqz008l4vrrkzdrw14os"
-        }
-      ],
-      "destination": "/sheikob-s-bagels-arce?e=6",
-      "permanent": true
-    },
-    {
-      "source": "/rating",
-      "has": [
-        {
-          "type": "query",
-          "key": "local",
-          "value": "oe8jinyojdesps910f9lftg7"
-        },
-        {
-          "type": "query",
-          "key": "employee",
-          "value": "ruxnhw3jcdduqwf523nb0qvc"
-        }
-      ],
-      "destination": "/sheikob-s-bagels-arce?e=6",
+      "destination": "/sheikob-s-bagels-arce?e=5&local=&employee=",
       "permanent": true
     },
     {
@@ -313,7 +282,7 @@
           "value": "ryrhonvgm9kuk6ane4kuzx99"
         }
       ],
-      "destination": "/sheikob-s-bagels-arce?e=7",
+      "destination": "/sheikob-s-bagels-arce?e=7&local=&employee=",
       "permanent": true
     },
     {
@@ -330,7 +299,24 @@
           "value": "aa0sehod03luphxa3dn3x59w"
         }
       ],
-      "destination": "/sheikob-s-bagels-arce?e=8",
+      "destination": "/sheikob-s-bagels-arce?e=8&local=&employee=",
+      "permanent": true
+    },
+    {
+      "source": "/rating",
+      "has": [
+        {
+          "type": "query",
+          "key": "local",
+          "value": "oe8jinyojdesps910f9lftg7"
+        },
+        {
+          "type": "query",
+          "key": "employee",
+          "value": "gqxtiqz008l4vrrkzdrw14os"
+        }
+      ],
+      "destination": "/sheikob-s-bagels-arce?e=6&local=&employee=",
       "permanent": true
     }
   ],
@@ -339,18 +325,9 @@
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
