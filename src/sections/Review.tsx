@@ -333,9 +333,11 @@ export default function Review({ restaurant, employee }: Props) {
                 emailError ? 'ring-2 ring-red-400' : ''
               }`}
             />
-            <span className='absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 font-bold'>
-              *
-            </span>
+            {restaurant.slug !== 'los-maestros-parana' && (
+              <span className='absolute left-3 top-1/2 transform -translate-y-1/2 text-red-400 font-bold'>
+                *
+              </span>
+            )}
             {emailError && (
               <span className='absolute right-3 top-1/2 transform -translate-y-1/2 text-red-400 text-sm'>
                 {emailError}
