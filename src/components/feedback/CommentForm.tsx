@@ -1,3 +1,4 @@
+//Users/Mati/Desktop/yuppie-web/src/components/feedback/CommentForm.tsx
 import { commentOptions } from '@/data/Reviews';
 import type {
   CommentCategory,
@@ -27,18 +28,18 @@ export default function CommentForm({
   maxLength,
 }: Props) {
   return (
-    <div className='w-full max-w-md flex flex-col items-center gap-3'>
+    <div className="w-full max-w-md flex flex-col items-center gap-3">
       {showCustomComment ? (
-        <div className='w-full flex flex-col gap-2 items-end'>
+        <div className="w-full flex flex-col gap-2 items-end">
           <textarea
-            name='customComment'
-            id='customComment'
+            name="customComment"
+            id="customComment"
             onChange={onChange}
             value={customComment}
             minLength={minLength}
             maxLength={maxLength}
             placeholder={`Cuéntanos tu experiencia (mínimo ${minLength} caracteres)`}
-            className='w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 resize-none h-40 transition-all duration-200 focus:ring-2 focus:ring-white/20 focus:outline-none'
+            className="w-full p-4 rounded-lg bg-white/5 text-white placeholder-gray-400 resize-none h-40 transition-all duration-200 focus:ring-2 focus:ring-white/20 focus:outline-none"
           />
           <span
             className={`text-sm ${
@@ -61,7 +62,7 @@ export default function CommentForm({
                 }`}
                 onClick={() => onClick(id as CommentValue)}
               >
-                <span className='text-xl' role='img' aria-label={label}>
+                <span className="text-xl" role="img" aria-label={label}>
                   {icon}
                 </span>
                 {label}
