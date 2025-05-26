@@ -1,6 +1,14 @@
 import { ratingOptions } from '@/data/Reviews';
 import type { RatingValue } from '@/types/reviews';
 
+import {
+  BsEmojiAngryFill,
+  BsFillEmojiFrownFill,
+  BsEmojiNeutralFill,
+  BsEmojiSmileFill,
+  BsEmojiGrinFill,
+} from 'react-icons/bs';
+
 interface Props {
   onClick: (rating: RatingValue) => void;
 }
@@ -13,7 +21,7 @@ export default function RatingForm({ onClick }: Props) {
       </h2>
 
       <div className='flex justify-between w-full px-4 relative'>
-        {ratingOptions.map(({ rating, icon, label }) => (
+        {ratingOptions.map(({ rating, label }) => (
           <button
             key={rating}
             onClick={() => onClick(rating as RatingValue)}
@@ -22,7 +30,11 @@ export default function RatingForm({ onClick }: Props) {
           >
             {/* Use a simpler approach for the emoji display */}
             <span className='text-4xl transform transition-transform duration-200 group-hover:scale-110'>
-              {icon}
+              {rating === 1 && <BsEmojiAngryFill color='#ff5454' />}
+              {rating === 2 && <BsFillEmojiFrownFill color='#ff7c54' />}
+              {rating === 3 && <BsEmojiNeutralFill color='#FFD700' />}
+              {rating === 4 && <BsEmojiSmileFill color='#CDDC39' />}
+              {rating === 5 && <BsEmojiGrinFill color='#4CAF50' />}
             </span>
           </button>
         ))}

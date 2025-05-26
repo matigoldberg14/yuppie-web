@@ -1,11 +1,7 @@
 ---
-//src/layouts/Layout.astro
-
-import { ViewTransitions } from 'astro:transitions';
-import { SEO } from 'astro-seo';
 import '../styles/globals.css';
+import { ClientRouter } from 'astro:transitions';
 import emailjs from '@emailjs/browser';
-import Analytics from '@vercel/analytics/astro';
 emailjs.init('3wONTqDb8Fwtqf1P0');
 
 interface Props {
@@ -18,43 +14,21 @@ interface Props {
 const {
   title,
   description = 'Yuppie - Mejora la experiencia de tus clientes con feedback en tiempo real',
-  image = '/og-image.jpg',
-  noindex = false,
 } = Astro.props;
-
-const canonicalURL = new URL(Astro.url.pathname, 'https://yuppiecx.com.ar');
 ---
 
 <!doctype html>
 <html lang='es' class='scroll-smooth'>
   <head>
     <meta charset='UTF-8' />
+    <meta name="description" content={description} />
     <meta name='viewport' content='width=device-width, initial-scale=1.0' />
     <link rel='icon' type='image/png' href='/favicon.png' />
     <link rel='icon' type='image/png' href='/favicon.png' sizes='32x32' />
     <link rel='icon' type='image/png' href='/favicon-16x16.png' sizes='16x16' />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
     <link rel='manifest' href='/site.webmanifest' />
-
-    <SEO
-      title={title}
-      description={description}
-      canonical={canonicalURL.toString()}
-      noindex={noindex}
-      openGraph={{
-        basic: {
-          title,
-          type: 'website',
-          image,
-        },
-        image: {
-          alt: 'Yuppie Preview Image',
-        },
-      }}
-      twitter={{
-        creator: '@yuppie',
-        card: 'summary_large_image',
-      }}
-    />
 
     <!-- Fonts -->
     <link
@@ -64,7 +38,7 @@ const canonicalURL = new URL(Astro.url.pathname, 'https://yuppiecx.com.ar');
       onload="this.onload=null;this.rel='stylesheet'"
     />
 
-    <ViewTransitions />
+    <ClientRouter />
 
     <style is:inline>
       :root {

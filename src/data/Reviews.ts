@@ -6,13 +6,12 @@ import type {
 } from '@/types/reviews';
 
 export const ratingOptions: RatingOption[] = [
-  { rating: 1, icon: '😠', label: 'Muy insatisfecho' },
-  { rating: 2, icon: '🙁', label: 'Insatisfecho' },
-  { rating: 3, icon: '😐', label: 'Neutral' },
-  { rating: 4, icon: '🙂', label: 'Satisfecho' },
+  { rating: 1, label: 'Muy insatisfecho' },
+  { rating: 2, label: 'Insatisfecho' },
+  { rating: 3, label: 'Neutral' },
+  { rating: 4, label: 'Satisfecho' },
   {
     rating: 5,
-    icon: '😁',
     label: 'Muy satisfecho',
   },
 ];
