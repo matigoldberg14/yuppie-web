@@ -7,8 +7,15 @@ import {
   setSelectedRestaurant,
 } from '../../lib/restaurantStore';
 import type { Restaurant } from '../../lib/restaurantStore';
+import { useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '../../i18n/config';
 
-const RestaurantValidator: React.FC = () => {
+interface RestaurantValidatorProps {
+  lang: SupportedLang;
+}
+
+const RestaurantValidator: React.FC<RestaurantValidatorProps> = ({ lang }) => {
+  const t = useTranslations(lang);
   const [isValidating, setIsValidating] = useState(true);
 
   useEffect(() => {
@@ -50,7 +57,7 @@ const RestaurantValidator: React.FC = () => {
           console.log(
             'RestaurantValidator: Múltiples restaurantes sin selección, redirigiendo...'
           );
-          window.location.href = '/dashboard/restaurants';
+          window.location.href = `/${lang}/dashboard/restaurants`;
           return;
         }
 
@@ -63,7 +70,7 @@ const RestaurantValidator: React.FC = () => {
           console.log(
             'RestaurantValidator: Restaurante seleccionado no válido, redirigiendo...'
           );
-          window.location.href = '/dashboard/restaurants';
+          window.location.href = `/${lang}/dashboard/restaurants`;
           return;
         }
 
@@ -73,16 +80,18 @@ const RestaurantValidator: React.FC = () => {
         );
         setIsValidating(false);
       } catch (error) {
-        console.error('Error validating restaurant:', error);
+        console.error(t('error.validatingRestaurant'), error);
         setIsValidating(false);
       }
     };
 
     validateRestaurant();
-  }, []);
+  }, [lang, t]);
 
   if (isValidating) {
-    return <div className="text-white">Verificando restaurante...</div>;
+    return (
+      <div className='text-white'>{t('dashboard.validatingRestaurant')}</div>
+    );
   }
 
   return null;

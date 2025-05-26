@@ -20,4 +20,15 @@ export default defineConfig({
       noExternal: ['@nanostores/react'],
     },
   },
+  trailingSlash: 'never',
+  build: {
+    format: 'directory',
+  },
+  i18n: {
+    locales: ['es', 'en'],
+    defaultLocale: 'es',
+    routing: {
+      prefixDefaultLocale: false,
+    },
+  },
 });

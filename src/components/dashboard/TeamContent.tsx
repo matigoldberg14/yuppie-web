@@ -61,6 +61,8 @@ import {
   toggleCompareRestaurant as toggleCompare,
   setRestaurantsList,
 } from '../../lib/restaurantStore';
+import { useTranslations } from '../../i18n/utils';
+import type { SupportedLang } from '../../i18n/config';
 
 // Definimos ReviewExt para incluir la propiedad opcional "employee"
 type ReviewExt = Review & {
@@ -111,7 +113,12 @@ const getInitialRestaurant = (): Restaurant | null => {
   return null;
 };
 
-export function TeamContent() {
+interface Props {
+  lang: SupportedLang;
+}
+
+export function TeamContent({ lang }: Props) {
+  const t = useTranslations(lang);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentRestaurant, setCurrentRestaurant] = useState<Restaurant | null>(
     null
@@ -125,7 +132,7 @@ export function TeamContent() {
   const [selectedEmployee, setSelectedEmployee] =
     useState<EnrichedEmployee | null>(null);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
-  const [sortOption, setSortOption] = useState('name'); // 'name', 'rating', 'reviews', 'lastReview'
+  const [sortOption, setSortOption] = useState('name');
   const [filterText, setFilterText] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'leaderboard'>('grid');
   const { toast } = useToast();
@@ -400,40 +407,33 @@ export function TeamContent() {
     photo?: File | null;
   }) => {
     try {
-      if (!restaurantId) throw new Error('No restaurant ID');
-      await createEmployee({ ...data, photo: null, restaurantId });
-      if (restaurantId) {
-        const updatedEmployees = await getEmployeesByRestaurant(restaurantId);
-        const enrichedEmployees: EnrichedEmployee[] = updatedEmployees.map(
-          (employee: any) => ({
-            ...employee,
-            reviewCount: 0,
-            averageRating: 0,
-            reviews: [],
-            lastReviewDate: null,
-            daysWithoutReview: null,
-            schedules: employee.schedules || [],
-            taps:
-              typeof employee.taps === 'number'
-                ? employee.taps
-                : Number(employee.taps) || 0,
-          })
-        );
-        setEmployees(enrichedEmployees);
-        setIsAddingEmployee(false);
+      if (!restaurantId) {
         toast({
-          title: 'Éxito',
-          description: 'Empleado agregado correctamente',
+          title: t('team.error'),
+          description: t('team.noRestaurantSelected'),
+          variant: 'destructive',
         });
+        return;
       }
+
+      const newEmployee = await createEmployee({
+        ...data,
+        restaurantId,
+      });
+
+      setEmployees((prev) => [...prev, newEmployee]);
+      setIsAddingEmployee(false);
+      toast({
+        title: t('team.success'),
+        description: t('team.employeeAdded'),
+      });
     } catch (error) {
       console.error('Error adding employee:', error);
       toast({
+        title: t('team.error'),
+        description: t('team.errorAddingEmployee'),
         variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo agregar el empleado',
       });
-      throw error;
     }
   };
 
@@ -446,69 +446,59 @@ export function TeamContent() {
     photo?: File | null;
   }) => {
     try {
-      if (!editingEmployee) return;
-      await updateEmployee(editingEmployee.documentId, {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        position: data.position,
-        schedules: data.schedules,
-        photo: null,
-      });
-      if (restaurantId) {
-        const updatedEmployees = await getEmployeesByRestaurant(restaurantId);
-        const enrichedEmployees: EnrichedEmployee[] = updatedEmployees.map(
-          (employee: any) => {
-            const existingEmployee = employees.find(
-              (e) => e.documentId === employee.documentId
-            );
-            return {
-              ...employee,
-              reviewCount: existingEmployee?.reviewCount || 0,
-              averageRating: existingEmployee?.averageRating || 0,
-              reviews: existingEmployee?.reviews || [],
-              lastReviewDate: existingEmployee?.lastReviewDate || null,
-              daysWithoutReview: existingEmployee?.daysWithoutReview || null,
-              schedules: employee.schedules || [],
-              taps:
-                typeof employee.taps === 'number'
-                  ? employee.taps
-                  : Number(employee.taps) || 0,
-            };
-          }
-        );
-        setEmployees(enrichedEmployees);
+      if (!editingEmployee) {
+        toast({
+          title: t('team.error'),
+          description: t('team.noEmployeeSelected'),
+          variant: 'destructive',
+        });
+        return;
       }
+
+      const updatedEmployee = await updateEmployee({
+        ...data,
+        documentId: editingEmployee.documentId,
+        restaurantId: restaurantId!,
+      });
+
+      setEmployees((prev) =>
+        prev.map((emp) =>
+          emp.documentId === updatedEmployee.documentId
+            ? { ...emp, ...updatedEmployee }
+            : emp
+        )
+      );
       setEditingEmployee(null);
       toast({
-        title: 'Éxito',
-        description: 'Empleado actualizado correctamente',
+        title: t('team.success'),
+        description: t('team.employeeUpdated'),
       });
     } catch (error) {
       console.error('Error updating employee:', error);
       toast({
+        title: t('team.error'),
+        description: t('team.errorUpdatingEmployee'),
         variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo actualizar el empleado',
       });
     }
   };
 
   const handleDeleteEmployee = async (employeeId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este empleado?'))
-      return;
     try {
       await deleteEmployee(employeeId);
-      setEmployees(employees.filter((emp) => emp.documentId !== employeeId));
+      setEmployees((prev) =>
+        prev.filter((emp) => emp.documentId !== employeeId)
+      );
       toast({
-        title: 'Éxito',
-        description: 'Empleado eliminado correctamente',
+        title: t('team.success'),
+        description: t('team.employeeDeleted'),
       });
     } catch (error) {
       console.error('Error deleting employee:', error);
       toast({
+        title: t('team.error'),
+        description: t('team.errorDeletingEmployee'),
         variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo eliminar el empleado',
       });
     }
   };
@@ -546,8 +536,8 @@ export function TeamContent() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="animate-pulse text-white">Cargando equipo...</div>
+      <div className='p-8'>
+        <div className='animate-pulse text-white'>Cargando equipo...</div>
       </div>
     );
   }
@@ -561,81 +551,98 @@ export function TeamContent() {
     getEmployeesNeedingAttention();
 
   return (
-    <div className="p-8">
-      {/* Si hay más de un restaurante, mostrar dropdown para seleccionar */}
-      {restaurants.length > 1 && (
-        <div className="mb-4">
-          <Select onValueChange={(val: string) => handleRestaurantSelect(val)}>
-            <SelectTrigger className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-white/20 hover:border-white/40 text-white rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300">
-              {/* Mostrar el nombre del restaurante directamente dentro del trigger */}
-              <div className="flex-1 text-left overflow-hidden text-ellipsis whitespace-nowrap">
-                {selectedRestaurantName || 'Selecciona restaurante'}
-              </div>
-            </SelectTrigger>
-
-            <SelectContent className="bg-gradient-to-br from-indigo-600/90 to-purple-700/90 backdrop-blur-xl border border-indigo-300/30 text-white rounded-lg shadow-xl">
-              {restaurants.map((r) => (
-                <SelectItem
-                  key={r.documentId}
-                  value={r.documentId}
-                  className="hover:bg-white/20 focus:bg-white/25 transition-colors rounded-md my-1 cursor-pointer text-white font-medium px-1 py-2"
-                >
-                  {r.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <div className='space-y-4'>
+      <div className='flex justify-between items-center'>
+        <h2 className='text-3xl font-bold tracking-tight'>
+          {t('team.teamManagement')}
+        </h2>
+        <div className='flex gap-2'>
+          <Button
+            onClick={() => setIsAddingEmployee(true)}
+            className='flex items-center gap-2'
+          >
+            <Plus className='h-4 w-4' />
+            {t('team.addEmployee')}
+          </Button>
+          <Button
+            onClick={handleExportEmployeesData}
+            variant='outline'
+            className='flex items-center gap-2'
+          >
+            <Download className='h-4 w-4' />
+            {t('team.exportData')}
+          </Button>
         </div>
-      )}
-      <Tabs defaultValue="overview">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      </div>
+
+      <div className='flex gap-4 items-center'>
+        <div className='flex-1'>
+          <Input
+            type='text'
+            placeholder={t('team.searchEmployees')}
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            className='max-w-sm'
+          />
+        </div>
+        <Select value={sortOption} onValueChange={setSortOption}>
+          <SelectTrigger className='w-[180px]'>
+            <SelectValue placeholder={t('team.sortBy')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='name'>{t('team.sortByName')}</SelectItem>
+            <SelectItem value='rating'>{t('team.sortByRating')}</SelectItem>
+            <SelectItem value='reviews'>{t('team.sortByReviews')}</SelectItem>
+            <SelectItem value='lastReview'>
+              {t('team.sortByLastReview')}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <Tabs
+          value={viewMode}
+          onValueChange={(v) => setViewMode(v as 'grid' | 'leaderboard')}
+        >
+          <TabsList>
+            <TabsTrigger value='grid'>{t('team.gridView')}</TabsTrigger>
+            <TabsTrigger value='leaderboard'>
+              {t('team.leaderboardView')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      <Tabs defaultValue='overview'>
+        <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4'>
           <div>
-            <h1 className="text-2xl font-bold text-white mb-2">Equipo</h1>
-            <TabsList className="bg-white/10">
+            <h1 className='text-2xl font-bold text-white mb-2'>Equipo</h1>
+            <TabsList className='bg-white/10'>
               <TabsTrigger
-                value="overview"
-                className="data-[state=active]:bg-white/20"
+                value='overview'
+                className='data-[state=active]:bg-white/20'
               >
                 Vista General
               </TabsTrigger>
               <TabsTrigger
-                value="employees"
-                className="data-[state=active]:bg-white/20"
+                value='employees'
+                className='data-[state=active]:bg-white/20'
               >
                 Empleados
               </TabsTrigger>
               <TabsTrigger
-                value="stats"
-                className="data-[state=active]:bg-white/20"
+                value='stats'
+                className='data-[state=active]:bg-white/20'
               >
                 Estadísticas
               </TabsTrigger>
             </TabsList>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              onClick={handleExportEmployeesData}
-              className="flex items-center text-white border-white/20 hover:bg-white/10"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Exportar Datos
-            </Button>
-            <Button
-              onClick={() => setIsAddingEmployee(true)}
-              className="flex items-center bg-white text-black hover:bg-white/90"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Agregar miembro
-            </Button>
-          </div>
         </div>
-        <TabsContent value="overview" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card className="bg-gradient-to-br from-purple-600/30 to-blue-600/30 border-0">
+        <TabsContent value='overview' className='mt-0'>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-6'>
+            <Card className='bg-gradient-to-br from-purple-600/30 to-blue-600/30 border-0'>
               <CardHeader>
-                <CardTitle className="text-white">Empleado del Mes</CardTitle>
-                <CardDescription className="text-white/70">
+                <CardTitle className='text-white'>Empleado del Mes</CardTitle>
+                <CardDescription className='text-white/70'>
                   Basado en reseñas positivas
                 </CardDescription>
               </CardHeader>
@@ -644,18 +651,18 @@ export function TeamContent() {
                   (() => {
                     const employee: EnrichedEmployee = employeeOfMonth;
                     return (
-                      <div className="flex items-center">
-                        <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center mr-4">
-                          <User className="h-8 w-8 text-white" />
+                      <div className='flex items-center'>
+                        <div className='h-16 w-16 rounded-full bg-white/20 flex items-center justify-center mr-4'>
+                          <User className='h-8 w-8 text-white' />
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold text-white">
+                          <h3 className='text-lg font-semibold text-white'>
                             {employee.firstName} {employee.lastName}
                           </h3>
-                          <p className="text-white/70">{employee.position}</p>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Award className="h-4 w-4 text-yellow-400" />
-                            <span className="text-white/80">
+                          <p className='text-white/70'>{employee.position}</p>
+                          <div className='flex items-center gap-1 mt-1'>
+                            <Award className='h-4 w-4 text-yellow-400' />
+                            <span className='text-white/80'>
                               {employeeOfMonthScore} reseñas positivas
                             </span>
                           </div>
@@ -664,43 +671,43 @@ export function TeamContent() {
                     );
                   })()
                 ) : (
-                  <div className="text-white/70">
+                  <div className='text-white/70'>
                     No hay suficientes datos para determinar el empleado del
                     mes.
                   </div>
                 )}
               </CardContent>
             </Card>
-            <Card className="bg-gradient-to-br from-green-600/30 to-emerald-600/30 border-0">
+            <Card className='bg-gradient-to-br from-green-600/30 to-emerald-600/30 border-0'>
               <CardHeader>
-                <CardTitle className="text-white">Top Calificaciones</CardTitle>
-                <CardDescription className="text-white/70">
+                <CardTitle className='text-white'>Top Calificaciones</CardTitle>
+                <CardDescription className='text-white/70'>
                   Empleados con mejores reseñas
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className='space-y-3'>
                   {topRatedEmployees.length > 0 ? (
                     topRatedEmployees.map(
                       (employee: EnrichedEmployee, index: number) => (
                         <div
                           key={employee.documentId}
-                          className="flex items-center justify-between"
+                          className='flex items-center justify-between'
                         >
-                          <div className="flex items-center">
-                            <div className="mr-2 w-5 text-center text-white/70">
+                          <div className='flex items-center'>
+                            <div className='mr-2 w-5 text-center text-white/70'>
                               #{index + 1}
                             </div>
-                            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2">
-                              <User className="h-4 w-4 text-white" />
+                            <div className='h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2'>
+                              <User className='h-4 w-4 text-white' />
                             </div>
-                            <div className="text-white">
+                            <div className='text-white'>
                               {employee.firstName} {employee.lastName}
                             </div>
                           </div>
-                          <div className="flex items-center">
-                            <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                            <span className="text-white">
+                          <div className='flex items-center'>
+                            <Star className='h-4 w-4 text-yellow-400 mr-1' />
+                            <span className='text-white'>
                               {employee.averageRating?.toFixed(1)}
                             </span>
                           </div>
@@ -708,7 +715,7 @@ export function TeamContent() {
                       )
                     )
                   ) : (
-                    <div className="text-white/70">
+                    <div className='text-white/70'>
                       No hay suficientes datos para determinar top
                       calificaciones.
                     </div>
@@ -716,33 +723,33 @@ export function TeamContent() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-gradient-to-br from-orange-600/30 to-red-600/30 border-0">
+            <Card className='bg-gradient-to-br from-orange-600/30 to-red-600/30 border-0'>
               <CardHeader>
-                <CardTitle className="text-white">Necesitan Atención</CardTitle>
-                <CardDescription className="text-white/70">
+                <CardTitle className='text-white'>Necesitan Atención</CardTitle>
+                <CardDescription className='text-white/70'>
                   Empleados sin reseñas recientes
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className='space-y-3'>
                   {employeesNeedingAttention.length > 0 ? (
                     employeesNeedingAttention.map(
                       (employee: EnrichedEmployee) => (
                         <div
                           key={employee.documentId}
-                          className="flex items-center justify-between"
+                          className='flex items-center justify-between'
                         >
-                          <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2">
-                              <User className="h-4 w-4 text-white" />
+                          <div className='flex items-center'>
+                            <div className='h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2'>
+                              <User className='h-4 w-4 text-white' />
                             </div>
-                            <div className="text-white">
+                            <div className='text-white'>
                               {employee.firstName} {employee.lastName}
                             </div>
                           </div>
-                          <div className="flex items-center">
-                            <AlertCircle className="h-4 w-4 text-orange-400 mr-1" />
-                            <span className="text-white/70">
+                          <div className='flex items-center'>
+                            <AlertCircle className='h-4 w-4 text-orange-400 mr-1' />
+                            <span className='text-white/70'>
                               {employee.daysWithoutReview} días
                             </span>
                           </div>
@@ -750,7 +757,7 @@ export function TeamContent() {
                       )
                     )
                   ) : (
-                    <div className="text-white/70">
+                    <div className='text-white/70'>
                       ¡Genial! Todos los empleados tienen reseñas recientes.
                     </div>
                   )}
@@ -758,52 +765,52 @@ export function TeamContent() {
               </CardContent>
             </Card>
           </div>
-          <Card className="bg-white/10 border-0">
+          <Card className='bg-white/10 border-0'>
             <CardHeader>
-              <CardTitle className="text-white">Resumen de Equipo</CardTitle>
-              <CardDescription className="text-white/70">
+              <CardTitle className='text-white'>Resumen de Equipo</CardTitle>
+              <CardDescription className='text-white/70'>
                 Vista rápida de todos los empleados
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
                 {sortedEmployees.map((employee: EnrichedEmployee) => (
                   <div
                     key={employee.documentId}
-                    className="p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                    className='p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer'
                     onClick={() => {
                       console.log('Empleado seleccionado:', employee);
                       setSelectedEmployee(employee);
                     }}
                   >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                        <User className="h-5 w-5 text-white" />
+                    <div className='flex items-center gap-3 mb-3'>
+                      <div className='h-10 w-10 rounded-full bg-white/20 flex items-center justify-center'>
+                        <User className='h-5 w-5 text-white' />
                       </div>
                       <div>
-                        <h3 className="text-white font-medium">
+                        <h3 className='text-white font-medium'>
                           {employee.firstName} {employee.lastName}
                         </h3>
-                        <p className="text-white/60 text-sm">
+                        <p className='text-white/60 text-sm'>
                           {employee.position}
                         </p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="bg-white/5 p-2 rounded">
-                        <div className="text-white/60">Reseñas</div>
-                        <div className="text-white font-medium">
+                    <div className='grid grid-cols-2 gap-2 text-sm'>
+                      <div className='bg-white/5 p-2 rounded'>
+                        <div className='text-white/60'>Reseñas</div>
+                        <div className='text-white font-medium'>
                           {employee.reviewCount || 0}
                         </div>
                       </div>
-                      <div className="bg-white/5 p-2 rounded">
-                        <div className="text-white/60">Calificación</div>
-                        <div className="text-white font-medium flex items-center">
+                      <div className='bg-white/5 p-2 rounded'>
+                        <div className='text-white/60'>Calificación</div>
+                        <div className='text-white font-medium flex items-center'>
                           {employee.averageRating
                             ? employee.averageRating.toFixed(1)
                             : '-'}
                           {employee.averageRating && (
-                            <Star className="h-4 w-4 text-yellow-400 ml-1" />
+                            <Star className='h-4 w-4 text-yellow-400 ml-1' />
                           )}
                         </div>
                       </div>
@@ -814,73 +821,73 @@ export function TeamContent() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="employees" className="mt-0">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative">
-                <Search className="h-4 w-4 text-white/40 absolute left-3 top-1/2 transform -translate-y-1/2" />
+        <TabsContent value='employees' className='mt-0'>
+          <div className='flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6'>
+            <div className='flex flex-wrap items-center gap-3'>
+              <div className='relative'>
+                <Search className='h-4 w-4 text-white/40 absolute left-3 top-1/2 transform -translate-y-1/2' />
                 <Input
-                  placeholder="Buscar empleado..."
-                  className="pl-9 bg-white/5 border-white/10 text-white w-full md:w-64 h-10"
+                  placeholder='Buscar empleado...'
+                  className='pl-9 bg-white/5 border-white/10 text-white w-full md:w-64 h-10'
                   value={filterText}
                   onChange={(e) => setFilterText(e.target.value)}
                 />
               </div>
               <Select onValueChange={(val: string) => setSortOption(val)}>
-                <SelectTrigger className="flex items-center justify-center bg-white/5 border border-white/20 text-white w-[160px] h-10 rounded-md focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50">
+                <SelectTrigger className='flex items-center justify-center bg-white/5 border border-white/20 text-white w-[160px] h-10 rounded-md focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50'>
                   <SelectValue
-                    placeholder="Ordenar por"
-                    className="text-center"
+                    placeholder='Ordenar por'
+                    className='text-center'
                   />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border border-white/10 text-white rounded-md shadow-lg">
+                <SelectContent className='bg-gray-800 border border-white/10 text-white rounded-md shadow-lg'>
                   <SelectItem
-                    value="name"
-                    className="py-2 px-4 hover:bg-gray-700 transition-colors cursor-pointer text-center"
+                    value='name'
+                    className='py-2 px-4 hover:bg-gray-700 transition-colors cursor-pointer text-center'
                   >
                     Nombre
                   </SelectItem>
                   <SelectItem
-                    value="rating"
-                    className="py-2 px-4 hover:bg-gray-700 transition-colors cursor-pointer text-center"
+                    value='rating'
+                    className='py-2 px-4 hover:bg-gray-700 transition-colors cursor-pointer text-center'
                   >
                     Calificación
                   </SelectItem>
                   <SelectItem
-                    value="reviews"
-                    className="py-2 px-4 hover:bg-gray-700 transition-colors cursor-pointer text-center"
+                    value='reviews'
+                    className='py-2 px-4 hover:bg-gray-700 transition-colors cursor-pointer text-center'
                   >
                     Cantidad de reseñas
                   </SelectItem>
                   <SelectItem
-                    value="lastReview"
-                    className="py-2 px-4 hover:bg-gray-700 transition-colors cursor-pointer text-center"
+                    value='lastReview'
+                    className='py-2 px-4 hover:bg-gray-700 transition-colors cursor-pointer text-center'
                   >
                     Última reseña
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <div className="flex rounded-md overflow-hidden border border-gray-300">
+              <div className='flex rounded-md overflow-hidden border border-gray-300'>
                 <Button
-                  variant="primary"
+                  variant='primary'
                   className={
                     viewMode === 'grid'
                       ? 'bg-white text-black font-medium'
                       : 'bg-transparent text-black/80 border-r border-gray-300 hover:bg-gray-100'
                   }
-                  size="sm"
+                  size='sm'
                   onClick={() => setViewMode('grid')}
                 >
                   Grid
                 </Button>
                 <Button
-                  variant="primary"
+                  variant='primary'
                   className={
                     viewMode === 'leaderboard'
                       ? 'bg-white text-black font-medium'
                       : 'bg-transparent text-black/80 hover:bg-gray-100'
                   }
-                  size="sm"
+                  size='sm'
                   onClick={() => setViewMode('leaderboard')}
                 >
                   Ranking
@@ -889,79 +896,79 @@ export function TeamContent() {
             </div>
           </div>
           {viewMode === 'grid' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
               {filteredEmployees.map((employee: EnrichedEmployee) => (
                 <Card
                   key={employee.documentId}
-                  className="bg-white/10 border-0 overflow-hidden"
+                  className='bg-white/10 border-0 overflow-hidden'
                 >
-                  <CardContent className="p-0">
-                    <div className="p-6">
-                      <div className="flex justify-between mb-4">
-                        <div className="flex items-center gap-4">
-                          <div className="h-14 w-14 rounded-full bg-white/20 flex items-center justify-center">
-                            <User className="h-7 w-7 text-white" />
+                  <CardContent className='p-0'>
+                    <div className='p-6'>
+                      <div className='flex justify-between mb-4'>
+                        <div className='flex items-center gap-4'>
+                          <div className='h-14 w-14 rounded-full bg-white/20 flex items-center justify-center'>
+                            <User className='h-7 w-7 text-white' />
                           </div>
                           <div>
-                            <h3 className="text-lg font-semibold text-white">
+                            <h3 className='text-lg font-semibold text-white'>
                               {employee.firstName} {employee.lastName}
                             </h3>
-                            <p className="text-white/60">{employee.position}</p>
+                            <p className='text-white/60'>{employee.position}</p>
                           </div>
                         </div>
-                        <div className="flex gap-1">
+                        <div className='flex gap-1'>
                           <Button
-                            variant="ghost"
-                            size="icon"
+                            variant='ghost'
+                            size='icon'
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditingEmployee(employee);
                             }}
-                            className="text-blue-400 hover:text-blue-500 hover:bg-blue-400/10 h-8 w-8"
+                            className='text-blue-400 hover:text-blue-500 hover:bg-blue-400/10 h-8 w-8'
                           >
-                            <Edit2 className="h-4 w-4" />
+                            <Edit2 className='h-4 w-4' />
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="icon"
+                            variant='ghost'
+                            size='icon'
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteEmployee(employee.documentId);
                             }}
-                            className="text-red-400 hover:text-red-500 hover:bg-red-400/10 h-8 w-8"
+                            className='text-red-400 hover:text-red-500 hover:bg-red-400/10 h-8 w-8'
                           >
-                            <Trash className="h-4 w-4" />
+                            <Trash className='h-4 w-4' />
                           </Button>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="bg-white/5 p-3 rounded">
-                          <p className="text-white/60 text-sm mb-1">Reseñas</p>
-                          <p className="text-white text-lg font-semibold">
+                      <div className='grid grid-cols-2 gap-3 mb-4'>
+                        <div className='bg-white/5 p-3 rounded'>
+                          <p className='text-white/60 text-sm mb-1'>Reseñas</p>
+                          <p className='text-white text-lg font-semibold'>
                             {employee.reviewCount || 0}
                           </p>
                         </div>
-                        <div className="bg-white/5 p-3 rounded">
-                          <p className="text-white/60 text-sm mb-1">
+                        <div className='bg-white/5 p-3 rounded'>
+                          <p className='text-white/60 text-sm mb-1'>
                             Calificación
                           </p>
-                          <div className="flex items-center">
-                            <p className="text-white text-lg font-semibold">
+                          <div className='flex items-center'>
+                            <p className='text-white text-lg font-semibold'>
                               {employee.averageRating
                                 ? employee.averageRating.toFixed(1)
                                 : '-'}
                             </p>
                             {employee.averageRating && (
-                              <Star className="h-4 w-4 text-yellow-400 ml-1" />
+                              <Star className='h-4 w-4 text-yellow-400 ml-1' />
                             )}
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div className="flex border-t border-white/10">
+                    <div className='flex border-t border-white/10'>
                       <Button
-                        variant="ghost"
-                        className="flex-1 rounded-none border-r border-white/10 text-white/80 h-12"
+                        variant='ghost'
+                        className='flex-1 rounded-none border-r border-white/10 text-white/80 h-12'
                         onClick={() => {
                           console.log('Empleado seleccionado:', employee);
                           setSelectedEmployee(employee);
@@ -976,18 +983,18 @@ export function TeamContent() {
             </div>
           )}
           {viewMode === 'leaderboard' && (
-            <Card className="bg-white/10 border-0">
-              <CardContent className="p-0">
-                <div className="py-2">
-                  <table className="w-full">
+            <Card className='bg-white/10 border-0'>
+              <CardContent className='p-0'>
+                <div className='py-2'>
+                  <table className='w-full'>
                     <thead>
-                      <tr className="text-white/60 text-left border-b border-white/10">
-                        <th className="px-6 py-3">#</th>
-                        <th className="px-6 py-3">Empleado</th>
-                        <th className="px-6 py-3 text-center">Reseñas</th>
-                        <th className="px-6 py-3 text-center">Calificación</th>
-                        <th className="px-6 py-3 text-center">Última reseña</th>
-                        <th className="px-6 py-3 text-center">Acciones</th>
+                      <tr className='text-white/60 text-left border-b border-white/10'>
+                        <th className='px-6 py-3'>#</th>
+                        <th className='px-6 py-3'>Empleado</th>
+                        <th className='px-6 py-3 text-center'>Reseñas</th>
+                        <th className='px-6 py-3 text-center'>Calificación</th>
+                        <th className='px-6 py-3 text-center'>Última reseña</th>
+                        <th className='px-6 py-3 text-center'>Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -995,60 +1002,60 @@ export function TeamContent() {
                         (employee: EnrichedEmployee, index: number) => (
                           <tr
                             key={employee.documentId}
-                            className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                            className='border-b border-white/5 hover:bg-white/5 transition-colors'
                           >
-                            <td className="px-6 py-4 text-white/60">
+                            <td className='px-6 py-4 text-white/60'>
                               {index + 1}
                             </td>
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                                  <User className="h-5 w-5 text-white" />
+                            <td className='px-6 py-4'>
+                              <div className='flex items-center gap-3'>
+                                <div className='h-10 w-10 rounded-full bg-white/20 flex items-center justify-center'>
+                                  <User className='h-5 w-5 text-white' />
                                 </div>
                                 <div>
-                                  <div className="text-white font-medium">
+                                  <div className='text-white font-medium'>
                                     {employee.firstName} {employee.lastName}
                                   </div>
-                                  <div className="text-white/60 text-sm">
+                                  <div className='text-white/60 text-sm'>
                                     {employee.position}
                                   </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-center">
+                            <td className='px-6 py-4 text-center'>
                               <Badge
-                                variant="outline"
-                                className="bg-white/5 text-white"
+                                variant='outline'
+                                className='bg-white/5 text-white'
                               >
                                 {employee.reviewCount || 0}
                               </Badge>
                             </td>
-                            <td className="px-6 py-4 text-center">
-                              <div className="flex items-center justify-center">
+                            <td className='px-6 py-4 text-center'>
+                              <div className='flex items-center justify-center'>
                                 {employee.averageRating ? (
                                   <>
-                                    <span className="text-white mr-1">
+                                    <span className='text-white mr-1'>
                                       {employee.averageRating.toFixed(1)}
                                     </span>
-                                    <Star className="h-4 w-4 text-yellow-400" />
+                                    <Star className='h-4 w-4 text-yellow-400' />
                                   </>
                                 ) : (
-                                  <span className="text-white/40">-</span>
+                                  <span className='text-white/40'>-</span>
                                 )}
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-center text-white/80">
+                            <td className='px-6 py-4 text-center text-white/80'>
                               {employee.lastReviewDate
                                 ? new Date(
                                     employee.lastReviewDate
                                   ).toLocaleDateString()
                                 : 'Sin reseñas'}
                             </td>
-                            <td className="px-6 py-4">
-                              <div className="flex justify-center gap-2">
+                            <td className='px-6 py-4'>
+                              <div className='flex justify-center gap-2'>
                                 <Button
-                                  variant="ghost"
-                                  size="sm"
+                                  variant='ghost'
+                                  size='sm'
                                   onClick={() => {
                                     console.log(
                                       'Empleado seleccionado:',
@@ -1056,30 +1063,30 @@ export function TeamContent() {
                                     );
                                     setSelectedEmployee(employee);
                                   }}
-                                  className="text-white/80 hover:text-white hover:bg-white/10"
+                                  className='text-white/80 hover:text-white hover:bg-white/10'
                                 >
                                   Detalles
                                 </Button>
                                 <Button
-                                  variant="ghost"
-                                  size="sm"
+                                  variant='ghost'
+                                  size='sm'
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setEditingEmployee(employee);
                                   }}
-                                  className="text-blue-400 hover:text-blue-500 hover:bg-blue-400/10"
+                                  className='text-blue-400 hover:text-blue-500 hover:bg-blue-400/10'
                                 >
-                                  <Edit2 className="h-4 w-4" />
+                                  <Edit2 className='h-4 w-4' />
                                 </Button>
                                 <Button
-                                  variant="ghost"
-                                  size="sm"
+                                  variant='ghost'
+                                  size='sm'
                                   onClick={() =>
                                     handleDeleteEmployee(employee.documentId)
                                   }
-                                  className="text-red-400 hover:text-red-500 hover:bg-red-400/10"
+                                  className='text-red-400 hover:text-red-500 hover:bg-red-400/10'
                                 >
-                                  <Trash className="h-4 w-4" />
+                                  <Trash className='h-4 w-4' />
                                 </Button>
                               </div>
                             </td>
@@ -1093,30 +1100,30 @@ export function TeamContent() {
             </Card>
           )}
         </TabsContent>
-        <TabsContent value="stats" className="mt-0">
-          <div className="mb-4">
-            <Card className="bg-white/10 border-0">
+        <TabsContent value='stats' className='mt-0'>
+          <div className='mb-4'>
+            <Card className='bg-white/10 border-0'>
               <CardHeader>
-                <CardTitle className="text-white">
+                <CardTitle className='text-white'>
                   Estadísticas Comparativas de Empleados
                 </CardTitle>
-                <CardDescription className="text-white/70">
+                <CardDescription className='text-white/70'>
                   Compara el rendimiento de todos los empleados para identificar
                   fortalezas y oportunidades de mejora
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {/* Tabla comparativa de empleados */}
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className='overflow-x-auto'>
+                  <table className='w-full'>
                     <thead>
-                      <tr className="border-b border-white/10 text-white/70 text-sm">
-                        <th className="text-left p-3">Empleado</th>
-                        <th className="text-center p-3">Reseñas</th>
-                        <th className="text-center p-3">Calificación</th>
-                        <th className="text-center p-3">% 5 estrellas</th>
-                        <th className="text-center p-3">Última reseña</th>
-                        <th className="text-center p-3">Tendencia</th>
+                      <tr className='border-b border-white/10 text-white/70 text-sm'>
+                        <th className='text-left p-3'>Empleado</th>
+                        <th className='text-center p-3'>Reseñas</th>
+                        <th className='text-center p-3'>Calificación</th>
+                        <th className='text-center p-3'>% 5 estrellas</th>
+                        <th className='text-center p-3'>Última reseña</th>
+                        <th className='text-center p-3'>Tendencia</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1175,31 +1182,31 @@ export function TeamContent() {
                         return (
                           <tr
                             key={employee.documentId}
-                            className="border-b border-white/5 hover:bg-white/5 text-white"
+                            className='border-b border-white/5 hover:bg-white/5 text-white'
                           >
-                            <td className="p-3">
-                              <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                                  <User className="h-5 w-5 text-white" />
+                            <td className='p-3'>
+                              <div className='flex items-center gap-3'>
+                                <div className='h-10 w-10 rounded-full bg-white/20 flex items-center justify-center'>
+                                  <User className='h-5 w-5 text-white' />
                                 </div>
                                 <div>
-                                  <div className="font-medium">
+                                  <div className='font-medium'>
                                     {employee.firstName} {employee.lastName}
                                   </div>
-                                  <div className="text-white/60 text-sm">
+                                  <div className='text-white/60 text-sm'>
                                     {employee.position}
                                   </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="p-3 text-center">
-                              <div className="font-semibold">
+                            <td className='p-3 text-center'>
+                              <div className='font-semibold'>
                                 {employee.reviewCount || 0}
                               </div>
                             </td>
-                            <td className="p-3 text-center">
-                              <div className="flex items-center justify-center gap-1">
-                                <span className="font-semibold">
+                            <td className='p-3 text-center'>
+                              <div className='flex items-center justify-center gap-1'>
+                                <span className='font-semibold'>
                                   {employee.averageRating
                                     ? employee.averageRating.toFixed(1)
                                     : '-'}
@@ -1209,18 +1216,18 @@ export function TeamContent() {
                                   : '-'}
                               </div>
                             </td>
-                            <td className="p-3 text-center">
-                              <div className="font-semibold">
+                            <td className='p-3 text-center'>
+                              <div className='font-semibold'>
                                 {fiveStarPercentage}%
                               </div>
                             </td>
-                            <td className="p-3 text-center">
+                            <td className='p-3 text-center'>
                               {employee.lastReviewDate ? (
-                                <div className="text-white/80">
+                                <div className='text-white/80'>
                                   {new Date(
                                     employee.lastReviewDate
                                   ).toLocaleDateString()}
-                                  <div className="text-white/60 text-sm">
+                                  <div className='text-white/60 text-sm'>
                                     {employee.daysWithoutReview === 0
                                       ? 'Hoy'
                                       : employee.daysWithoutReview === 1
@@ -1229,79 +1236,79 @@ export function TeamContent() {
                                   </div>
                                 </div>
                               ) : (
-                                <div className="text-white/40">Sin reseñas</div>
+                                <div className='text-white/40'>Sin reseñas</div>
                               )}
                             </td>
-                            <td className="p-3 text-center">
+                            <td className='p-3 text-center'>
                               {lastMonthReviews.length > 0 ||
                               previousMonthReviews.length > 0 ? (
                                 <div>
                                   {trendDirection === 'up' && (
-                                    <div className="flex items-center justify-center text-green-400">
+                                    <div className='flex items-center justify-center text-green-400'>
                                       <svg
-                                        className="w-5 h-5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                        xmlns="http://www.w3.org/2000/svg"
+                                        className='w-5 h-5'
+                                        fill='none'
+                                        stroke='currentColor'
+                                        viewBox='0 0 24 24'
+                                        xmlns='http://www.w3.org/2000/svg'
                                       >
                                         <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
+                                          strokeLinecap='round'
+                                          strokeLinejoin='round'
                                           strokeWidth={2}
-                                          d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                                          d='M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'
                                         />
                                       </svg>
-                                      <span className="ml-1 text-sm">
+                                      <span className='ml-1 text-sm'>
                                         Mejorando
                                       </span>
                                     </div>
                                   )}
                                   {trendDirection === 'down' && (
-                                    <div className="flex items-center justify-center text-red-400">
+                                    <div className='flex items-center justify-center text-red-400'>
                                       <svg
-                                        className="w-5 h-5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                        xmlns="http://www.w3.org/2000/svg"
+                                        className='w-5 h-5'
+                                        fill='none'
+                                        stroke='currentColor'
+                                        viewBox='0 0 24 24'
+                                        xmlns='http://www.w3.org/2000/svg'
                                       >
                                         <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
+                                          strokeLinecap='round'
+                                          strokeLinejoin='round'
                                           strokeWidth={2}
-                                          d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"
+                                          d='M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6'
                                         />
                                       </svg>
-                                      <span className="ml-1 text-sm">
+                                      <span className='ml-1 text-sm'>
                                         Bajando
                                       </span>
                                     </div>
                                   )}
                                   {trendDirection === 'neutral' && (
-                                    <div className="flex items-center justify-center text-yellow-400">
+                                    <div className='flex items-center justify-center text-yellow-400'>
                                       <svg
-                                        className="w-5 h-5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                        xmlns="http://www.w3.org/2000/svg"
+                                        className='w-5 h-5'
+                                        fill='none'
+                                        stroke='currentColor'
+                                        viewBox='0 0 24 24'
+                                        xmlns='http://www.w3.org/2000/svg'
                                       >
                                         <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
+                                          strokeLinecap='round'
+                                          strokeLinejoin='round'
                                           strokeWidth={2}
-                                          d="M5 12h14"
+                                          d='M5 12h14'
                                         />
                                       </svg>
-                                      <span className="ml-1 text-sm">
+                                      <span className='ml-1 text-sm'>
                                         Estable
                                       </span>
                                     </div>
                                   )}
                                 </div>
                               ) : (
-                                <div className="text-white/40">Sin datos</div>
+                                <div className='text-white/40'>Sin datos</div>
                               )}
                             </td>
                           </tr>
@@ -1315,73 +1322,73 @@ export function TeamContent() {
           </div>
 
           {/* Gráficos y tarjetas principales */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card className="bg-gradient-to-br from-purple-600/30 to-blue-600/30 border-0">
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-6'>
+            <Card className='bg-gradient-to-br from-purple-600/30 to-blue-600/30 border-0'>
               <CardHeader>
-                <CardTitle className="text-white">Empleado del Mes</CardTitle>
-                <CardDescription className="text-white/70">
+                <CardTitle className='text-white'>Empleado del Mes</CardTitle>
+                <CardDescription className='text-white/70'>
                   Basado en reseñas positivas
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {employeeOfMonth ? (
-                  <div className="flex items-center">
-                    <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center mr-4">
-                      <User className="h-8 w-8 text-white" />
+                  <div className='flex items-center'>
+                    <div className='h-16 w-16 rounded-full bg-white/20 flex items-center justify-center mr-4'>
+                      <User className='h-8 w-8 text-white' />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white">
+                      <h3 className='text-lg font-semibold text-white'>
                         {employeeOfMonth.firstName} {employeeOfMonth.lastName}
                       </h3>
-                      <p className="text-white/70">
+                      <p className='text-white/70'>
                         {employeeOfMonth.position}
                       </p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Award className="h-4 w-4 text-yellow-400" />
-                        <span className="text-white/80">
+                      <div className='flex items-center gap-1 mt-1'>
+                        <Award className='h-4 w-4 text-yellow-400' />
+                        <span className='text-white/80'>
                           {employeeOfMonthScore} reseñas positivas
                         </span>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-white/70">
+                  <div className='text-white/70'>
                     No hay suficientes datos para determinar el empleado del
                     mes.
                   </div>
                 )}
               </CardContent>
             </Card>
-            <Card className="bg-gradient-to-br from-green-600/30 to-emerald-600/30 border-0">
+            <Card className='bg-gradient-to-br from-green-600/30 to-emerald-600/30 border-0'>
               <CardHeader>
-                <CardTitle className="text-white">Top Calificaciones</CardTitle>
-                <CardDescription className="text-white/70">
+                <CardTitle className='text-white'>Top Calificaciones</CardTitle>
+                <CardDescription className='text-white/70'>
                   Empleados con mejores reseñas
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className='space-y-3'>
                   {topRatedEmployees.length > 0 ? (
                     topRatedEmployees.map(
                       (employee: EnrichedEmployee, index: number) => (
                         <div
                           key={employee.documentId}
-                          className="flex items-center justify-between"
+                          className='flex items-center justify-between'
                         >
-                          <div className="flex items-center">
-                            <div className="mr-2 w-5 text-center text-white/70">
+                          <div className='flex items-center'>
+                            <div className='mr-2 w-5 text-center text-white/70'>
                               #{index + 1}
                             </div>
-                            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2">
-                              <User className="h-4 w-4 text-white" />
+                            <div className='h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2'>
+                              <User className='h-4 w-4 text-white' />
                             </div>
-                            <div className="text-white">
+                            <div className='text-white'>
                               {employee.firstName} {employee.lastName}
                             </div>
                           </div>
-                          <div className="flex items-center">
-                            <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                            <span className="text-white">
+                          <div className='flex items-center'>
+                            <Star className='h-4 w-4 text-yellow-400 mr-1' />
+                            <span className='text-white'>
                               {employee.averageRating !== undefined
                                 ? employee.averageRating.toFixed(1)
                                 : '-'}
@@ -1391,7 +1398,7 @@ export function TeamContent() {
                       )
                     )
                   ) : (
-                    <div className="text-white/70">
+                    <div className='text-white/70'>
                       No hay suficientes datos para determinar top
                       calificaciones.
                     </div>
@@ -1399,33 +1406,33 @@ export function TeamContent() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-gradient-to-br from-orange-600/30 to-red-600/30 border-0">
+            <Card className='bg-gradient-to-br from-orange-600/30 to-red-600/30 border-0'>
               <CardHeader>
-                <CardTitle className="text-white">Necesitan Atención</CardTitle>
-                <CardDescription className="text-white/70">
+                <CardTitle className='text-white'>Necesitan Atención</CardTitle>
+                <CardDescription className='text-white/70'>
                   Empleados sin reseñas recientes
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className='space-y-3'>
                   {employeesNeedingAttention.length > 0 ? (
                     employeesNeedingAttention.map(
                       (employee: EnrichedEmployee) => (
                         <div
                           key={employee.documentId}
-                          className="flex items-center justify-between"
+                          className='flex items-center justify-between'
                         >
-                          <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2">
-                              <User className="h-4 w-4 text-white" />
+                          <div className='flex items-center'>
+                            <div className='h-8 w-8 rounded-full bg-white/20 flex items-center justify-center mr-2'>
+                              <User className='h-4 w-4 text-white' />
                             </div>
-                            <div className="text-white">
+                            <div className='text-white'>
                               {employee.firstName} {employee.lastName}
                             </div>
                           </div>
-                          <div className="flex items-center">
-                            <AlertCircle className="h-4 w-4 text-orange-400 mr-1" />
-                            <span className="text-white/70">
+                          <div className='flex items-center'>
+                            <AlertCircle className='h-4 w-4 text-orange-400 mr-1' />
+                            <span className='text-white/70'>
                               {employee.daysWithoutReview} días
                             </span>
                           </div>
@@ -1433,7 +1440,7 @@ export function TeamContent() {
                       )
                     )
                   ) : (
-                    <div className="text-white/70">
+                    <div className='text-white/70'>
                       ¡Genial! Todos los empleados tienen reseñas recientes.
                     </div>
                   )}
@@ -1443,19 +1450,19 @@ export function TeamContent() {
           </div>
 
           {/* Sección de estadísticas adicionales */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="col-span-full md:col-span-2">
-              <Card className="bg-white/10 border-0 h-full">
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-6'>
+            <div className='col-span-full md:col-span-2'>
+              <Card className='bg-white/10 border-0 h-full'>
                 <CardHeader>
-                  <CardTitle className="text-white">
+                  <CardTitle className='text-white'>
                     Distribución de Calificaciones
                   </CardTitle>
-                  <CardDescription className="text-white/70">
+                  <CardDescription className='text-white/70'>
                     Cómo se distribuyen las calificaciones entre los empleados
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className='space-y-4'>
                     {[5, 4, 3, 2, 1].map((rating) => {
                       // Calcular el total de reseñas con esta calificación
                       const reviewsWithRating = reviews.filter(
@@ -1466,23 +1473,23 @@ export function TeamContent() {
                         : 0;
 
                       return (
-                        <div key={rating} className="space-y-1">
-                          <div className="flex justify-between">
-                            <div className="flex items-center">
-                              <span className="font-medium text-white">
+                        <div key={rating} className='space-y-1'>
+                          <div className='flex justify-between'>
+                            <div className='flex items-center'>
+                              <span className='font-medium text-white'>
                                 {rating}
                               </span>
-                              <Star className="h-4 w-4 ml-1 text-yellow-400" />
+                              <Star className='h-4 w-4 ml-1 text-yellow-400' />
                             </div>
-                            <span className="text-white/70">
+                            <span className='text-white/70'>
                               {reviewsWithRating} reseña
                               {reviewsWithRating !== 1 ? 's' : ''} (
                               {percentage.toFixed(1)}%)
                             </span>
                           </div>
-                          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                          <div className='h-2 bg-white/10 rounded-full overflow-hidden'>
                             <div
-                              className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                              className='h-full bg-gradient-to-r from-blue-500 to-purple-500'
                               style={{ width: `${percentage}%` }}
                             ></div>
                           </div>
@@ -1492,20 +1499,20 @@ export function TeamContent() {
                   </div>
 
                   {/* Estadísticas generales de reseñas */}
-                  <div className="mt-8 grid grid-cols-3 gap-4">
-                    <div className="bg-white/5 p-4 rounded-lg">
-                      <h4 className="text-white/60 text-sm mb-1">
+                  <div className='mt-8 grid grid-cols-3 gap-4'>
+                    <div className='bg-white/5 p-4 rounded-lg'>
+                      <h4 className='text-white/60 text-sm mb-1'>
                         Total de reseñas
                       </h4>
-                      <div className="text-2xl font-bold text-white">
+                      <div className='text-2xl font-bold text-white'>
                         {reviews.length}
                       </div>
                     </div>
-                    <div className="bg-white/5 p-4 rounded-lg">
-                      <h4 className="text-white/60 text-sm mb-1">
+                    <div className='bg-white/5 p-4 rounded-lg'>
+                      <h4 className='text-white/60 text-sm mb-1'>
                         Calificación promedio
                       </h4>
-                      <div className="text-2xl font-bold text-white flex items-center">
+                      <div className='text-2xl font-bold text-white flex items-center'>
                         {reviews.length
                           ? (
                               reviews.reduce(
@@ -1514,14 +1521,14 @@ export function TeamContent() {
                               ) / reviews.length
                             ).toFixed(1)
                           : '0.0'}
-                        <Star className="h-5 w-5 text-yellow-400 ml-1" />
+                        <Star className='h-5 w-5 text-yellow-400 ml-1' />
                       </div>
                     </div>
-                    <div className="bg-white/5 p-4 rounded-lg">
-                      <h4 className="text-white/60 text-sm mb-1">
+                    <div className='bg-white/5 p-4 rounded-lg'>
+                      <h4 className='text-white/60 text-sm mb-1'>
                         Satisfacción
                       </h4>
-                      <div className="text-2xl font-bold text-white">
+                      <div className='text-2xl font-bold text-white'>
                         {reviews.length
                           ? (
                               (reviews.filter((r) => r.calification >= 4)
@@ -1539,23 +1546,23 @@ export function TeamContent() {
             </div>
 
             {/* Estadísticas de rendimiento */}
-            <div className="col-span-full md:col-span-1">
-              <Card className="bg-white/10 border-0 h-full">
+            <div className='col-span-full md:col-span-1'>
+              <Card className='bg-white/10 border-0 h-full'>
                 <CardHeader>
-                  <CardTitle className="text-white">Rendimiento</CardTitle>
-                  <CardDescription className="text-white/70">
+                  <CardTitle className='text-white'>Rendimiento</CardTitle>
+                  <CardDescription className='text-white/70'>
                     Indicadores clave
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-6">
+                  <div className='space-y-6'>
                     {/* Reseñas por empleado */}
                     <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-white/70">
+                      <div className='flex justify-between mb-1'>
+                        <span className='text-white/70'>
                           Reseñas por empleado
                         </span>
-                        <span className="text-white font-medium">
+                        <span className='text-white font-medium'>
                           {employees.length
                             ? (reviews.length / employees.length).toFixed(1)
                             : '0'}
@@ -1566,17 +1573,17 @@ export function TeamContent() {
                           100,
                           (reviews.length / (employees.length || 1)) * 10
                         )}
-                        className="h-2"
+                        className='h-2'
                       />
                     </div>
 
                     {/* Empleados sin reseñas */}
                     <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-white/70">
+                      <div className='flex justify-between mb-1'>
+                        <span className='text-white/70'>
                           Empleados sin reseñas
                         </span>
-                        <span className="text-white font-medium">
+                        <span className='text-white font-medium'>
                           {employees.filter((e) => !e.reviewCount).length}/
                           {employees.length}
                         </span>
@@ -1590,17 +1597,17 @@ export function TeamContent() {
                                 100
                             : 0
                         }
-                        className="h-2"
+                        className='h-2'
                       />
                     </div>
 
                     {/* Reseñas de 5 estrellas */}
                     <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-white/70">
+                      <div className='flex justify-between mb-1'>
+                        <span className='text-white/70'>
                           Reseñas 5 estrellas
                         </span>
-                        <span className="text-white font-medium">
+                        <span className='text-white font-medium'>
                           {reviews.length
                             ? (reviews.filter((r) => r.calification === 5)
                                 .length /
@@ -1619,15 +1626,15 @@ export function TeamContent() {
                               100
                             : 0
                         }
-                        className="h-2"
+                        className='h-2'
                       />
                     </div>
 
                     {/* Reseñas negativas */}
                     <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-white/70">Reseñas negativas</span>
-                        <span className="text-white font-medium">
+                      <div className='flex justify-between mb-1'>
+                        <span className='text-white/70'>Reseñas negativas</span>
+                        <span className='text-white font-medium'>
                           {reviews.length
                             ? (
                                 (reviews.filter((r) => r.calification <= 2)
@@ -1649,20 +1656,20 @@ export function TeamContent() {
                                 100
                             : 100
                         }
-                        className="h-2"
+                        className='h-2'
                       />
                     </div>
                   </div>
 
                   {/* Acciones recomendadas */}
-                  <div className="mt-8 bg-white/5 p-4 rounded-lg">
-                    <h4 className="text-white font-medium mb-2">
+                  <div className='mt-8 bg-white/5 p-4 rounded-lg'>
+                    <h4 className='text-white font-medium mb-2'>
                       Acciones recomendadas
                     </h4>
-                    <ul className="space-y-2 text-sm text-white/70">
+                    <ul className='space-y-2 text-sm text-white/70'>
                       {employeesNeedingAttention.length > 0 && (
-                        <li className="flex items-start gap-2">
-                          <AlertCircle className="h-4 w-4 text-orange-400 mt-0.5 flex-shrink-0" />
+                        <li className='flex items-start gap-2'>
+                          <AlertCircle className='h-4 w-4 text-orange-400 mt-0.5 flex-shrink-0' />
                           <span>
                             Solicitar más reseñas para empleados sin actividad
                             reciente
@@ -1672,8 +1679,8 @@ export function TeamContent() {
                       {employees.filter(
                         (e) => e.averageRating && e.averageRating < 3.5
                       ).length > 0 && (
-                        <li className="flex items-start gap-2">
-                          <AlertCircle className="h-4 w-4 text-orange-400 mt-0.5 flex-shrink-0" />
+                        <li className='flex items-start gap-2'>
+                          <AlertCircle className='h-4 w-4 text-orange-400 mt-0.5 flex-shrink-0' />
                           <span>
                             Revisar desempeño de empleados con calificación por
                             debajo de 3.5
@@ -1685,8 +1692,8 @@ export function TeamContent() {
                         employees.filter(
                           (e) => e.averageRating && e.averageRating >= 4.5
                         ).length > 0) && (
-                        <li className="flex items-start gap-2">
-                          <Star className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                        <li className='flex items-start gap-2'>
+                          <Star className='h-4 w-4 text-green-400 mt-0.5 flex-shrink-0' />
                           <span>
                             ¡Reconocer a los empleados con mejores
                             calificaciones!
@@ -1707,67 +1714,67 @@ export function TeamContent() {
           open={!!selectedEmployee}
           onOpenChange={() => setSelectedEmployee(null)}
         >
-          <DialogContent className="bg-gray-900 text-white max-h-[90vh] overflow-y-auto max-w-4xl">
-            <DialogTitle className="flex justify-between items-center">
+          <DialogContent className='bg-gray-900 text-white max-h-[90vh] overflow-y-auto max-w-4xl'>
+            <DialogTitle className='flex justify-between items-center'>
               <span>Detalles del Empleado</span>
-              <div className="flex gap-2">
+              <div className='flex gap-2'>
                 <Button
-                  variant="ghost"
-                  size="sm"
+                  variant='ghost'
+                  size='sm'
                   onClick={() => {
                     setEditingEmployee(selectedEmployee);
                     setSelectedEmployee(null);
                   }}
-                  className="text-white border-white/20 hover:bg-white/10"
+                  className='text-white border-white/20 hover:bg-white/10'
                 >
-                  <Edit2 className="h-4 w-4 mr-2" />
+                  <Edit2 className='h-4 w-4 mr-2' />
                   Editar
                 </Button>
               </div>
             </DialogTitle>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-1">
-                <div className="flex flex-col items-center mb-4">
-                  <div className="h-32 w-32 rounded-full bg-white/20 flex items-center justify-center mb-3">
-                    <User className="h-16 w-16 text-white" />
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+              <div className='md:col-span-1'>
+                <div className='flex flex-col items-center mb-4'>
+                  <div className='h-32 w-32 rounded-full bg-white/20 flex items-center justify-center mb-3'>
+                    <User className='h-16 w-16 text-white' />
                   </div>
-                  <h2 className="text-xl font-bold text-white">
+                  <h2 className='text-xl font-bold text-white'>
                     {selectedEmployee.firstName} {selectedEmployee.lastName}
                   </h2>
-                  <p className="text-white/60">{selectedEmployee.position}</p>
+                  <p className='text-white/60'>{selectedEmployee.position}</p>
                 </div>
-                <div className="space-y-4">
-                  <div className="bg-white/5 rounded-lg p-4">
-                    <h3 className="text-white/60 mb-2 text-sm">Métricas</h3>
-                    <div className="grid grid-cols-2 gap-3">
+                <div className='space-y-4'>
+                  <div className='bg-white/5 rounded-lg p-4'>
+                    <h3 className='text-white/60 mb-2 text-sm'>Métricas</h3>
+                    <div className='grid grid-cols-2 gap-3'>
                       <div>
-                        <p className="text-white/60 text-sm">Total reseñas</p>
-                        <p className="text-white text-xl font-semibold">
+                        <p className='text-white/60 text-sm'>Total reseñas</p>
+                        <p className='text-white text-xl font-semibold'>
                           {selectedEmployee.reviewCount || 0}
                         </p>
                       </div>
                       <div>
-                        <p className="text-white/60 text-sm">Calificación</p>
-                        <div className="flex items-center">
-                          <p className="text-white text-xl font-semibold">
+                        <p className='text-white/60 text-sm'>Calificación</p>
+                        <div className='flex items-center'>
+                          <p className='text-white text-xl font-semibold'>
                             {selectedEmployee.averageRating
                               ? selectedEmployee.averageRating.toFixed(1)
                               : '-'}
                           </p>
                           {selectedEmployee.averageRating && (
-                            <Star className="h-5 w-5 text-yellow-400 ml-1" />
+                            <Star className='h-5 w-5 text-yellow-400 ml-1' />
                           )}
                         </div>
                       </div>
                       <div>
-                        <p className="text-white/60 text-sm">Taps</p>
-                        <p className="text-white text-xl font-semibold">
+                        <p className='text-white/60 text-sm'>Taps</p>
+                        <p className='text-white text-xl font-semibold'>
                           {selectedEmployee.taps ?? 0}
                         </p>
                       </div>
                       <div>
-                        <p className="text-white/60 text-sm">Tasa de rechazo</p>
-                        <p className="text-white text-xl font-semibold">
+                        <p className='text-white/60 text-sm'>Tasa de rechazo</p>
+                        <p className='text-white text-xl font-semibold'>
                           {(selectedEmployee.taps ?? 0) > 0
                             ? `${(
                                 ((selectedEmployee.reviewCount || 0) /
@@ -1779,19 +1786,19 @@ export function TeamContent() {
                       </div>
                     </div>
                   </div>
-                  <div className="bg-white/5 rounded-lg p-4">
-                    <h3 className="text-white/60 mb-2 text-sm">Horarios</h3>
-                    <div className="space-y-1">
+                  <div className='bg-white/5 rounded-lg p-4'>
+                    <h3 className='text-white/60 mb-2 text-sm'>Horarios</h3>
+                    <div className='space-y-1'>
                       {selectedEmployee.schedules.map(
                         (schedule: LocalSchedule) => (
                           <div
                             key={schedule.documentId}
-                            className="flex justify-between"
+                            className='flex justify-between'
                           >
-                            <span className="text-white capitalize">
+                            <span className='text-white capitalize'>
                               {schedule.day}
                             </span>
-                            <span className="text-white/70">
+                            <span className='text-white/70'>
                               {schedule.startTime.slice(0, 5)} -{' '}
                               {schedule.endTime.slice(0, 5)}
                             </span>
@@ -1802,18 +1809,18 @@ export function TeamContent() {
                   </div>
                 </div>
               </div>
-              <div className="md:col-span-2 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-white">
+              <div className='md:col-span-2 space-y-4'>
+                <div className='flex items-center justify-between'>
+                  <h3 className='text-lg font-medium text-white'>
                     Reseñas recibidas
                   </h3>
-                  <span className="text-white/60">
+                  <span className='text-white/60'>
                     {selectedEmployee.reviewCount || 0} total
                   </span>
                 </div>
                 {selectedEmployee.reviews &&
                 selectedEmployee.reviews.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                  <div className='space-y-3 max-h-96 overflow-y-auto pr-2'>
                     {selectedEmployee.reviews
                       .sort(
                         (a, b) =>
@@ -1823,10 +1830,10 @@ export function TeamContent() {
                       .map((review: ReviewExt) => (
                         <div
                           key={review.id}
-                          className="bg-white/5 p-4 rounded-lg"
+                          className='bg-white/5 p-4 rounded-lg'
                         >
-                          <div className="flex justify-between mb-2">
-                            <div className="flex items-center">
+                          <div className='flex justify-between mb-2'>
+                            <div className='flex items-center'>
                               {[...Array(5)].map((_, i) => (
                                 <Star
                                   key={i}
@@ -1838,13 +1845,13 @@ export function TeamContent() {
                                 />
                               ))}
                             </div>
-                            <div className="text-white/60 text-sm">
+                            <div className='text-white/60 text-sm'>
                               {new Date(review.createdAt).toLocaleDateString()}
                             </div>
                           </div>
-                          <p className="text-white mb-2">{review.comment}</p>
-                          <div className="flex items-center text-sm text-white/60">
-                            <span className="bg-white/10 px-2 py-1 rounded">
+                          <p className='text-white mb-2'>{review.comment}</p>
+                          <div className='flex items-center text-sm text-white/60'>
+                            <span className='bg-white/10 px-2 py-1 rounded'>
                               {review.typeImprovement}
                             </span>
                           </div>
@@ -1852,15 +1859,15 @@ export function TeamContent() {
                       ))}
                   </div>
                 ) : (
-                  <div className="text-white/60 text-center py-8 bg-white/5 rounded-lg">
+                  <div className='text-white/60 text-center py-8 bg-white/5 rounded-lg'>
                     Este empleado aún no tiene reseñas.
                   </div>
                 )}
-                <div className="bg-white/5 p-4 rounded-lg">
-                  <h3 className="text-white/60 mb-3 text-sm">
+                <div className='bg-white/5 p-4 rounded-lg'>
+                  <h3 className='text-white/60 mb-3 text-sm'>
                     Distribución de calificaciones
                   </h3>
-                  <div className="space-y-2">
+                  <div className='space-y-2'>
                     {[5, 4, 3, 2, 1].map((rating: number) => {
                       if (!selectedEmployee.reviews) return null;
                       const count = selectedEmployee.reviews.filter(
@@ -1870,20 +1877,20 @@ export function TeamContent() {
                         ? (count / selectedEmployee.reviews.length) * 100
                         : 0;
                       return (
-                        <div key={rating} className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <div className="flex items-center text-white">
+                        <div key={rating} className='space-y-1'>
+                          <div className='flex justify-between text-sm'>
+                            <div className='flex items-center text-white'>
                               {rating}{' '}
-                              <Star className="h-3 w-3 text-yellow-400 mx-1" />
+                              <Star className='h-3 w-3 text-yellow-400 mx-1' />
                             </div>
-                            <div className="text-white/70">
+                            <div className='text-white/70'>
                               {count} reseña{count !== 1 ? 's' : ''} (
                               {percentage.toFixed(0)}%)
                             </div>
                           </div>
                           <Progress
                             value={percentage}
-                            className="h-2 bg-white/10"
+                            className='h-2 bg-white/10'
                           />
                         </div>
                       );

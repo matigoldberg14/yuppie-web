@@ -1,46 +1,49 @@
 ---
-// src/pages/contact.astro
-import SharedLayout from '../layouts/SharedLayout.astro';
-import { Card } from '../components/ui/card';
-import { Button } from '../components/ui/Button';
-import { Mail, MapPin, Phone, Clock, MessageSquare } from 'lucide-react';
-import { ContactForm } from '../components/common/ContactForm';
+import SharedLayout from '../../layouts/SharedLayout.astro';
+import { Card } from '../../components/ui/card';
+import { Mail, Clock, MessageSquare } from 'lucide-react';
+import { ContactForm } from '../../components/common/ContactForm';
+import { getLangFromUrl, useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '@/i18n/config';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
 
 const contactMethods = [
   {
     icon: Mail,
-    title: "Email",
-    description: "Respuesta en las 24 horas",
-    value: "info@yuppiecx.com.ar",
+    title: t('contact.methods.email.title'),
+    description: t('contact.methods.email.description'),
+    value: t('contact.methods.email.value'),
     link: "mailto:info@yuppiecx.com.ar"
   },
   {
     icon: MessageSquare,
-    title: "Ventas y Consultas",
-    description: "Respuesta en las 24 horas",
-    value: "Lunes a Viernes de 9:00 a 18:00",
+    title: t('contact.methods.sales.title'),
+    description: t('contact.methods.sales.description'),
+    value: t('contact.methods.sales.value'),
   },
   {
     icon: MessageSquare,
-    title: "Soporte",
-    description: "Soporte Técnico 24/7",
-    value: "soporte@yuppiecx.com.ar",
+    title: t('contact.methods.support.title'),
+    description: t('contact.methods.support.description'),
+    value: t('contact.methods.support.value'),
     link: "mailto:soporte@yuppiecx.com.ar"
   }
 ];
 
 const faqs = [
   {
-    question: "¿Cómo funciona el periodo de prueba gratuito?",
-    answer: "Ofrecemos un mes completo de prueba sin cargo ni compromiso. Durante este período podrás acceder a todas las funcionalidades de la plataforma."
+    question: t('contact.faq.questions.trial.question'),
+    answer: t('contact.faq.questions.trial.answer')
   },
   {
-    question: "¿Necesito instalar algo en mi local?",
-    answer: "No, solo necesitas los dispositivos NFC que te proporcionamos. Nuestra plataforma es 100% basada en la nube."
+    question: t('contact.faq.questions.installation.question'),
+    answer: t('contact.faq.questions.installation.answer')
   },
   {
-    question: "¿Puedo cancelar mi suscripción en cualquier momento?",
-    answer: "Sí, puedes cancelar tu suscripción cuando lo desees sin penalizaciones. Si tienes un plan anual, podrás seguir usando el servicio hasta el final del período pagado."
+    question: t('contact.faq.questions.cancellation.question'),
+    answer: t('contact.faq.questions.cancellation.answer')
   }
 ];
 ---
@@ -52,10 +55,10 @@ const faqs = [
       <div class="container mx-auto px-4">
         <div class="max-w-3xl mx-auto text-center">
           <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">
-            Contáctanos
+            {t('contact.title')}
           </h1>
           <p class="text-xl text-white/80">
-            Estamos aquí para ayudarte. Contáctanos para una demo personalizada o cualquier consulta sobre nuestros servicios.
+            {t('contact.subtitle')}
           </p>
         </div>
       </div>
@@ -84,9 +87,9 @@ const faqs = [
           <Card className="bg-black/40 backdrop-blur-xl border border-white/10">
             <div class="p-8">
               <h2 class="text-2xl font-bold text-center text-white mb-8">
-                Solicita una Demo
+                {t('contact.requestDemo')}
               </h2>
-              <ContactForm client:load />
+              <ContactForm client:load lang={lang} />
             </div>
           </Card>
         </div>
@@ -98,7 +101,7 @@ const faqs = [
       <div class="container mx-auto px-4">
         <div class="max-w-3xl mx-auto">
           <h2 class="text-3xl font-bold text-center text-white mb-12">
-            Preguntas Frecuentes
+            {t('contact.faq.title')}
           </h2>
           <div class="space-y-6">
             {faqs.map((faq) => (
@@ -123,7 +126,7 @@ const faqs = [
       <div class="container mx-auto px-4">
         <div class="max-w-4xl mx-auto text-center">
           <h2 class="text-3xl font-bold text-white mb-12">
-            Horarios de Atención
+            {t('contact.officeHours.title')}
           </h2>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Card className="bg-black/40 backdrop-blur-xl border border-white/10">
@@ -131,9 +134,9 @@ const faqs = [
                 <div class="bg-white/10 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <Clock className="h-8 w-8 text-white" />
                 </div>
-                <h3 class="text-xl font-bold text-white mb-4">Soporte Técnico</h3>
-                <p class="text-white/80">24/7</p>
-                <p class="text-white/80">Tiempo de respuesta: 30 minutos</p>
+                <h3 class="text-xl font-bold text-white mb-4">{t('contact.officeHours.technicalSupport.title')}</h3>
+                <p class="text-white/80">{t('contact.officeHours.technicalSupport.hours')}</p>
+                <p class="text-white/80">{t('contact.officeHours.technicalSupport.responseTime')}</p>
               </div>
             </Card>
             <Card className="bg-black/40 backdrop-blur-xl border border-white/10">
@@ -141,9 +144,9 @@ const faqs = [
                 <div class="bg-white/10 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <MessageSquare className="h-8 w-8 text-white" />
                 </div>
-                <h3 class="text-xl font-bold text-white mb-4">Ventas y Consultas</h3>
-                <p class="text-white/80">Lunes a Viernes</p>
-                <p class="text-white/80">9:00 - 18:00 hs</p>
+                <h3 class="text-xl font-bold text-white mb-4">{t('contact.officeHours.sales.title')}</h3>
+                <p class="text-white/80">{t('contact.officeHours.sales.hours')}</p>
+                <p class="text-white/80">{t('contact.officeHours.sales.schedule')}</p>
               </div>
             </Card>
           </div>

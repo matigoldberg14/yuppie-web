@@ -5,6 +5,8 @@ import { auth } from '../../lib/firebase';
 import { signOut } from 'firebase/auth';
 import { Button } from '../ui/Button';
 import { clearUserRestaurants } from '../../lib/restaurantStore';
+import { useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '../../i18n/config';
 import {
   Home,
   MessageSquare,
@@ -26,8 +28,13 @@ import {
   setRestaurantsList,
 } from '../../lib/restaurantStore';
 
-export function Sidebar() {
+interface SidebarProps {
+  lang: SupportedLang;
+}
+
+export function Sidebar({ lang }: SidebarProps) {
   const { user } = useAuth();
+  const t = useTranslations(lang);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('sidebarCollapsed') === 'true';
@@ -49,11 +56,11 @@ export function Sidebar() {
         }
         setHasMultipleRestaurants(list.length > 1);
       } catch (error) {
-        console.error('Error al cargar restaurantes para el sidebar:', error);
+        console.error(t('dashboard.errorLoadingRestaurants'), error);
       }
     }
     loadRestaurants();
-  }, []);
+  }, [t]);
 
   // Actualizar el padding del contenido principal cuando cambia el estado del sidebar
   useEffect(() => {
@@ -87,62 +94,62 @@ export function Sidebar() {
   const handleLogout = async () => {
     try {
       clearUserRestaurants(); // Limpiar selecciones antes de cerrar sesión
-      if (!auth) throw new Error('Firebase not initialized');
+      if (!auth) throw new Error(t('auth.firebaseNotInitialized'));
       await signOut(auth);
-      window.location.href = '/login';
+      window.location.href = `/${lang}/login`;
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      console.error(t('auth.logoutError'), error);
     }
   };
 
   // Botón de menú móvil
   const MobileMenuButton = () => (
     <Button
-      variant="ghost"
-      size="icon"
+      variant='ghost'
+      size='icon'
       onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-      className="fixed top-4 right-4 z-50 md:hidden bg-white/10 text-white hover:bg-white/20"
+      className='fixed top-4 right-4 z-50 md:hidden bg-white/10 text-white hover:bg-white/20'
     >
       {isMobileMenuOpen ? (
-        <X className="h-6 w-6" />
+        <X className='h-6 w-6' />
       ) : (
-        <Menu className="h-6 w-6" />
+        <Menu className='h-6 w-6' />
       )}
     </Button>
   );
 
   const navItems = [
     {
-      icon: <Home className="h-4 w-4" />,
-      text: 'Dashboard',
-      href: '/dashboard',
+      icon: <Home className='h-4 w-4' />,
+      text: t('dashboard.nav.dashboard'),
+      href: `/${lang}/dashboard`,
     },
     {
-      icon: <MessageSquare className="h-4 w-4" />,
-      text: 'Reseñas',
-      href: '/dashboard/reviews',
+      icon: <MessageSquare className='h-4 w-4' />,
+      text: t('dashboard.nav.reviews'),
+      href: `/${lang}/dashboard/reviews`,
     },
     {
-      icon: <Users2 className="h-4 w-4" />,
-      text: 'Equipo',
-      href: '/dashboard/team',
+      icon: <Users2 className='h-4 w-4' />,
+      text: t('dashboard.nav.team'),
+      href: `/${lang}/dashboard/team`,
     },
     {
-      icon: <BarChart3 className="h-4 w-4" />,
-      text: 'Analytics',
-      href: '/dashboard/analytics',
+      icon: <BarChart3 className='h-4 w-4' />,
+      text: t('dashboard.nav.analytics'),
+      href: `/${lang}/dashboard/analytics`,
     },
     {
-      icon: <Calendar className="h-4 w-4" />,
-      text: 'Calendario',
-      href: '/dashboard/calendar',
+      icon: <Calendar className='h-4 w-4' />,
+      text: t('dashboard.nav.calendar'),
+      href: `/${lang}/dashboard/calendar`,
     },
     ...(hasMultipleRestaurants
       ? [
           {
-            icon: <ShoppingBag className="h-4 w-4" />,
-            text: 'Restaurantes',
-            href: '/dashboard/restaurants',
+            icon: <ShoppingBag className='h-4 w-4' />,
+            text: t('dashboard.nav.restaurants'),
+            href: `/${lang}/dashboard/restaurants`,
           },
         ]
       : []),
@@ -153,7 +160,7 @@ export function Sidebar() {
       <MobileMenuButton />
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className='fixed inset-0 bg-black/50 z-40 md:hidden'
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -165,67 +172,67 @@ export function Sidebar() {
         } ${isCollapsed ? 'md:w-16' : 'md:w-64'} w-64`}
       >
         <Button
-          variant="ghost"
-          size="icon"
+          variant='ghost'
+          size='icon'
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-6 h-6 w-6 rounded-full bg-white/10 text-white hover:bg-white/20 hidden md:flex items-center justify-center"
+          className='absolute -right-3 top-6 h-6 w-6 rounded-full bg-white/10 text-white hover:bg-white/20 hidden md:flex items-center justify-center'
         >
           {isCollapsed ? (
-            <ChevronRight className="h-3 w-3" />
+            <ChevronRight className='h-3 w-3' />
           ) : (
-            <ChevronLeft className="h-3 w-3" />
+            <ChevronLeft className='h-3 w-3' />
           )}
         </Button>
-        <div className="px-2 pt-4 flex items-center">
+        <div className='px-2 pt-4 flex items-center'>
           {isCollapsed && !isMobileMenuOpen ? (
-            <div className="w-full flex justify-center items-center">
+            <div className='w-full flex justify-center items-center'>
               <img
-                src="/yblanca.png"
-                alt="Yuppie Logo chico"
-                className="h-8 w-auto"
+                src='/yblanca.png'
+                alt={t('dashboard.logoSmall')}
+                className='h-8 w-auto'
               />
             </div>
           ) : (
-            <div className="w-full flex items-center px-2">
+            <div className='w-full flex items-center px-2'>
               <img
-                src="/logo_grande.png"
-                alt="Yuppie Logo"
-                className="h-8 w-auto"
+                src='/logo_grande.png'
+                alt={t('dashboard.logo')}
+                className='h-8 w-auto'
               />
             </div>
           )}
         </div>
-        <div className="flex flex-col flex-1 justify-between mt-8">
-          <nav className="space-y-4">
+        <div className='flex flex-col flex-1 justify-between mt-8'>
+          <nav className='space-y-4'>
             {navItems.map((item) => (
               <a key={item.href} href={item.href}>
                 <Button
-                  variant="ghost"
-                  className="w-full flex items-center text-white hover:bg-white/10 px-2"
+                  variant='ghost'
+                  className='w-full flex items-center text-white hover:bg-white/10 px-2'
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  <div className="w-8 flex items-center justify-start">
+                  <div className='w-8 flex items-center justify-start'>
                     {item.icon}
                   </div>
                   {(!isCollapsed || isMobileMenuOpen) && (
-                    <span className="text-lg">{item.text}</span>
+                    <span className='text-lg'>{item.text}</span>
                   )}
                 </Button>
               </a>
             ))}
           </nav>
-          <div className="mt-auto pt-4 border-t border-white/10">
+          <div className='mt-auto pt-4 border-t border-white/10'>
             <Button
-              variant="ghost"
+              variant='ghost'
               onClick={handleLogout}
-              className="w-full flex items-center text-white hover:bg-white/10 px-2 group"
+              className='w-full flex items-center text-white hover:bg-white/10 px-2 group'
             >
-              <div className="w-8 flex items-center justify-start">
-                <LogOut className="h-4 w-4 group-hover:text-red-400" />
+              <div className='w-8 flex items-center justify-start'>
+                <LogOut className='h-4 w-4 group-hover:text-red-400' />
               </div>
               {(!isCollapsed || isMobileMenuOpen) && (
-                <span className="text-lg group-hover:text-red-400">
-                  Cerrar sesión
+                <span className='text-lg group-hover:text-red-400'>
+                  {t('auth.logout')}
                 </span>
               )}
             </Button>

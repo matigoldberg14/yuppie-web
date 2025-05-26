@@ -1,6 +1,8 @@
 // src/components/dashboard/RestaurantMap.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { MapPin, AlertCircle } from 'lucide-react';
+import { useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '../../i18n/config';
 
 interface Coordinates {
   latitude: number;
@@ -37,6 +39,7 @@ export interface RestaurantMapProps {
   onRestaurantClick?: (restaurantId: string) => void;
   className?: string;
   onNeedCoordinates?: (restaurantId: string) => void;
+  lang: SupportedLang;
 }
 
 /* Usamos los tipos oficiales de Google Maps (asegúrate de tener @types/google.maps instalado) */
@@ -214,14 +217,17 @@ const RestaurantMap: React.FC<RestaurantMapProps> = ({
   onRestaurantClick,
   onNeedCoordinates,
   className = 'h-[300px]',
+  lang,
 }) => {
+  const t = useTranslations(lang);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<any[]>([]);
+  const markersRef = useRef<Map<string, google.maps.Marker>>(new Map());
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [missingCoordinates, setMissingCoordinates] = useState<string[]>([]);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   // Procesar restaurantes con coordenadas INMUTABLES
   // Esto es crucial para evitar ciclos de renderizado infinitos
@@ -718,76 +724,26 @@ const RestaurantMap: React.FC<RestaurantMapProps> = ({
     if (onNeedCoordinates) onNeedCoordinates(id);
   };
 
+  if (mapError) {
+    return (
+      <div
+        className={`${className} flex items-center justify-center bg-gray-100 rounded-lg`}
+      >
+        <div className='text-center p-4'>
+          <AlertCircle className='h-8 w-8 text-red-500 mx-auto mb-2' />
+          <p className='text-red-500'>{t('map.error')}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={`${className} bg-white/5 rounded-lg overflow-hidden relative`}
-    >
-      {/* Estado de carga inicial */}
-      {isLoading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 p-4 bg-black/30 z-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-3"></div>
-          <p>Cargando mapa...</p>
-        </div>
-      )}
-
-      {/* Mensaje de error */}
-      {loadError && !isLoading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4 bg-black/40 z-10">
-          <AlertCircle className="h-12 w-12 text-red-500 mb-3" />
-          <p className="text-center text-red-300 mb-2">
-            Error al cargar el mapa:
-          </p>
-          <p className="text-center">{loadError}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-white/10 hover:bg-white/20 rounded text-white"
-          >
-            Reintentar
-          </button>
-        </div>
-      )}
-
-      {/* Sin restaurantes válidos */}
-      {!isLoading && !loadError && validRestaurants.length === 0 && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white/40 p-4 z-10">
-          <div className="text-center">
-            <MapPin className="h-12 w-12 mx-auto mb-2 opacity-40" />
-            <p className="mb-2">No hay restaurantes con ubicación disponible</p>
-            {missingCoordinates.length > 0 && (
-              <>
-                <div className="flex items-center gap-2 text-amber-400 mb-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>Hay restaurantes sin coordenadas</span>
-                </div>
-                <div className="text-sm text-white/70 mb-2">
-                  Agrega coordenadas a tus restaurantes para visualizarlos en el
-                  mapa:
-                </div>
-                <div className="flex flex-wrap gap-2 justify-center max-w-md">
-                  {missingCoordinates.map((id: string) => {
-                    const restaurant = restaurants.find(
-                      (r: RestaurantLocation) => r.documentId === id
-                    );
-                    return restaurant ? (
-                      <button
-                        key={id}
-                        onClick={() => handleAddCoordinates(id)}
-                        className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-sm text-white"
-                      >
-                        {restaurant.name}
-                      </button>
-                    ) : null;
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Contenedor del mapa */}
-      <div ref={mapRef} className="h-full w-full" />
-    </div>
+      ref={mapRef}
+      className={`${className} rounded-lg overflow-hidden`}
+      role='img'
+      aria-label={t('map.ariaLabel')}
+    />
   );
 };
 

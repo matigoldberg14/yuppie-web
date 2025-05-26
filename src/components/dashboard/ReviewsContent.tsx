@@ -16,6 +16,8 @@ import * as XLSX from 'xlsx';
 import { formatDateBuenosAires } from '../../utils/formatDate';
 import process from 'process/browser';
 import { getSelectedRestaurant } from '../../lib/restaurantStore';
+import { useTranslations } from '../../i18n/utils';
+import type { SupportedLang } from '../../i18n/config';
 
 interface Employee {
   id: number;
@@ -40,7 +42,12 @@ interface Review {
   employee?: Employee; // Agregamos el empleado asociado
 }
 
-export function ReviewsContent() {
+interface Props {
+  lang: SupportedLang;
+}
+
+export function ReviewsContent({ lang }: Props) {
+  const t = useTranslations(lang);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   // Estado para guardar cupones enviados (aunque la info viene de Strapi)
@@ -52,18 +59,22 @@ export function ReviewsContent() {
   const handleExportToExcel = () => {
     // Preparar los datos para el Excel
     const exportData = reviews.map((review) => ({
-      Fecha: formatDateBuenosAires(review.createdAt),
-      Email: review.email,
-      Calificación: review.calification,
-      'Tipo de Mejora': review.typeImprovement,
-      Comentario: review.comment,
-      'Enviado a Google': review.googleSent ? 'Sí' : 'No',
-      'Código de Cupón': review.couponCode || 'No enviado',
-      'Cupón Usado': review.couponUsed ? 'Sí' : 'No',
-      'ID de Review': review.documentId,
-      Empleado: review.employee
+      [t('reviews.date')]: formatDateBuenosAires(review.createdAt),
+      [t('reviews.email')]: review.email,
+      [t('reviews.rating')]: review.calification,
+      [t('reviews.improvementType')]: review.typeImprovement,
+      [t('reviews.comment')]: review.comment,
+      [t('reviews.sentToGoogle')]: review.googleSent
+        ? t('reviews.yes')
+        : t('reviews.no'),
+      [t('reviews.couponCode')]: review.couponCode || t('reviews.notSent'),
+      [t('reviews.couponUsed')]: review.couponUsed
+        ? t('reviews.yes')
+        : t('reviews.no'),
+      [t('reviews.reviewId')]: review.documentId,
+      [t('reviews.employee')]: review.employee
         ? `${review.employee.firstName} ${review.employee.lastName}`
-        : 'No asignado',
+        : t('reviews.notAssigned'),
     }));
 
     // Crear el libro de Excel
@@ -86,10 +97,10 @@ export function ReviewsContent() {
     ws['!cols'] = columnWidths;
 
     // Agregar la hoja al libro
-    XLSX.utils.book_append_sheet(wb, ws, 'Reseñas');
+    XLSX.utils.book_append_sheet(wb, ws, t('reviews.reviews'));
 
     // Generar el archivo y descargarlo
-    const fileName = `reseñas_${restaurantName}_${
+    const fileName = `${t('reviews.reviews')}_${restaurantName}_${
       new Date().toISOString().split('T')[0]
     }.xlsx`;
     XLSX.writeFile(wb, fileName);
@@ -185,13 +196,11 @@ export function ReviewsContent() {
 
   // Función para enviar el cupón y actualizar Strapi
   const handleSendCoupon = (review: Review) => {
-    const discountStr = window.prompt(
-      'Ingrese el porcentaje de descuento (entre 10 y 100):'
-    );
+    const discountStr = window.prompt(t('reviews.enterDiscountPercentage'));
     if (!discountStr) return;
     const discount = parseInt(discountStr, 10);
     if (isNaN(discount) || discount < 10 || discount > 100) {
-      alert('El valor debe ser un número entre 10 y 100.');
+      alert(t('reviews.invalidDiscountValue'));
       return;
     }
 
@@ -215,7 +224,7 @@ export function ReviewsContent() {
       .then(
         async (result) => {
           console.log('Email enviado correctamente', result.text);
-          alert('Cupón enviado exitosamente.');
+          alert(t('reviews.couponSentSuccess'));
           try {
             await updateReview(review.documentId, {
               couponCode: couponCode,
@@ -236,68 +245,66 @@ export function ReviewsContent() {
         },
         (error) => {
           console.error('Error enviando cupón', error);
-          alert('Error enviando el cupón.');
+          alert(t('reviews.errorSendingCoupon'));
         }
       );
   };
 
   const handleMarkCouponUsed = (review: Review) => {
-    const confirmation = window.confirm(
-      '¿Está seguro de que desea marcar este cupón como usado? Esta acción no se puede revertir.'
-    );
+    const confirmation = window.confirm(t('reviews.confirmMarkCouponUsed'));
     if (!confirmation) return;
 
     updateReview(review.documentId, { couponUsed: true })
       .then(() => {
-        alert('El cupón se ha marcado como usado.');
         setReviews((prevReviews) =>
           prevReviews.map((r) =>
             r.id === review.id ? { ...r, couponUsed: true } : r
           )
         );
+        alert(t('reviews.couponMarkedAsUsed'));
       })
       .catch((error) => {
-        console.error('Error marcando el cupón como usado:', error);
-        alert('Error al actualizar el estado del cupón.');
+        console.error('Error marking coupon as used:', error);
+        alert(t('reviews.errorMarkingCouponUsed'));
       });
   };
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="animate-pulse text-white">Cargando reseñas...</div>
+      <div className='p-8'>
+        <div className='animate-pulse text-white'>Cargando reseñas...</div>
       </div>
     );
   }
 
   if (reviews.length === 0) {
     return (
-      <div className="p-8">
-        <div className="text-white">No hay reseñas disponibles.</div>
+      <div className='p-8'>
+        <div className='text-white'>No hay reseñas disponibles.</div>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Reseñas</h1>
+    <div className='p-8'>
+      <div className='flex justify-between items-center mb-6'>
+        <h1 className='text-2xl font-bold text-white'>Reseñas</h1>
         <Button
-          variant="ghost"
-          className="flex items-center text-white hover:bg-white/10"
+          variant='ghost'
+          className='flex items-center text-white hover:bg-white/10'
           onClick={handleExportToExcel}
         >
-          <Download className="mr-2 h-4 w-4" />
-          Exportar
+          <Download className='mr-2 h-4 w-4' />
+          {t('reviews.exportData')}
         </Button>
       </div>
-      <div className="space-y-4">
+      <div className='space-y-4'>
         {reviews.map((review) => (
-          <Card key={review.id} className="bg-white/10 border-0">
-            <CardHeader className="flex flex-row items-start justify-between">
+          <Card key={review.id} className='bg-white/10 border-0'>
+            <CardHeader className='flex flex-row items-start justify-between'>
               <div>
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-white">
+                <div className='flex items-center gap-2'>
+                  <CardTitle className='text-white'>
                     {review.email ===
                     'prefirio-no-dar-su-email@nodiosuemail.com'
                       ? '-'
@@ -306,14 +313,14 @@ export function ReviewsContent() {
 
                   {/* Badge para mostrar el empleado asociado */}
                   {review.employee && (
-                    <Badge className="bg-indigo-500 hover:bg-indigo-600 text-white">
-                      <User className="h-3 w-3 mr-1" />
+                    <Badge className='bg-indigo-500 hover:bg-indigo-600 text-white'>
+                      <User className='h-3 w-3 mr-1' />
                       {review.employee.firstName} {review.employee.lastName}
                     </Badge>
                   )}
                 </div>
 
-                <div className="flex items-center mt-1">
+                <div className='flex items-center mt-1'>
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
@@ -326,22 +333,22 @@ export function ReviewsContent() {
                   ))}
                 </div>
               </div>
-              <div className="text-sm text-white/60">
+              <div className='text-sm text-white/60'>
                 {new Date(review.createdAt).toLocaleDateString()}
               </div>
             </CardHeader>
             <CardContent>
-              <div className="mb-4 max-h-24 overflow-auto break-words">
-                <p className="text-white">{review.comment}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
+              <div className='mb-4 max-h-24 overflow-auto break-words'>
+                <p className='text-white'>{review.comment}</p>
+                <div className='mt-2 flex flex-wrap gap-2'>
                   {review.typeImprovement && (
-                    <span className="text-sm bg-white/10 text-white px-2 py-1 rounded-full">
+                    <span className='text-sm bg-white/10 text-white px-2 py-1 rounded-full'>
                       {review.typeImprovement}
                     </span>
                   )}
                   {/* Solo mostrar "Enviada a Google" si googleSent es true */}
                   {review.googleSent && (
-                    <span className="text-sm bg-green-600 text-white px-2 py-1 rounded-full">
+                    <span className='text-sm bg-green-600 text-white px-2 py-1 rounded-full'>
                       Enviada a Google
                     </span>
                   )}
@@ -350,26 +357,26 @@ export function ReviewsContent() {
               {/* Resto del código de cupones */}
               {review.email !== 'prefirio-no-dar-su-email@nodiosuemail.com' &&
                 (review.couponCode ? (
-                  <div className="space-y-2">
-                    <div className="bg-green-600 text-white text-center py-2 rounded">
+                  <div className='space-y-2'>
+                    <div className='bg-green-600 text-white text-center py-2 rounded'>
                       Cupón de descuento: <strong>{review.couponCode}</strong>
                     </div>
                     {!review.couponUsed ? (
                       <Button
-                        variant="secondary"
+                        variant='secondary'
                         onClick={() => handleMarkCouponUsed(review)}
                       >
                         Marcar como usado
                       </Button>
                     ) : (
-                      <div className="text-sm text-white/60 text-center">
+                      <div className='text-sm text-white/60 text-center'>
                         Cupón usado
                       </div>
                     )}
                   </div>
                 ) : (
                   <Button
-                    variant="secondary"
+                    variant='secondary'
                     onClick={() => handleSendCoupon(review)}
                   >
                     Enviar cupón de descuento

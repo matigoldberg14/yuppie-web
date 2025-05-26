@@ -34,6 +34,8 @@ import {
   setRestaurantsList,
 } from '../../lib/restaurantStore';
 import { useToast } from '../ui/use-toast';
+import { useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '../../i18n/config';
 
 export interface RestaurantData {
   id: number;
@@ -84,7 +86,8 @@ const convertToRestaurant = (data: RestaurantData): Restaurant => {
   };
 };
 
-export function RestaurantsOverview() {
+export function RestaurantsOverview({ lang }: { lang: SupportedLang }) {
+  const t = useTranslations(lang);
   const [restaurants, setRestaurants] = useState<RestaurantData[]>([]);
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(true);
@@ -105,7 +108,7 @@ export function RestaurantsOverview() {
 
   // Obtener ciudad desde datos reales o usar función de respaldo para compatibilidad
   const getCiudad = (restaurant: RestaurantData): string => {
-    return restaurant.location?.city || 'Ciudad no disponible';
+    return restaurant.location?.city || t('restaurants.noCityAvailable');
   };
 
   // Filtrar restaurantes basados en la búsqueda
@@ -163,7 +166,7 @@ export function RestaurantsOverview() {
         console.log('UID del usuario:', uid);
 
         if (!uid) {
-          console.warn('No se encontró UID de usuario');
+          console.warn(t('error.noUserFound'));
           setLoading(false);
           return;
         }
@@ -173,7 +176,7 @@ export function RestaurantsOverview() {
         console.log('Datos recibidos de getOwnerRestaurants:', data);
 
         if (!data || data.length === 0) {
-          console.warn('No se encontraron restaurantes para el usuario');
+          console.warn(t('restaurants.noRestaurantsFound'));
           setRestaurants([]);
           setLoading(false);
           return;
@@ -210,42 +213,15 @@ export function RestaurantsOverview() {
 
         // Cargar métricas para todos los restaurantes
         await loadRestaurantMetrics(formattedData);
-      } catch (err) {
-        console.error('Error en fetchRestaurants:', err);
-        setError('Error al obtener los restaurantes');
-      } finally {
+      } catch (error) {
+        console.error(t('error.loadingRestaurants'), error);
+        setError(t('error.loadingRestaurants'));
         setLoading(false);
       }
     };
 
-    const checkAuthAndFetch = () => {
-      if (auth?.currentUser) {
-        console.log('Usuario autenticado, cargando restaurantes');
-        fetchRestaurants();
-      } else {
-        console.log('Usuario no autenticado, esperando...');
-        setLoading(false);
-      }
-    };
-
-    checkAuthAndFetch();
-
-    const unsubscribe = auth?.onAuthStateChanged((user) => {
-      console.log(
-        'Estado de autenticación cambiado:',
-        user ? 'Usuario autenticado' : 'No autenticado'
-      );
-      if (user) {
-        fetchRestaurants();
-      } else {
-        setLoading(false);
-      }
-    });
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
+    fetchRestaurants();
+  }, [t]);
 
   // Cargar métricas para los restaurantes
   const loadRestaurantMetrics = async (restaurants: RestaurantData[]) => {
@@ -336,20 +312,20 @@ export function RestaurantsOverview() {
   };
 
   if (loading)
-    return <div className="text-white">Cargando restaurantes...</div>;
+    return <div className='text-white'>Cargando restaurantes...</div>;
 
-  if (error) return <div className="text-red-500">{error}</div>;
+  if (error) return <div className='text-red-500'>{error}</div>;
 
   if (restaurants.length === 0) {
     return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-white mb-4">Mis Restaurantes</h1>
-        <p className="text-white">
+      <div className='p-6'>
+        <h1 className='text-2xl font-bold text-white mb-4'>Mis Restaurantes</h1>
+        <p className='text-white'>
           No se encontraron restaurantes para este usuario. (UID:{' '}
           {auth?.currentUser?.uid || 'No autenticado'})
         </p>
-        <div className="mt-4">
-          <Button variant="primary" onClick={() => window.location.reload()}>
+        <div className='mt-4'>
+          <Button variant='primary' onClick={() => window.location.reload()}>
             Reintentar
           </Button>
         </div>
@@ -358,170 +334,95 @@ export function RestaurantsOverview() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Building2 className="h-8 w-8" />
-            Mis Restaurantes
-          </h1>
-          <p className="text-white/60">
-            Gestiona y compara el rendimiento de tus locales
-          </p>
-        </div>
-        <div className="mt-4 md:mt-0 flex gap-2">
-          <Button
-            variant={activeTab === 'list' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('list')}
-          >
-            Listado
-          </Button>
-          <Button
-            variant={activeTab === 'compare' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('compare')}
-          >
-            Comparación
+    <div className='p-6'>
+      <header className='flex justify-between items-center mb-6'>
+        <h1 className='text-2xl font-bold text-white'>
+          {t('restaurants.title')}
+        </h1>
+        <div className='flex gap-2'>
+          <Button variant='ghost' className='text-white'>
+            <Plus className='mr-2 h-4 w-4' />
+            {t('restaurants.addRestaurant')}
           </Button>
         </div>
+      </header>
+
+      <div className='flex gap-4 mb-6'>
+        <div className='relative flex-1'>
+          <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60' />
+          <Input
+            type='text'
+            placeholder={t('restaurants.searchPlaceholder')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className='pl-10 bg-white/10 border-0 text-white'
+          />
+        </div>
+        <Button variant='ghost' className='text-white'>
+          <RefreshCw className='mr-2 h-4 w-4' />
+          {t('restaurants.refresh')}
+        </Button>
       </div>
 
-      {activeTab === 'list' && (
-        <>
-          <div className="mb-4 max-w-md">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-white/50" />
-              <Input
-                placeholder="Buscar restaurante..."
-                className="pl-8 bg-white/5 border-white/10 text-white"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredRestaurants.map((restaurant) => (
-              <Card
-                key={restaurant.documentId}
-                className={`bg-white/10 border-0 cursor-pointer hover:bg-white/20 transition-colors ${
-                  currentRestaurant?.documentId === restaurant.documentId
-                    ? 'border-2 border-blue-500'
-                    : ''
-                }`}
-                onClick={() => handleSelectRestaurant(restaurant)}
-              >
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-white flex justify-between items-start">
-                    <div>
-                      {restaurant.name}
-                      <div className="text-sm font-normal text-white/60 flex items-center mt-1">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        {getCiudad(restaurant)}
-                      </div>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+        {filteredRestaurants.map((restaurant) => (
+          <Card key={restaurant.documentId} className='bg-white/10 border-0'>
+            <CardHeader>
+              <div className='flex justify-between items-start'>
+                <CardTitle className='text-white'>{restaurant.name}</CardTitle>
+                <Badge variant='secondary' className='bg-white/20'>
+                  {restaurant.taps} {t('restaurants.taps')}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className='space-y-4'>
+                <div className='flex items-center text-white/60'>
+                  <MapPin className='h-4 w-4 mr-2' />
+                  {getCiudad(restaurant)}
+                </div>
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='text-center'>
+                    <div className='text-2xl font-bold text-white'>
+                      {restaurantMetrics[restaurant.documentId]?.totalReviews ||
+                        0}
                     </div>
-                    <Badge
-                      className={
-                        currentRestaurant?.documentId === restaurant.documentId
-                          ? 'bg-blue-500'
-                          : 'bg-white/20'
-                      }
-                    >
-                      {currentRestaurant?.documentId === restaurant.documentId
-                        ? 'Principal'
-                        : 'Seleccionar'}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
-                      <MessageSquare className="h-4 w-4 mb-1 text-blue-400" />
-                      <div className="text-xs text-white/60">Total Reseñas</div>
-                      {metricsLoading ? (
-                        <div className="h-5 flex items-center">
-                          <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
-                        </div>
-                      ) : (
-                        <div className="font-medium text-white">
-                          {restaurantMetrics[restaurant.documentId]
-                            ?.totalReviews || 0}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
-                      <Star className="h-4 w-4 mb-1 text-yellow-400" />
-                      <div className="text-xs text-white/60">
-                        Rating Promedio
-                      </div>
-                      {metricsLoading ? (
-                        <div className="h-5 flex items-center justify-center">
-                          <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
-                        </div>
-                      ) : (
-                        <div className="font-medium text-white">
-                          {restaurantMetrics[restaurant.documentId]
-                            ? restaurantMetrics[
-                                restaurant.documentId
-                              ].averageRating.toFixed(1)
-                            : '0'}
-                          /5
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
-                      <Zap className="h-4 w-4 mb-1 text-amber-400" />
-                      <div className="text-xs text-white/60">
-                        Tasa de Conversión
-                      </div>
-                      {metricsLoading ? (
-                        <div className="h-5 flex items-center">
-                          <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
-                        </div>
-                      ) : (
-                        <div className="font-medium text-white">
-                          {restaurantMetrics[restaurant.documentId]
-                            ? restaurantMetrics[
-                                restaurant.documentId
-                              ].conversionRate.toFixed(1)
-                            : '0'}
-                          %
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
-                      <Users className="h-4 w-4 mb-1 text-purple-400" />
-                      <div className="text-xs text-white/60">Equipo</div>
-                      {metricsLoading ? (
-                        <div className="h-5 flex items-center">
-                          <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
-                        </div>
-                      ) : (
-                        <div className="font-medium text-white">
-                          {restaurantMetrics[restaurant.documentId]
-                            ?.employeeCount || 0}
-                        </div>
-                      )}
+                    <div className='text-sm text-white/60'>
+                      {t('restaurants.totalReviews')}
                     </div>
                   </div>
-
-                  <div className="mt-4">
-                    <div className="text-center text-white/60 text-xs py-2">
-                      Utiliza la vista de comparación para analizar múltiples
-                      locales
+                  <div className='text-center'>
+                    <div className='text-2xl font-bold text-white'>
+                      {restaurantMetrics[
+                        restaurant.documentId
+                      ]?.averageRating?.toFixed(1) || '0.0'}
+                    </div>
+                    <div className='text-sm text-white/60'>
+                      {t('restaurants.averageRating')}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </>
-      )}
-
-      {activeTab === 'compare' && (
-        <AdvancedComparison
-          restaurants={restaurants.map(convertToRestaurant)}
-        />
-      )}
+                </div>
+                <div className='flex justify-between'>
+                  <Button
+                    variant='ghost'
+                    className='text-white'
+                    onClick={() => handleSelectRestaurant(restaurant)}
+                  >
+                    {t('restaurants.select')}
+                  </Button>
+                  <Button
+                    variant='ghost'
+                    className='text-white'
+                    onClick={() => handleToggleCompare(restaurant)}
+                  >
+                    {t('restaurants.compare')}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

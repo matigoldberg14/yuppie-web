@@ -8,8 +8,18 @@ import {
 } from '../../lib/restaurantStore';
 import { auth } from '../../lib/firebase';
 import { getOwnerRestaurants } from '../../services/api';
+import { useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '../../i18n/config';
 
-export default function RestaurantsOverviewWrapper() {
+interface RestaurantsOverviewWrapperProps {
+  lang: SupportedLang;
+}
+
+export default function RestaurantsOverviewWrapper({
+  lang,
+}: RestaurantsOverviewWrapperProps) {
+  const t = useTranslations(lang);
+
   useEffect(() => {
     const initPage = async () => {
       if (auth?.currentUser?.uid) {
@@ -23,7 +33,7 @@ export default function RestaurantsOverviewWrapper() {
           setSelectedRestaurant(ownerRestaurants[0]);
 
           // Redirigir al dashboard principal
-          window.location.href = '/dashboard';
+          window.location.href = `/${lang}/dashboard`;
           return;
         }
 
@@ -33,7 +43,7 @@ export default function RestaurantsOverviewWrapper() {
     };
 
     initPage();
-  }, []);
+  }, [lang, t]);
 
-  return <RestaurantsOverview />;
+  return <RestaurantsOverview lang={lang} />;
 }

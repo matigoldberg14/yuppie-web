@@ -4,6 +4,8 @@ import { Button } from '../ui/Button';
 import { Plus, Trash, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
+import { useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '../../i18n/config';
 
 // Interfaces
 export interface TimeBlock {
@@ -19,17 +21,18 @@ export interface DaySchedule {
 export interface ScheduleComponentProps {
   schedule: DaySchedule;
   onChange: (schedule: DaySchedule) => void;
+  lang: SupportedLang;
 }
 
 // Datos de días de la semana
 const DAYS = [
-  { id: 'monday', label: 'Lunes' },
-  { id: 'tuesday', label: 'Martes' },
-  { id: 'wednesday', label: 'Miércoles' },
-  { id: 'thursday', label: 'Jueves' },
-  { id: 'friday', label: 'Viernes' },
-  { id: 'saturday', label: 'Sábado' },
-  { id: 'sunday', label: 'Domingo' },
+  { id: 'monday', label: 'monday' },
+  { id: 'tuesday', label: 'tuesday' },
+  { id: 'wednesday', label: 'wednesday' },
+  { id: 'thursday', label: 'thursday' },
+  { id: 'friday', label: 'friday' },
+  { id: 'saturday', label: 'saturday' },
+  { id: 'sunday', label: 'sunday' },
 ];
 
 // Función para generar IDs únicos
@@ -39,7 +42,9 @@ const generateId = () => Math.random().toString(36).substring(2, 11);
 export function EmployeeSchedule({
   schedule,
   onChange,
+  lang,
 }: ScheduleComponentProps) {
+  const t = useTranslations(lang);
   const [copySource, setCopySource] = useState<string | null>(null);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const { toast } = useToast();
@@ -158,10 +163,10 @@ export function EmployeeSchedule({
   const copyDay = (sourceDay: string) => {
     setCopySource(sourceDay);
     toast({
-      title: 'Día copiado',
-      description: `Selecciona otro día para copiar el horario de ${getDayLabel(
-        sourceDay
-      )}`,
+      title: t('employee.schedule.messages.copied'),
+      description: `${t(
+        'employee.schedule.messages.copyDescription'
+      )} ${getDayLabel(sourceDay)}`,
     });
   };
 
@@ -181,10 +186,12 @@ export function EmployeeSchedule({
 
     onChange(newSchedule);
     toast({
-      title: 'Horario pegado',
-      description: `Se copió el horario de ${getDayLabel(
-        copySource
-      )} a ${getDayLabel(targetDay)}`,
+      title: t('employee.schedule.messages.pasted'),
+      description: `${t(
+        'employee.schedule.messages.pasteDescription'
+      )} ${getDayLabel(copySource)} ${t(
+        'employee.schedule.messages.to'
+      )} ${getDayLabel(targetDay)}`,
     });
 
     setCopySource(null);
@@ -194,8 +201,7 @@ export function EmployeeSchedule({
 
   // Obtener etiqueta del día a partir del ID
   const getDayLabel = (dayId: string): string => {
-    const day = DAYS.find((d) => d.id === dayId);
-    return day ? day.label : dayId;
+    return t(`employee.schedule.days.${dayId}`);
   };
 
   // Verificar si hay error en un bloque de tiempo
@@ -245,19 +251,19 @@ export function EmployeeSchedule({
   };
 
   return (
-    <div className="space-y-2">
+    <div className='space-y-2'>
       {/* Resumen de horarios */}
-      <div className="flex justify-between items-center mb-3 px-1">
-        <div className="text-sm text-white/70">{getScheduleSummary()}</div>
+      <div className='flex justify-between items-center mb-3 px-1'>
+        <div className='text-sm text-white/70'>{getScheduleSummary()}</div>
         {copySource && (
-          <div className="text-sm text-blue-400 flex items-center gap-1">
+          <div className='text-sm text-blue-400 flex items-center gap-1'>
             <span>Copiando {getDayLabel(copySource)}</span>
             <Button
-              type="button"
-              size="sm"
-              variant="ghost"
+              type='button'
+              size='sm'
+              variant='ghost'
               onClick={() => setCopySource(null)}
-              className="h-6 px-2 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+              className='h-6 px-2 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10'
             >
               Cancelar
             </Button>
@@ -266,7 +272,7 @@ export function EmployeeSchedule({
       </div>
 
       {/* Lista vertical de días de la semana */}
-      <div className="space-y-2">
+      <div className='space-y-2'>
         {DAYS.map((day) => {
           const hasSchedule = schedule[day.id]?.length > 0;
           const isExpanded = expandedDay === day.id;
@@ -298,7 +304,7 @@ export function EmployeeSchedule({
                   }
                 }}
               >
-                <div className="flex items-center gap-2">
+                <div className='flex items-center gap-2'>
                   <h3
                     className={`font-medium ${
                       hasSchedule ? 'text-white' : 'text-white/70'
@@ -307,72 +313,72 @@ export function EmployeeSchedule({
                     {day.label}
                   </h3>
                   {hasSchedule && (
-                    <div className="text-sm text-white/60">
+                    <div className='text-sm text-white/60'>
                       {schedule[day.id].length}{' '}
                       {schedule[day.id].length === 1 ? 'horario' : 'horarios'}
                     </div>
                   )}
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className='flex items-center gap-1'>
                   {/* Botones de acciones */}
                   {copySource === day.id ? (
                     <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
+                      type='button'
+                      size='icon'
+                      variant='ghost'
                       onClick={(e) => {
                         e.stopPropagation();
                         setCopySource(null);
                       }}
-                      className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+                      className='h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10'
                     >
-                      <Check className="h-4 w-4" />
+                      <Check className='h-4 w-4' />
                     </Button>
                   ) : (
                     <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
+                      type='button'
+                      size='icon'
+                      variant='ghost'
                       onClick={(e) => {
                         e.stopPropagation();
                         copyDay(day.id);
                       }}
-                      className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10"
+                      className='h-8 w-8 text-white/60 hover:text-white hover:bg-white/10'
                       disabled={!hasSchedule}
                     >
-                      <Copy className="h-4 w-4" />
+                      <Copy className='h-4 w-4' />
                     </Button>
                   )}
 
                   <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
+                    type='button'
+                    size='icon'
+                    variant='ghost'
                     onClick={(e) => {
                       e.stopPropagation();
                       addTimeBlock(day.id);
                     }}
-                    className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10"
+                    className='h-8 w-8 text-white/60 hover:text-white hover:bg-white/10'
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className='h-4 w-4' />
                   </Button>
 
                   {hasSchedule && (
                     <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
+                      type='button'
+                      size='icon'
+                      variant='ghost'
                       onClick={(e) => {
                         e.stopPropagation();
                         setExpandedDay(isExpanded ? null : day.id);
                       }}
-                      className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10"
+                      className='h-8 w-8 text-white/60 hover:text-white hover:bg-white/10'
                     >
                       {isExpanded ? (
-                        <ChevronUp className="h-4 w-4" />
+                        <ChevronUp className='h-4 w-4' />
                       ) : (
-                        <ChevronDown className="h-4 w-4" />
+                        <ChevronDown className='h-4 w-4' />
                       )}
                     </Button>
                   )}
@@ -387,9 +393,9 @@ export function EmployeeSchedule({
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
+                    className='overflow-hidden'
                   >
-                    <div className="p-3 pt-0 space-y-2 border-t border-white/10">
+                    <div className='p-3 pt-0 space-y-2 border-t border-white/10'>
                       {schedule[day.id].map((block) => {
                         const error = getTimeBlockError(day.id, block.id);
 
@@ -405,13 +411,13 @@ export function EmployeeSchedule({
                                 : 'bg-white/10'
                             }`}
                           >
-                            <div className="flex-grow grid grid-cols-2 gap-3">
+                            <div className='flex-grow grid grid-cols-2 gap-3'>
                               <div>
-                                <div className="text-xs text-white/60 mb-1">
-                                  Hora inicio
-                                </div>
+                                <label className='text-sm text-white/60 mb-1 block'>
+                                  {t('employee.schedule.time.start')}
+                                </label>
                                 <input
-                                  type="time"
+                                  type='time'
                                   value={block.startTime}
                                   onChange={(e) =>
                                     updateTimeBlock(
@@ -421,15 +427,15 @@ export function EmployeeSchedule({
                                       e.target.value
                                     )
                                   }
-                                  className="bg-white/10 border border-white/20 rounded p-2 text-sm text-white w-full"
+                                  className='w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-white'
                                 />
                               </div>
                               <div>
-                                <div className="text-xs text-white/60 mb-1">
-                                  Hora fin
-                                </div>
+                                <label className='text-sm text-white/60 mb-1 block'>
+                                  {t('employee.schedule.time.end')}
+                                </label>
                                 <input
-                                  type="time"
+                                  type='time'
                                   value={block.endTime}
                                   onChange={(e) =>
                                     updateTimeBlock(
@@ -439,18 +445,18 @@ export function EmployeeSchedule({
                                       e.target.value
                                     )
                                   }
-                                  className="bg-white/10 border border-white/20 rounded p-2 text-sm text-white w-full"
+                                  className='w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-white'
                                 />
                               </div>
                             </div>
                             <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
+                              type='button'
+                              size='icon'
+                              variant='ghost'
                               onClick={() => removeTimeBlock(day.id, block.id)}
-                              className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                              className='h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-400/10'
                             >
-                              <Trash className="h-4 w-4" />
+                              <Trash className='h-4 w-4' />
                             </Button>
                           </motion.div>
                         );
@@ -458,12 +464,12 @@ export function EmployeeSchedule({
 
                       {/* Botón para añadir otro horario */}
                       <Button
-                        type="button"
-                        variant="ghost"
+                        type='button'
+                        variant='ghost'
                         onClick={() => addTimeBlock(day.id)}
-                        className="w-full text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 border border-dashed border-blue-400/30"
+                        className='w-full text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 border border-dashed border-blue-400/30'
                       >
-                        <Plus className="h-4 w-4 mr-2" />
+                        <Plus className='h-4 w-4 mr-2' />
                         Añadir otro horario
                       </Button>
                     </div>
@@ -473,17 +479,17 @@ export function EmployeeSchedule({
 
               {/* Mostrar botón para añadir horario si no hay ninguno */}
               {!hasSchedule && (
-                <div className="p-3 text-center">
+                <div className='p-3 text-center'>
                   <Button
-                    type="button"
-                    variant="ghost"
+                    type='button'
+                    variant='ghost'
                     onClick={(e) => {
                       e.stopPropagation();
                       addTimeBlock(day.id);
                     }}
-                    className="w-full text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+                    className='w-full text-blue-400 hover:text-blue-300 hover:bg-blue-400/10'
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className='h-4 w-4 mr-2' />
                     Añadir horario
                   </Button>
                 </div>

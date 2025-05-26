@@ -9,8 +9,15 @@ import {
   getRestaurantReviews,
 } from '../../services/api';
 import { getSelectedRestaurant } from '../../lib/restaurantStore';
+import { useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '../../i18n/config';
 
-export function CalendarContent() {
+interface Props {
+  lang: SupportedLang;
+}
+
+export function CalendarContent({ lang }: Props) {
+  const t = useTranslations(lang);
   const [displayDate, setDisplayDate] = useState(new Date());
   const [reviews, setReviews] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
@@ -50,7 +57,7 @@ export function CalendarContent() {
         const restaurantData = selectedRestaurant
           ? selectedRestaurant
           : await getRestaurantByFirebaseUID(auth.currentUser.uid);
-        if (!restaurantData) throw new Error('No se encontró el restaurante');
+        if (!restaurantData) throw new Error(t('error.noRestaurantFound'));
         const reviewsData = await getRestaurantReviews(
           restaurantData.documentId
         );
@@ -62,11 +69,14 @@ export function CalendarContent() {
       }
     };
     fetchReviews();
-  }, [selectedRestaurant]);
+  }, [selectedRestaurant, t]);
 
   const year = displayDate.getFullYear();
   const month = displayDate.getMonth();
-  const monthName = displayDate.toLocaleString('es-ES', { month: 'long' });
+  const monthName = displayDate.toLocaleString(
+    lang === 'es' ? 'es-ES' : 'en-US',
+    { month: 'long' }
+  );
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startDay = new Date(year, month, 1).getDay();
 
@@ -104,67 +114,67 @@ export function CalendarContent() {
   };
 
   return (
-    <div className="p-6">
-      <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Calendario</h1>
+    <div className='p-6'>
+      <header className='flex justify-between items-center mb-6'>
+        <h1 className='text-2xl font-bold text-white'>{t('calendar.title')}</h1>
         {/*        <Button variant="primary">
           <Plus className="mr-2 h-4 w-4" />
-          Nuevo evento
+          {t('calendar.newEvent')}
         </Button> */}
       </header>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 bg-white/10 border-0">
+      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+        <Card className='lg:col-span-2 bg-white/10 border-0'>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-white capitalize">{`${monthName} ${year}`}</CardTitle>
-              <div className="flex gap-2">
+            <div className='flex items-center justify-between'>
+              <CardTitle className='text-white capitalize'>{`${monthName} ${year}`}</CardTitle>
+              <div className='flex gap-2'>
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white"
+                  variant='ghost'
+                  size='icon'
+                  className='text-white'
                   onClick={handlePrevMonth}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className='h-4 w-4' />
                 </Button>
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white"
+                  variant='ghost'
+                  size='icon'
+                  className='text-white'
                   onClick={handleNextMonth}
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className='h-4 w-4' />
                 </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-7 gap-1">
-              {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
-                <div key={day} className="p-2 text-center text-white/60">
+            <div className='grid grid-cols-7 gap-1'>
+              {t('calendar.weekDays').map((day: string) => (
+                <div key={day} className='p-2 text-center text-white/60'>
                   {day}
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-7 gap-1 mt-2">
+            <div className='grid grid-cols-7 gap-1 mt-2'>
               {calendarCells.map((cell, index) => {
                 if (cell === null) {
-                  return <div key={index} className="aspect-square p-2"></div>;
+                  return <div key={index} className='aspect-square p-2'></div>;
                 }
                 const eventCount = getEventCountForDay(cell);
                 const reviewCount = getReviewCountForDay(cell);
                 return (
                   <div
                     key={index}
-                    className="relative aspect-square p-2 border border-white/10 rounded-lg text-white hover:bg-white/5 cursor-pointer"
+                    className='relative aspect-square p-2 border border-white/10 rounded-lg text-white hover:bg-white/5 cursor-pointer'
                   >
-                    <div className="text-center">{cell}</div>
+                    <div className='text-center'>{cell}</div>
                     {eventCount > 0 && (
-                      <span className="absolute top-1 right-1 bg-blue-500 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+                      <span className='absolute top-1 right-1 bg-blue-500 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center'>
                         {eventCount}
                       </span>
                     )}
                     {reviewCount > 0 && (
-                      <span className="absolute top-1 left-1 bg-red-500 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+                      <span className='absolute top-1 left-1 bg-red-500 text-white text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center'>
                         {reviewCount}
                       </span>
                     )}
@@ -176,12 +186,12 @@ export function CalendarContent() {
         </Card>
         {/*         <Card className="bg-white/10 border-0">
           <CardHeader>
-            <CardTitle className="text-white">Próximos eventos</CardTitle>
+            <CardTitle className="text-white">{t('calendar.upcomingEvents')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="text-white/60 text-center py-8">
-                Sin eventos próximos.
+                {t('calendar.noUpcomingEvents')}
               </div>
             </div>
           </CardContent>

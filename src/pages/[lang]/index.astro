@@ -1,0 +1,358 @@
+---
+import HomeLayout from '../../layouts/HomeLayout.astro';
+import { 
+  ChartBarIcon, 
+  ChatBubbleBottomCenterTextIcon,
+  BoltIcon,
+  StarIcon,
+  ArrowRightIcon,
+  Bars3Icon,
+  XMarkIcon
+} from '@heroicons/react/24/outline';
+import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/card';
+import { Heading } from '@/components/ui/heading';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
+import { getLangFromUrl, useTranslations } from '../../i18n/config';
+import type { ComponentType } from 'react';
+import type { SVGProps } from 'react';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+// Types
+interface Feature {
+  title: string;
+  description: string;
+  icon: HeroIcon;
+}
+
+interface Testimonial {
+  rating: number;
+  content: string;
+  author: {
+    name: string;
+    role: string;
+    company: string;
+    image: string;
+  };
+}
+
+interface Step {
+  number: number;
+  title: string;
+  description: string;
+}
+
+type HeroIcon = ComponentType<SVGProps<SVGSVGElement>>;
+
+// Data for sections
+const features: Feature[] = [
+  {
+    title: t('features.realTimeFeedback.title'),
+    description: t('features.realTimeFeedback.description'),
+    icon: ChatBubbleBottomCenterTextIcon as HeroIcon
+  },
+  {
+    title: t('features.detailedAnalysis.title'),
+    description: t('features.detailedAnalysis.description'),
+    icon: ChartBarIcon as HeroIcon
+  },
+  {
+    title: t('features.quickResponse.title'),
+    description: t('features.quickResponse.description'),
+    icon: BoltIcon as HeroIcon
+  }
+];
+
+const testimonials: Testimonial[] = [
+  {
+    rating: 5,
+    content: "Yuppie ha revolucionado la forma en que manejamos nuestras reseñas. Nuestro rating promedio subió de 4.2 a 4.8 en solo tres meses.",
+    author: {
+      name: "María González",
+      role: t('testimonials.role'),
+      company: "Restaurante El Sabor",
+      image: "/testimonial-1.jpg"
+    }
+  },
+  {
+    rating: 5,
+    content: "La plataforma es intuitiva y los insights que obtenemos son invaluables para mejorar nuestro servicio.",
+    author: {
+      name: "Carlos Ruiz",
+      role: t('testimonials.role'),
+      company: "Hotel Vista Mar",
+      image: "/testimonial-2.jpg"
+    }
+  },
+  {
+    rating: 5,
+    content: "El soporte al cliente es excepcional y las actualizaciones constantes mejoran la plataforma cada vez más.",
+    author: {
+      name: "Ana Martínez",
+      role: t('testimonials.role'),
+      company: "Café La Esquina",
+      image: "/testimonial-3.jpg"
+    }
+  }
+];
+
+const steps: Step[] = [
+  {
+    number: 1,
+    title: t('howItWorks.step1.title'),
+    description: t('howItWorks.step1.description')
+  },
+  {
+    number: 2,
+    title: t('howItWorks.step2.title'),
+    description: t('howItWorks.step2.description')
+  },
+  {
+    number: 3,
+    title: t('howItWorks.step3.title'),
+    description: t('howItWorks.step3.description')
+  }
+];
+---
+
+<HomeLayout title="Yuppie - Mejora la experiencia de tus clientes">
+  <!-- Particles Background -->
+  <div class="fixed inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-to-b from-black via-blue-900/20 to-black"></div>
+    <div id="particles-js" class="absolute inset-0"></div>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="fixed inset-0 bg-black/90 backdrop-blur-lg z-50 hidden lg:hidden">
+    <div class="container mx-auto px-4 py-8">
+      <button id="close-menu" class="absolute top-6 right-6 text-white">
+        <XMarkIcon className="w-8 h-8" />
+      </button>
+      <div class="mb-8 text-center">
+        <a href={`/${lang}`}>
+          <img 
+            src="/logo_grande.png" 
+            alt="Yuppie Logo" 
+            class="h-10 mx-auto" 
+            width="160"
+            height="40"
+          />
+        </a>
+      </div>
+      <nav class="flex flex-col space-y-6 text-center mt-2">
+        <a href="#caracteristicas" class="text-2xl text-white hover:text-blue-400 transition-colors">
+          {t('nav.features')}
+        </a>
+        <a href="#como-funciona" class="text-2xl text-white hover:text-blue-400 transition-colors">
+          {t('nav.howItWorks')}
+        </a>
+        <a href="#demo" class="text-2xl text-white hover:text-blue-400 transition-colors">
+          {t('nav.bookDemo')}
+        </a>
+        <div class="pt-6 flex flex-col space-y-4">
+          <a href="https://calendly.com/matigarfio/30min" target="_blank" rel="noopener noreferrer">
+            <Button variant="primary" size="lg">
+              {t('button.startFree')}
+            </Button>
+          </a>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="fixed w-full z-40 transition-all duration-300" id="header">
+    <div class="container mx-auto px-4 h-20 flex items-center justify-between">
+      <a href={`/${lang}`} class="flex items-center space-x-2">
+        <img 
+          src="/logo_grande.png" 
+          alt="Yuppie Logo" 
+          class="h-8 w-auto"
+          width="128"
+          height="32"
+        />
+      </a>
+  
+      <nav class="hidden lg:flex items-center space-x-8">
+        <a href="#caracteristicas" class="text-white/80 transition-transform duration-300 hover:text-white hover:-translate-y-1">
+          {t('nav.features')}
+        </a>
+        <a href="#como-funciona" class="text-white/80 transition-transform duration-300 hover:text-white hover:-translate-y-1">
+          {t('nav.howItWorks')}
+        </a>
+        <a href="#demo" class="text-white/80 transition-transform duration-300 hover:text-white hover:-translate-y-1">
+          {t('nav.bookDemo')}
+        </a>
+      </nav>
+  
+      <div class="hidden lg:flex items-center space-x-4">
+        <LanguageSwitcher client:load currentLang={lang} />
+        <Button asChild variant="primary" size="lg">
+          <a href="https://calendly.com/matigarfio/30min" target="_blank" rel="noopener noreferrer">
+            {t('button.startDemo')}
+          </a>
+        </Button>
+      </div>
+  
+      <button id="open-menu" class="lg:hidden text-white">
+        <Bars3Icon className="w-8 h-8" />
+      </button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="min-h-screen flex flex-col items-center pt-20 relative overflow-hidden">
+    <div class="container mx-auto px-4 flex flex-col items-center justify-center flex-1 mt-20" data-aos="fade-up" data-aos-duration="1000">
+      <div class="text-center">
+        <Heading as="h1" size="7xl" className="mb-6 tracking-tight">
+          <span class="text-gradient">Revoluciona</span> la Experiencia de tus Clientes
+        </Heading>
+        <p class="text-xl lg:text-2xl text-white/80 mb-8 max-w-3xl mx-auto">
+          Obtén feedback en tiempo real y transforma la satisfacción de tus clientes con nuestra plataforma inteligente
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+          <Button asChild variant="primary" size="lg">
+            <a href="https://calendly.com/matigarfio/30min" target="_blank" rel="noopener noreferrer">
+              {t('button.startFree')}
+            </a>
+          </Button>
+        </div>
+      </div>
+    </div>
+  
+    <div class="w-full flex justify-center mb-10" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200">
+      <div class="relative max-w-3xl w-full">
+        <div class="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-purple-500/30 blur-3xl"></div>
+        <img 
+          src="/dashboard_preview.png" 
+          alt="Yuppie Dashboard" 
+          class="relative rounded-lg shadow-2xl animate-float"
+          loading="lazy"
+          width="1200"
+          height="800"
+        />
+      </div>
+    </div>
+  
+    <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent"></div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="caracteristicas" class="py-20 relative">
+    <div class="container mx-auto px-4">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl lg:text-5xl font-bold mb-6">
+          {t('nav.features')}
+        </h2>
+        <p class="text-xl text-white/80">
+          {t('features.description')}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {features.map((feature) => (
+          <Card key={feature.title} className="p-6">
+            <div class="flex items-center mb-4">
+              <feature.icon className="w-8 h-8 text-blue-500" />
+            </div>
+            <h3 class="text-xl font-semibold mb-2">{feature.title}</h3>
+            <p class="text-white/70">{feature.description}</p>
+          </Card>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- How it Works Section -->
+  <section id="como-funciona" class="py-20 relative">
+    <div class="container mx-auto px-4">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl lg:text-5xl font-bold mb-6">
+          {t('nav.howItWorks')}
+        </h2>
+        <p class="text-xl text-white/80">
+          {t('howItWorks.description')}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {steps.map((step) => (
+          <Card key={step.number} className="p-6">
+            <div class="flex items-center mb-4">
+              <span class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                {step.number}
+              </span>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">{step.title}</h3>
+            <p class="text-white/70">{step.description}</p>
+          </Card>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section id="testimonios" class="py-20 relative">
+    <div class="container mx-auto px-4">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl lg:text-5xl font-bold mb-6">
+          {t('testimonials.title')}
+        </h2>
+        <p class="text-xl text-white/80">
+          {t('testimonials.description')}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {testimonials.map((testimonial) => (
+          <Card key={testimonial.author.name} className="p-6">
+            <div class="flex items-center mb-4">
+              {Array.from({ length: testimonial.rating }).map((_, i) => (
+                <StarIcon key={i} className="w-5 h-5 text-yellow-400" />
+              ))}
+            </div>
+            <p class="text-white/70 mb-4">{testimonial.content}</p>
+            <div class="flex items-center">
+              <img
+                src={testimonial.author.image}
+                alt={testimonial.author.name}
+                class="w-12 h-12 rounded-full mr-4"
+              />
+              <div>
+                <h4 class="font-semibold">{testimonial.author.name}</h4>
+                <p class="text-white/70 text-sm">
+                  {testimonial.author.role} - {testimonial.author.company}
+                </p>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section id="demo" class="py-20 relative">
+    <div class="container mx-auto px-4">
+      <div class="text-center max-w-3xl mx-auto">
+        <h2 class="text-3xl lg:text-5xl font-bold mb-6">
+          {t('cta.title')}
+        </h2>
+        <p class="text-xl text-white/80 mb-8">
+          {t('cta.description')}
+        </p>
+        <Button asChild variant="primary" size="lg">
+          <a href="https://calendly.com/matigarfio/30min" target="_blank" rel="noopener noreferrer">
+            {t('button.startDemo')}
+          </a>
+        </Button>
+      </div>
+    </div>
+  </section>
+</HomeLayout>
+
+<script>
+  // Your existing JavaScript code...
+</script> 

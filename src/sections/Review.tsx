@@ -17,9 +17,10 @@ import { validateEmail } from '@/utils/validation';
 import useLoading from '@/hooks/useLoading';
 import { incrementTapsForEmployee } from '@/services/api/employees';
 import InstagramIcon from '@/components/icons/InstagramIcon';
-import { commentOptions } from '@/data/Reviews';
+import { getCommentOptions } from '@/data/Reviews';
 import ErrorModal from '@/components/ui/Modal';
 import emailjs from '@emailjs/browser';
+import { useTranslations, type SupportedLang } from '../i18n/config';
 
 type Pages = 'rating' | 'improvement' | 'comment' | 'thanks';
 
@@ -41,6 +42,12 @@ export default function Review({ restaurant, employee }: Props) {
   const [emailError, setEmailError] = useState('');
   const [error, setError] = useState({ type: '', message: '' });
   const { loading, startLoading, stopLoading } = useLoading();
+  // Obtener el idioma desde la URL
+  const lang =
+    typeof window !== 'undefined'
+      ? window.location.pathname.split('/')[1]
+      : 'en';
+  const t = useTranslations(lang as SupportedLang);
 
   useEffect(() => {
     const alreadyVisited = localStorage.getItem(
@@ -78,10 +85,10 @@ export default function Review({ restaurant, employee }: Props) {
 
   useEffect(() => {
     setSendButtonDisabled(
-      (improvement === 'Otra' && customComment.length < 10) ||
-        (improvement !== 'Otra' && comment === '') ||
-        (improvement !== 'Otra' &&
-          comment === 'otro' &&
+      (improvement === 'other' && customComment.length < 10) ||
+        (improvement !== 'other' && comment === '') ||
+        (improvement !== 'other' &&
+          comment === 'other' &&
           customComment.length < 10)
     );
   }, [customComment, comment, improvement]);
@@ -107,7 +114,13 @@ export default function Review({ restaurant, employee }: Props) {
   const handleImprovementSelect = useCallback(
     (improvement: ImprovementValue) => {
       setImprovement(improvement);
-      setShowCustomComment(improvement === 'Otra');
+      if (improvement === 'other') {
+        setShowCustomComment(true);
+        setComment('other');
+      } else {
+        setShowCustomComment(false);
+        setComment('');
+      }
       setPage('comment');
     },
     []
@@ -115,7 +128,7 @@ export default function Review({ restaurant, employee }: Props) {
 
   const handleCommentSubmit = useCallback((comment: CommentValue) => {
     setComment(comment);
-    setShowCustomComment(comment === 'otro');
+    setShowCustomComment(comment === 'other');
   }, []);
 
   const handleCustomCommentChange = useCallback(
@@ -186,7 +199,7 @@ export default function Review({ restaurant, employee }: Props) {
       if (googleReview) {
         commentToSend = 'Google Review: 5 estrellas. Review enviada a Google!';
       } else if (comment) {
-        const commentOption = commentOptions[
+        const commentOption = getCommentOptions(lang as SupportedLang)[
           improvement as CommentCategory
         ].find((option: CommentOption) => option.id === comment);
         commentToSend = `${commentOption?.icon} ${commentOption?.label}`;
@@ -303,7 +316,7 @@ export default function Review({ restaurant, employee }: Props) {
           page === 'rating' || page === 'thanks' ? 'opacity-0' : 'opacity-100'
         }`}
       >
-        <ArrowLeftIcon className='w-4 h-4' /> Back
+        <ArrowLeftIcon className='w-4 h-4' /> {t('button.back')}
       </span>
       <div
         className={`flex items-center gap-6 h-fit transition-transform duration-300 ease-in-out ${
@@ -318,21 +331,27 @@ export default function Review({ restaurant, employee }: Props) {
       >
         <div className='card p-6 min-w-full flex flex-col gap-6'>
           <h2 className='text-2xl font-semibold text-center'>
-            Califica tu experiencia
+            {t('feedback.title')}
           </h2>
           <div className='emoji-container'>
-            <RatingForm onClick={handleRatingSelect} />
+            <RatingForm
+              onClick={handleRatingSelect}
+              lang={lang as SupportedLang}
+            />
           </div>
         </div>
         <div className='card p-6 min-w-full flex flex-col gap-6'>
           <h2 className='text-2xl font-semibold text-center'>
-            ¿En qué podríamos mejorar?
+            {t('feedback.improvements.title')}
           </h2>
-          <ImprovementForm onClick={handleImprovementSelect} />
+          <ImprovementForm
+            onClick={handleImprovementSelect}
+            lang={lang as SupportedLang}
+          />
         </div>
         <div className='card p-6 min-w-full flex flex-col gap-6'>
           <h2 className='text-2xl font-semibold text-center'>
-            Déjanos tu comentario
+            {t('feedback.commentTitle')}
           </h2>
           <CommentForm
             comment={comment}
@@ -343,12 +362,13 @@ export default function Review({ restaurant, employee }: Props) {
             onClick={handleCommentSubmit}
             minLength={10}
             maxLength={500}
+            lang={lang as SupportedLang}
           />
           <div className='w-full relative'>
             <input
               type='email'
               name='email'
-              placeholder='Tu email'
+              placeholder={t('contact.emailPlaceholder')}
               onChange={handleChangeEmail}
               value={email}
               required
@@ -371,15 +391,14 @@ export default function Review({ restaurant, employee }: Props) {
                 type='button'
                 className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center'
                 onClick={clearEmail}
-                aria-label='Borrar email'
+                aria-label={t('button.cancel')}
               >
                 ✕
               </button>
             )}
           </div>
           <p className='text-sm text-gray-400 italic text-center'>
-            Ingresa tu email para recibir descuentos exclusivos y recompensas
-            especiales
+            {t('feedback.emailInfo')}
           </p>
           <button
             type='submit'
@@ -391,12 +410,12 @@ export default function Review({ restaurant, employee }: Props) {
                 : 'hover:bg-gray-100 hover:scale-[1.01] active:scale-[0.99]'
             }`}
           >
-            {loading ? 'Enviando...' : 'Enviar'}
+            {loading ? t('button.loading') : t('button.submit')}
           </button>
         </div>
         <div className='card p-6 min-w-full flex flex-col gap-6'>
           <h2 className='text-3xl font-bold text-white text-center'>
-            ¡Gracias por ayudarnos a mejorar!
+            {t('feedback.thankYou')}
           </h2>
           <p className='text-lg text-gray-200 text-center'>
             Tu opinión es muy valiosa para nosotros y nos ayuda a ofrecer una

@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { auth } from '../../lib/firebase';
 import { getRestaurantByFirebaseUID } from '../../services/api';
+import { useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '../../i18n/config';
 
 interface Objective {
   id: string;
@@ -40,7 +42,12 @@ interface Objective {
   restaurantId: string;
 }
 
-export function ObjectivesContent() {
+interface Props {
+  lang: SupportedLang;
+}
+
+export function ObjectivesContent({ lang }: Props) {
+  const t = useTranslations(lang);
   const [objectives, setObjectives] = useState<Objective[]>([]);
   const [loading, setLoading] = useState(true);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
@@ -60,36 +67,36 @@ export function ObjectivesContent() {
         const restaurantData = await getRestaurantByFirebaseUID(
           auth.currentUser.uid
         );
-        if (!restaurantData) throw new Error('No restaurant found');
+        if (!restaurantData) throw new Error(t('error.noRestaurantFound'));
 
         setRestaurantId(restaurantData.documentId);
         // Aquí irá la llamada a la API para obtener los objetivos cuando la implementes
         setObjectives([
           {
             id: '1',
-            name: 'Aumentar calificación promedio',
+            name: t('objectives.sample.title1'),
             meta: 4.8,
             actual: 4.5,
-            categoria: 'Calidad',
+            categoria: t('objectives.categories.quality'),
             endDate: '2024-12-31',
             restaurantId: restaurantData.documentId,
           },
           {
             id: '2',
-            name: 'Incrementar reseñas mensuales',
+            name: t('objectives.sample.title2'),
             meta: 100,
             actual: 75,
-            categoria: 'Engagement',
+            categoria: t('objectives.categories.engagement'),
             endDate: '2024-12-31',
             restaurantId: restaurantData.documentId,
           },
         ]);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error(t('error.loadingObjectives'), error);
         toast({
           variant: 'destructive',
-          title: 'Error',
-          description: 'No se pudieron cargar los objetivos',
+          title: t('error.title'),
+          description: t('error.loadingObjectives'),
         });
       } finally {
         setLoading(false);
@@ -97,7 +104,7 @@ export function ObjectivesContent() {
     };
 
     fetchData();
-  }, [toast]);
+  }, [toast, t]);
 
   const handleNewObjective = () => {
     if (
@@ -108,8 +115,8 @@ export function ObjectivesContent() {
     ) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Por favor completa todos los campos',
+        title: t('error.title'),
+        description: t('objectives.error.incompleteFields'),
       });
       return;
     }
@@ -128,8 +135,8 @@ export function ObjectivesContent() {
     setObjectives([...objectives, objective]);
     setNewObjective({ name: '', meta: '', categoria: '', endDate: '' });
     toast({
-      title: 'Éxito',
-      description: 'Objetivo creado correctamente',
+      title: t('success.title'),
+      description: t('objectives.success.created'),
     });
   };
 
@@ -137,93 +144,96 @@ export function ObjectivesContent() {
     // Aquí irá la llamada a la API para eliminar el objetivo cuando la implementes
     setObjectives(objectives.filter((obj) => obj.id !== id));
     toast({
-      title: 'Éxito',
-      description: 'Objetivo eliminado correctamente',
+      title: t('success.title'),
+      description: t('objectives.success.deleted'),
     });
   };
 
   if (loading) {
-    return (
-      <div className="p-8">
-        <div className="animate-pulse text-white">Cargando objetivos...</div>
-      </div>
-    );
+    return <div className='p-6'>{t('objectives.loading')}</div>;
   }
 
   return (
-    <div className="p-8">
-      <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Objetivos del Negocio</h1>
+    <div className='p-6'>
+      <header className='flex justify-between items-center mb-6'>
+        <h1 className='text-2xl font-bold text-white'>
+          {t('objectives.title')}
+        </h1>
       </header>
 
-      <Tabs defaultValue="current" className="space-y-6">
-        <TabsList className="bg-white/10">
-          <TabsTrigger
-            value="current"
-            className="data-[state=active]:bg-white/20"
-          >
-            Objetivos Actuales
+      <Tabs defaultValue='current' className='space-y-4'>
+        <TabsList>
+          <TabsTrigger value='current'>
+            {t('objectives.tabs.current')}
           </TabsTrigger>
-          <TabsTrigger value="new" className="data-[state=active]:bg-white/20">
-            Nuevo Objetivo
-          </TabsTrigger>
+          <TabsTrigger value='new'>{t('objectives.tabs.new')}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="current">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <TabsContent value='current'>
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
             {objectives.map((objective) => (
-              <Card key={objective.id} className="bg-white/10 border-0">
+              <Card key={objective.id} className='bg-white/10 border-0'>
                 <CardHeader>
-                  <div className="flex justify-between items-start">
+                  <div className='flex justify-between items-start'>
                     <div>
-                      <CardTitle className="text-white">
+                      <CardTitle className='text-white'>
                         {objective.name}
                       </CardTitle>
-                      <CardDescription className="text-white/60">
+                      <CardDescription className='text-white/60'>
                         {objective.categoria}
                       </CardDescription>
                     </div>
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant='ghost'
+                      size='icon'
                       onClick={() => handleDeleteObjective(objective.id)}
-                      className="text-red-400 hover:text-red-500 hover:bg-red-400/10"
+                      className='text-red-400 hover:text-red-500 hover:bg-red-400/10'
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className='h-4 w-4' />
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className='space-y-4'>
                     <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-white/60">Progreso</span>
-                        <span className="text-white">
-                          {objective.actual} / {objective.meta}
+                      <div className='flex justify-between text-sm mb-2'>
+                        <span className='text-white/60'>
+                          {t('objectives.progress')}
+                        </span>
+                        <span className='text-white/60'>
+                          {Math.round(
+                            (objective.actual / objective.meta) * 100
+                          )}
+                          %
                         </span>
                       </div>
                       <Progress
                         value={(objective.actual / objective.meta) * 100}
-                        className="h-2"
+                        className='h-2'
                       />
                     </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-white/60">Fecha límite</span>
-                      <span className="text-white">
-                        {new Date(objective.endDate).toLocaleDateString()}
-                      </span>
+                    <div className='grid grid-cols-2 gap-4'>
+                      <div>
+                        <p className='text-sm text-white/60'>
+                          {t('objectives.target')}
+                        </p>
+                        <p className='text-white'>{objective.meta}</p>
+                      </div>
+                      <div>
+                        <p className='text-sm text-white/60'>
+                          {t('objectives.current')}
+                        </p>
+                        <p className='text-white'>{objective.actual}</p>
+                      </div>
                     </div>
-                    {objective.actual >= objective.meta ? (
-                      <div className="flex items-center text-green-400 text-sm">
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Objetivo alcanzado
-                      </div>
-                    ) : (
-                      <div className="flex items-center text-yellow-400 text-sm">
-                        <BarChart2 className="mr-2 h-4 w-4" />
-                        En progreso
-                      </div>
-                    )}
+                    <div>
+                      <p className='text-sm text-white/60'>
+                        {t('objectives.endDate')}
+                      </p>
+                      <p className='text-white'>
+                        {new Date(objective.endDate).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -231,67 +241,85 @@ export function ObjectivesContent() {
           </div>
         </TabsContent>
 
-        <TabsContent value="new">
-          <Card className="bg-white/10 border-0">
+        <TabsContent value='new'>
+          <Card className='bg-white/10 border-0'>
             <CardHeader>
-              <CardTitle className="text-white">Crear Nuevo Objetivo</CardTitle>
-              <CardDescription>
-                Define un nuevo objetivo para tu negocio
+              <CardTitle className='text-white'>
+                {t('objectives.new.title')}
+              </CardTitle>
+              <CardDescription className='text-white/60'>
+                {t('objectives.new.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nombre del Objetivo</Label>
+              <div className='space-y-4'>
+                <div className='space-y-2'>
+                  <Label htmlFor='name' className='text-white'>
+                    {t('objectives.new.fields.name')}
+                  </Label>
                   <Input
-                    id="name"
+                    id='name'
                     value={newObjective.name}
                     onChange={(e) =>
                       setNewObjective({ ...newObjective, name: e.target.value })
                     }
-                    placeholder="Ej: Aumentar calificación promedio"
-                    className="bg-white/5 border-white/10"
+                    className='bg-white/10 border-0 text-white'
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="meta">Meta</Label>
+                <div className='space-y-2'>
+                  <Label htmlFor='meta' className='text-white'>
+                    {t('objectives.new.fields.target')}
+                  </Label>
                   <Input
-                    id="meta"
-                    type="number"
+                    id='meta'
+                    type='number'
                     value={newObjective.meta}
                     onChange={(e) =>
                       setNewObjective({ ...newObjective, meta: e.target.value })
                     }
-                    placeholder="Ej: 4.8"
-                    className="bg-white/5 border-white/10"
+                    className='bg-white/10 border-0 text-white'
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="categoria">Categoría</Label>
+                <div className='space-y-2'>
+                  <Label htmlFor='categoria' className='text-white'>
+                    {t('objectives.new.fields.category')}
+                  </Label>
                   <Select
+                    value={newObjective.categoria}
                     onValueChange={(value) =>
                       setNewObjective({ ...newObjective, categoria: value })
                     }
                   >
-                    <SelectTrigger className="bg-white/5 border-white/10">
-                      <SelectValue placeholder="Selecciona una categoría" />
+                    <SelectTrigger className='bg-white/10 border-0 text-white'>
+                      <SelectValue
+                        placeholder={t(
+                          'objectives.new.fields.categoryPlaceholder'
+                        )}
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Calidad">Calidad</SelectItem>
-                      <SelectItem value="Engagement">Engagement</SelectItem>
-                      <SelectItem value="Servicio">Servicio</SelectItem>
-                      <SelectItem value="Fidelización">Fidelización</SelectItem>
+                      <SelectItem value='quality'>
+                        {t('objectives.categories.quality')}
+                      </SelectItem>
+                      <SelectItem value='engagement'>
+                        {t('objectives.categories.engagement')}
+                      </SelectItem>
+                      <SelectItem value='sales'>
+                        {t('objectives.categories.sales')}
+                      </SelectItem>
+                      <SelectItem value='efficiency'>
+                        {t('objectives.categories.efficiency')}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">Fecha límite</Label>
+                <div className='space-y-2'>
+                  <Label htmlFor='endDate' className='text-white'>
+                    {t('objectives.new.fields.endDate')}
+                  </Label>
                   <Input
-                    id="endDate"
-                    type="date"
+                    id='endDate'
+                    type='date'
                     value={newObjective.endDate}
                     onChange={(e) =>
                       setNewObjective({
@@ -299,13 +327,11 @@ export function ObjectivesContent() {
                         endDate: e.target.value,
                       })
                     }
-                    className="bg-white/5 border-white/10"
+                    className='bg-white/10 border-0 text-white'
                   />
                 </div>
-
-                <Button onClick={handleNewObjective} className="w-full mt-4">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Crear Objetivo
+                <Button onClick={handleNewObjective} className='w-full'>
+                  {t('objectives.new.submit')}
                 </Button>
               </div>
             </CardContent>

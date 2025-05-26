@@ -26,6 +26,8 @@ import {
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { getRestaurantByFirebaseUID } from '../../services/api';
+import { useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '../../i18n/config';
 
 interface Improvement {
   id: string;
@@ -46,7 +48,12 @@ interface Improvement {
   restaurantId: string;
 }
 
-export function ImprovementsContent() {
+interface Props {
+  lang: SupportedLang;
+}
+
+export function ImprovementsContent({ lang }: Props) {
+  const t = useTranslations(lang);
   const [improvements, setImprovements] = useState<Improvement[]>([]);
   const [loading, setLoading] = useState(true);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
@@ -65,17 +72,16 @@ export function ImprovementsContent() {
         const restaurantData = await getRestaurantByFirebaseUID(
           auth.currentUser.uid
         );
-        if (!restaurantData) throw new Error('No restaurant found');
+        if (!restaurantData) throw new Error(t('error.noRestaurantFound'));
 
         setRestaurantId(restaurantData.documentId);
         // Aquí irá la llamada a la API para obtener las mejoras cuando la implementes
         setImprovements([
           {
             id: '1',
-            title: 'Implementar sistema de reservas online',
-            description:
-              'Muchos clientes han solicitado poder hacer reservas a través de nuestra página web.',
-            category: 'Tecnología',
+            title: t('improvements.sample.title1'),
+            description: t('improvements.sample.description1'),
+            category: t('improvements.categories.technology'),
             status: 'pending',
             author: {
               name: 'María López',
@@ -91,10 +97,9 @@ export function ImprovementsContent() {
           },
           {
             id: '2',
-            title: 'Ampliar el menú vegetariano',
-            description:
-              'Hemos recibido feedback sobre la falta de opciones vegetarianas.',
-            category: 'Menú',
+            title: t('improvements.sample.title2'),
+            description: t('improvements.sample.description2'),
+            category: t('improvements.categories.menu'),
             status: 'in_review',
             author: {
               name: 'Carlos Rodríguez',
@@ -110,11 +115,11 @@ export function ImprovementsContent() {
           },
         ] as Improvement[]);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error(t('error.loadingImprovements'), error);
         toast({
           variant: 'destructive',
-          title: 'Error',
-          description: 'No se pudieron cargar las mejoras',
+          title: t('error.title'),
+          description: t('error.loadingImprovements'),
         });
       } finally {
         setLoading(false);
@@ -122,7 +127,7 @@ export function ImprovementsContent() {
     };
 
     fetchData();
-  }, [toast]);
+  }, [toast, t]);
 
   const handleNewImprovement = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,8 +138,8 @@ export function ImprovementsContent() {
     ) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Por favor completa todos los campos',
+        title: t('error.title'),
+        description: t('improvements.error.incompleteFields'),
       });
       return;
     }
@@ -147,7 +152,7 @@ export function ImprovementsContent() {
       category: newImprovement.category,
       status: 'pending',
       author: {
-        name: auth?.currentUser?.displayName || 'Usuario',
+        name: auth?.currentUser?.displayName || t('improvements.defaultAuthor'),
         email: auth?.currentUser?.email || '',
       },
       votes: {
@@ -162,8 +167,8 @@ export function ImprovementsContent() {
     setImprovements([...improvements, improvement]);
     setNewImprovement({ title: '', description: '', category: '' });
     toast({
-      title: 'Éxito',
-      description: 'Mejora propuesta correctamente',
+      title: t('success.title'),
+      description: t('improvements.success.proposed'),
     });
   };
 
@@ -185,178 +190,155 @@ export function ImprovementsContent() {
   const getStatusText = (status: Improvement['status']) => {
     switch (status) {
       case 'pending':
-        return 'Pendiente';
+        return t('improvements.status.pending');
       case 'in_review':
-        return 'En revisión';
+        return t('improvements.status.inReview');
       case 'approved':
-        return 'Aprobado';
+        return t('improvements.status.approved');
       case 'rejected':
-        return 'Rechazado';
+        return t('improvements.status.rejected');
       default:
         return status;
     }
   };
 
   if (loading) {
-    return (
-      <div className="p-8">
-        <div className="animate-pulse text-white">Cargando mejoras...</div>
-      </div>
-    );
+    return <div className='p-6'>{t('improvements.loading')}</div>;
   }
 
   return (
-    <div className="p-8">
-      <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Tablero de Mejoras</h1>
+    <div className='p-6'>
+      <header className='flex justify-between items-center mb-6'>
+        <h1 className='text-2xl font-bold text-white'>
+          {t('improvements.title')}
+        </h1>
       </header>
 
-      <Tabs defaultValue="current" className="space-y-6">
-        <TabsList className="bg-white/10">
-          <TabsTrigger
-            value="current"
-            className="data-[state=active]:bg-white/20"
-          >
-            Mejoras Propuestas
-          </TabsTrigger>
-          <TabsTrigger value="new" className="data-[state=active]:bg-white/20">
-            Nueva Propuesta
-          </TabsTrigger>
+      <Tabs defaultValue='list' className='space-y-4'>
+        <TabsList>
+          <TabsTrigger value='list'>{t('improvements.tabs.list')}</TabsTrigger>
+          <TabsTrigger value='new'>{t('improvements.tabs.new')}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="current">
-          <div className="space-y-4">
-            {improvements.map((improvement) => (
-              <Card key={improvement.id} className="bg-white/10 border-0">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <CardTitle className="text-white">
-                        {improvement.title}
-                      </CardTitle>
-                      <CardDescription className="text-white/60">
-                        {improvement.description}
-                      </CardDescription>
-                    </div>
-                    <Badge className={getStatusColor(improvement.status)}>
-                      {getStatusText(improvement.status)}
-                    </Badge>
+        <TabsContent value='list' className='space-y-4'>
+          {improvements.map((improvement) => (
+            <Card key={improvement.id} className='bg-white/10 border-0'>
+              <CardHeader>
+                <div className='flex justify-between items-start'>
+                  <div>
+                    <CardTitle className='text-white'>
+                      {improvement.title}
+                    </CardTitle>
+                    <CardDescription className='text-white/60'>
+                      {improvement.description}
+                    </CardDescription>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Avatar>
-                        <AvatarFallback>
-                          {improvement.author.name[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-white">
-                          {improvement.author.name}
-                        </p>
-                        <p className="text-xs text-white/60">
-                          {new Date(improvement.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-white">
-                      {improvement.category}
-                    </Badge>
+                  <Badge className={getStatusColor(improvement.status)}>
+                    {getStatusText(improvement.status)}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className='flex items-center gap-4 text-white/60'>
+                  <div className='flex items-center'>
+                    <ThumbsUp className='h-4 w-4 mr-1' />
+                    {improvement.votes.up}
                   </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <div className="flex space-x-4">
-                    <Button variant="ghost" size="sm" className="text-white/60">
-                      <ThumbsUp className="mr-2 h-4 w-4" />
-                      {improvement.votes.up}
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-white/60">
-                      <ThumbsDown className="mr-2 h-4 w-4" />
-                      {improvement.votes.down}
-                    </Button>
+                  <div className='flex items-center'>
+                    <ThumbsDown className='h-4 w-4 mr-1' />
+                    {improvement.votes.down}
                   </div>
-                  <Button variant="ghost" size="sm" className="text-white/60">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    {improvement.comments} comentarios
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+                  <div className='flex items-center'>
+                    <MessageSquare className='h-4 w-4 mr-1' />
+                    {improvement.comments}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </TabsContent>
 
-        <TabsContent value="new">
-          <Card className="bg-white/10 border-0">
+        <TabsContent value='new'>
+          <Card className='bg-white/10 border-0'>
             <CardHeader>
-              <CardTitle className="text-white">
-                Proponer Nueva Mejora
+              <CardTitle className='text-white'>
+                {t('improvements.new.title')}
               </CardTitle>
-              <CardDescription>
-                Comparte tu idea para mejorar la experiencia
+              <CardDescription className='text-white/60'>
+                {t('improvements.new.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Título de la Mejora</Label>
+              <form onSubmit={handleNewImprovement} className='space-y-4'>
+                <div className='space-y-2'>
+                  <Label htmlFor='title' className='text-white'>
+                    {t('improvements.new.fields.title')}
+                  </Label>
                   <Input
-                    id="title"
+                    id='title'
                     value={newImprovement.title}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    onChange={(e) =>
                       setNewImprovement({
                         ...newImprovement,
                         title: e.target.value,
                       })
                     }
-                    placeholder="Ej: Implementar sistema de reservas online"
-                    className="bg-white/5 border-white/10"
+                    className='bg-white/10 border-0 text-white'
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descripción</Label>
+                <div className='space-y-2'>
+                  <Label htmlFor='category' className='text-white'>
+                    {t('improvements.new.fields.category')}
+                  </Label>
+                  <Select
+                    value={newImprovement.category}
+                    onValueChange={(value) =>
+                      setNewImprovement({ ...newImprovement, category: value })
+                    }
+                  >
+                    <SelectTrigger className='bg-white/10 border-0 text-white'>
+                      <SelectValue
+                        placeholder={t(
+                          'improvements.new.fields.categoryPlaceholder'
+                        )}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='technology'>
+                        {t('improvements.categories.technology')}
+                      </SelectItem>
+                      <SelectItem value='menu'>
+                        {t('improvements.categories.menu')}
+                      </SelectItem>
+                      <SelectItem value='service'>
+                        {t('improvements.categories.service')}
+                      </SelectItem>
+                      <SelectItem value='facilities'>
+                        {t('improvements.categories.facilities')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className='space-y-2'>
+                  <Label htmlFor='description' className='text-white'>
+                    {t('improvements.new.fields.description')}
+                  </Label>
                   <Textarea
-                    id="description"
+                    id='description'
                     value={newImprovement.description}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    onChange={(e) =>
                       setNewImprovement({
                         ...newImprovement,
                         description: e.target.value,
                       })
                     }
-                    placeholder="Describe tu idea de mejora y cómo beneficiará al negocio..."
-                    className="bg-white/5 border-white/10"
+                    className='bg-white/10 border-0 text-white'
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="category">Categoría</Label>
-                  <Select
-                    onValueChange={(value: string) =>
-                      setNewImprovement({ ...newImprovement, category: value })
-                    }
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/10">
-                      <SelectValue placeholder="Selecciona una categoría" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Tecnología">Tecnología</SelectItem>
-                      <SelectItem value="Menú">Menú</SelectItem>
-                      <SelectItem value="Servicio">
-                        Servicio al Cliente
-                      </SelectItem>
-                      <SelectItem value="Ambiente">Ambiente</SelectItem>
-                      <SelectItem value="Procesos">Procesos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button onClick={handleNewImprovement} className="w-full mt-4">
-                  <Lightbulb className="mr-2 h-4 w-4" />
-                  Proponer Mejora
+                <Button type='submit' className='w-full'>
+                  {t('improvements.new.submit')}
                 </Button>
-              </div>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>

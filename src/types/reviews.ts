@@ -13,45 +13,55 @@ export interface ReviewEmployee {
 
 export type RatingValue = 1 | 2 | 3 | 4 | 5;
 
+export type ImprovementValue =
+  | 'service'
+  | 'food'
+  | 'drinks'
+  | 'atmosphere'
+  | 'other';
+
+// Nuevo: ids válidos para subopciones
+export type CommentOptionId =
+  | 'portionSize'
+  | 'temperature'
+  | 'taste'
+  | 'presentation'
+  | 'variety'
+  | 'musicLoud'
+  | 'lighting'
+  | 'cleanliness'
+  | 'comfort'
+  | 'friendliness'
+  | 'speed'
+  | 'attention'
+  | 'orderAccuracy'
+  | 'price'
+  | 'quality'
+  | 'portion'
+  | 'waitingTime'
+  | 'kindness'
+  | 'order'
+  | 'availability'
+  | 'noise'
+  | 'other';
+
+export type CommentValue = CommentOptionId;
+
+export type CommentCategory = 'service' | 'food' | 'drinks' | 'atmosphere';
+
 export interface RatingOption {
   rating: RatingValue;
   label: string;
 }
 
-export type ImprovementValue =
-  | 'Atención'
-  | 'Comidas'
-  | 'Bebidas'
-  | 'Ambiente'
-  | 'Otra';
-
-export interface ImprovementOption {
-  id: ImprovementValue;
+export interface CommentOption {
+  id: CommentOptionId;
   icon: string;
   label: string;
 }
 
-export type CommentCategory = Exclude<ImprovementValue, 'Otra'>;
-
-export type CommentValue =
-  | 'temperatura'
-  | 'variedad'
-  | 'precio'
-  | 'calidad'
-  | 'otro'
-  | 'sabor'
-  | 'porcion'
-  | 'presentacion'
-  | 'tiempo'
-  | 'amabilidad'
-  | 'pedido'
-  | 'disponibilidad'
-  | 'ruido'
-  | 'limpieza'
-  | 'comodidad';
-
-export interface CommentOption {
-  id: CommentValue;
+export interface ImprovementOption {
+  id: ImprovementValue;
   icon: string;
   label: string;
 }
@@ -60,7 +70,7 @@ export interface Review {
   id: number;
   documentId: string;
   googleSent: boolean;
-  typeImprovement: 'Atención' | 'Comidas' | 'Bebidas' | 'Ambiente' | 'Otra';
+  typeImprovement: CommentCategory;
   email: string;
   date: string;
   comment: string;

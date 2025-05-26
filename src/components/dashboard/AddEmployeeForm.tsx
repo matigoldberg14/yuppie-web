@@ -9,6 +9,8 @@ import { motion } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 import { EmployeeSchedule } from './EmployeeSchedule';
 import type { DaySchedule } from './EmployeeSchedule';
+import { useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '../../i18n/config';
 
 // Tipo para el índice dinámico
 type DayMap = {
@@ -31,6 +33,7 @@ interface AddEmployeeFormProps {
     schedules: WorkSchedule[];
   }) => Promise<void>;
   restaurantId: string;
+  lang: SupportedLang;
   initialData?: {
     documentId: string;
     firstName: string;
@@ -45,8 +48,10 @@ export default function AddEmployeeForm({
   onClose,
   onSubmit,
   restaurantId,
+  lang,
   initialData,
 }: AddEmployeeFormProps) {
+  const t = useTranslations(lang);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [position, setPosition] = useState('');
@@ -151,8 +156,8 @@ export default function AddEmployeeForm({
     );
     if (!hasAnySchedule) {
       toast({
-        title: 'Horario requerido',
-        description: 'El empleado debe tener al menos un horario asignado',
+        title: t('employee.form.schedule.required'),
+        description: t('employee.form.schedule.description'),
         variant: 'destructive',
       });
       return false;
@@ -162,8 +167,10 @@ export default function AddEmployeeForm({
         const blockA = blocks[i];
         if (blockA.startTime >= blockA.endTime) {
           toast({
-            title: 'Horario inválido',
-            description: `En ${day}: La hora de fin debe ser posterior a la de inicio`,
+            title: t('employee.form.schedule.invalid'),
+            description: `${t(
+              'employee.form.schedule.invalidDescription'
+            )} (${day})`,
             variant: 'destructive',
           });
           return false;
@@ -177,8 +184,10 @@ export default function AddEmployeeForm({
               blockB.endTime > blockA.startTime)
           ) {
             toast({
-              title: 'Horarios superpuestos',
-              description: `Hay horarios superpuestos el día ${day}`,
+              title: t('employee.form.schedule.overlap'),
+              description: `${t(
+                'employee.form.schedule.overlapDescription'
+              )} ${day}`,
               variant: 'destructive',
             });
             return false;
@@ -193,33 +202,39 @@ export default function AddEmployeeForm({
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim() || !position.trim()) {
       toast({
-        title: 'Campos requeridos',
-        description: 'Por favor completa todos los campos obligatorios',
+        title: t('employee.form.error.required'),
+        description: t('employee.form.error.description'),
         variant: 'destructive',
       });
       return;
     }
-    if (!validateSchedules()) return;
-    const apiSchedules: WorkSchedule[] = [];
-    Object.entries(schedule).forEach(([day, timeBlocks]) => {
-      timeBlocks.forEach((block) => {
-        apiSchedules.push({
-          day,
-          startTime: block.startTime,
-          endTime: block.endTime,
-        });
-      });
-    });
+
+    if (!validateSchedules()) {
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
+      const schedules = Object.entries(schedule)
+        .filter(([_, blocks]) => blocks.length > 0)
+        .flatMap(([day, blocks]) =>
+          blocks.map((block) => ({
+            day,
+            startTime: block.startTime,
+            endTime: block.endTime,
+          }))
+        );
+
       await onSubmit({
-        firstName,
-        lastName,
-        position,
-        schedules: apiSchedules,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        position: position.trim(),
+        schedules,
       });
-    } catch (err) {
-      // Error handling in onSubmit
+
+      onClose();
+    } catch (error) {
+      console.error('Error submitting form:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -229,40 +244,40 @@ export default function AddEmployeeForm({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-gray-900 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogTitle>
-          {initialData ? 'Editar Empleado' : 'Agregar Nuevo Empleado'}
+      <DialogContent className='bg-gray-900 text-white max-w-3xl max-h-[90vh] overflow-y-auto'>
+        <DialogTitle className='text-xl font-semibold'>
+          {initialData ? t('employee.form.update') : t('employee.form.title')}
         </DialogTitle>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-6">
-              <div className="flex justify-center">
-                <div className="relative">
-                  <div className="h-24 w-24 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
-                    <User className="h-12 w-12 text-white" />
+        <form onSubmit={handleSubmit} className='space-y-6'>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+            <div className='space-y-6'>
+              <div className='flex justify-center'>
+                <div className='relative'>
+                  <div className='h-24 w-24 rounded-full bg-white/20 flex items-center justify-center overflow-hidden'>
+                    <User className='h-12 w-12 text-white' />
                   </div>
                 </div>
               </div>
 
               {/* Input con botón para limpiar */}
               <div>
-                <Label htmlFor="firstName" className="text-white">
-                  Nombre *
+                <Label htmlFor='firstName' className='text-white'>
+                  {t('employee.form.fields.firstName')} *
                 </Label>
-                <div className="relative">
+                <div className='relative'>
                   <Input
-                    id="firstName"
+                    id='firstName'
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="bg-white/10 border-white/20 text-white pr-10"
+                    className='bg-white/10 border-white/20 text-white pr-10'
                     required
                   />
                   {firstName && (
                     <button
-                      type="button"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"
+                      type='button'
+                      className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center'
                       onClick={() => setFirstName('')}
-                      aria-label="Borrar nombre"
+                      aria-label='Borrar nombre'
                     >
                       ✕
                     </button>
@@ -272,23 +287,23 @@ export default function AddEmployeeForm({
 
               {/* Input con botón para limpiar */}
               <div>
-                <Label htmlFor="lastName" className="text-white">
-                  Apellido *
+                <Label htmlFor='lastName' className='text-white'>
+                  {t('employee.form.fields.lastName')} *
                 </Label>
-                <div className="relative">
+                <div className='relative'>
                   <Input
-                    id="lastName"
+                    id='lastName'
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="bg-white/10 border-white/20 text-white pr-10"
+                    className='bg-white/10 border-white/20 text-white pr-10'
                     required
                   />
                   {lastName && (
                     <button
-                      type="button"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"
+                      type='button'
+                      className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center'
                       onClick={() => setLastName('')}
-                      aria-label="Borrar apellido"
+                      aria-label='Borrar apellido'
                     >
                       ✕
                     </button>
@@ -298,23 +313,23 @@ export default function AddEmployeeForm({
 
               {/* Input con botón para limpiar */}
               <div>
-                <Label htmlFor="position" className="text-white">
-                  Cargo *
+                <Label htmlFor='position' className='text-white'>
+                  {t('employee.form.fields.position')} *
                 </Label>
-                <div className="relative">
+                <div className='relative'>
                   <Input
-                    id="position"
+                    id='position'
                     value={position}
                     onChange={(e) => setPosition(e.target.value)}
-                    className="bg-white/10 border-white/20 text-white pr-10"
+                    className='bg-white/10 border-white/20 text-white pr-10'
                     required
                   />
                   {position && (
                     <button
-                      type="button"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center"
+                      type='button'
+                      className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center'
                       onClick={() => setPosition('')}
-                      aria-label="Borrar cargo"
+                      aria-label='Borrar cargo'
                     >
                       ✕
                     </button>
@@ -322,40 +337,44 @@ export default function AddEmployeeForm({
                 </div>
               </div>
             </div>
-            <div className="md:col-span-2 space-y-4">
-              <div className="flex justify-between items-center">
-                <Label className="text-white font-medium">
-                  Horarios de trabajo
+            <div className='md:col-span-2 space-y-4'>
+              <div className='flex justify-between items-center'>
+                <Label className='text-white font-medium'>
+                  {t('employee.form.schedule.title')}
                 </Label>
-                <div className="text-sm text-white/60">
-                  Añade horarios para cada día de la semana
+                <div className='text-sm text-white/60'>
+                  {t('employee.form.schedule.description')}
                 </div>
               </div>
-              <div className="bg-white/5 rounded-lg p-4">
-                <EmployeeSchedule schedule={schedule} onChange={setSchedule} />
+              <div className='bg-white/5 rounded-lg p-4'>
+                <EmployeeSchedule
+                  schedule={schedule}
+                  onChange={setSchedule}
+                  lang={lang}
+                />
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <div className='flex justify-end gap-2 pt-2'>
             <Button
-              type="button"
-              variant="ghost"
+              type='button'
+              variant='ghost'
               onClick={onClose}
-              className="text-white border-white/20 hover:bg-white/10"
+              className='text-white border-white/20 hover:bg-white/10'
               disabled={isSubmitting}
             >
-              Cancelar
+              <X className='w-4 h-4 mr-2' />
+              {t('common.cancel')}
             </Button>
             <Button
-              type="submit"
-              className="bg-white text-black hover:bg-white/90"
+              type='submit'
+              className='bg-white text-black hover:bg-white/90'
               disabled={isSubmitting}
             >
-              {isSubmitting
-                ? 'Enviando...'
-                : initialData
-                ? 'Guardar Cambios'
-                : 'Agregar Empleado'}
+              <User className='w-4 h-4 mr-2' />
+              {initialData
+                ? t('employee.form.update')
+                : t('employee.form.submit')}
             </Button>
           </div>
         </form>

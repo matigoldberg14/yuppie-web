@@ -22,6 +22,8 @@ import { getSelectedRestaurant } from '../../lib/restaurantStore';
 import { setSelectedRestaurant } from '../../lib/restaurantStore';
 import { metricsCache } from '../dashboard/metricsCache';
 import { MetricsCacheManager } from '../../lib/cache/metricsCacheManager';
+import { useTranslations } from '../../i18n/utils';
+import type { SupportedLang } from '../../i18n/config';
 
 interface Stats {
   totalReviews: number;
@@ -130,7 +132,12 @@ async function fetchEmployeesByRestaurant(restaurantDocumentId: string) {
   }
 }
 
-export function DashboardContent() {
+interface Props {
+  lang: SupportedLang;
+}
+
+export function DashboardContent({ lang }: Props) {
+  const t = useTranslations(lang);
   const [currentRestaurant, setCurrentRestaurant] = useState(
     getSelectedRestaurant()
   );
@@ -211,8 +218,8 @@ export function DashboardContent() {
     setLoading(true);
     try {
       toast({
-        title: 'Actualizando datos',
-        description: 'Obteniendo información fresca del servidor...',
+        title: t('dashboard.updatingData'),
+        description: t('dashboard.fetchingFreshData'),
       });
 
       // Limpiar caches locales
@@ -314,15 +321,15 @@ export function DashboardContent() {
       });
 
       toast({
-        title: 'Datos actualizados',
-        description: `Se han cargado ${totalReviews} reseñas del servidor`,
+        title: t('dashboard.dataUpdated'),
+        description: t('dashboard.dataRefreshSuccess'),
       });
     } catch (error) {
-      console.error('Error actualizando datos:', error);
+      console.error('Error al actualizar datos:', error);
       toast({
+        title: t('dashboard.error'),
+        description: t('dashboard.errorUpdatingData'),
         variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudieron obtener datos frescos del servidor',
       });
     } finally {
       setLoading(false);
@@ -409,20 +416,20 @@ export function DashboardContent() {
   }, [currentRestaurant]);
 
   if (loading) {
-    return <div className="animate-pulse text-white">Cargando datos...</div>;
+    return <div className='animate-pulse text-white'>Cargando datos...</div>;
   }
 
   if (!currentRestaurant) {
     return (
-      <div className="p-4 text-center">
-        <h2 className="text-xl font-bold text-white mb-4">
+      <div className='p-4 text-center'>
+        <h2 className='text-xl font-bold text-white mb-4'>
           No hay restaurante seleccionado
         </h2>
-        <p className="text-white/60 mb-6">
+        <p className='text-white/60 mb-6'>
           Por favor, selecciona un restaurante para ver su dashboard
         </p>
         <Button
-          variant="primary"
+          variant='primary'
           onClick={() => (window.location.href = '/dashboard/restaurants')}
         >
           Ir a seleccionar restaurante
@@ -432,117 +439,85 @@ export function DashboardContent() {
   }
 
   return (
-    <div>
-      <header className="mb-6 flex justify-between items-center">
-        <div>
-          {currentRestaurant && currentRestaurant.owner ? (
-            <h1 className="text-2xl font-bold text-white">
-              ¡Bienvenido {currentRestaurant.owner.firstName}{' '}
-              {currentRestaurant.owner.lastName}!
-            </h1>
-          ) : (
-            <h1 className="text-2xl font-bold text-white">¡Bienvenido!</h1>
-          )}
-          <p className="text-white/60">Restaurante: {currentRestaurant.name}</p>
-        </div>
+    <div className='space-y-4'>
+      <div className='flex justify-between items-center'>
+        <h2 className='text-3xl font-bold tracking-tight'>
+          {t('dashboard.dashboard')}
+        </h2>
         <Button
-          variant="secondary"
           onClick={handleRefreshData}
-          className="bg-white/10 text-white border-white/20 hover:bg-white/20 flex items-center gap-2"
           disabled={loading}
+          className='flex items-center gap-2'
         >
-          {loading ? (
-            <>
-              <div className="animate-spin h-4 w-4 border-2 border-white/70 border-t-transparent rounded-full"></div>
-              <span>Actualizando...</span>
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4" />
-              <span>Actualizar datos</span>
-            </>
-          )}
+          <RefreshCw className='h-4 w-4' />
+          {loading ? t('dashboard.updating') : t('dashboard.refresh')}
         </Button>
-      </header>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-white/10 border-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm">Total Reseñas</CardTitle>
+      <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+        <Card>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              {t('dashboard.totalReviews')}
+            </CardTitle>
+            <Star className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
-              {stats.totalReviews}
-            </div>
-            <Progress value={stats.totalReviews} max={1000} className="h-2" />
+            <div className='text-2xl font-bold'>{stats.totalReviews}</div>
           </CardContent>
         </Card>
-
-        <Card className="bg-white/10 border-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm">
-              Rating Promedio
+        <Card>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              {t('dashboard.averageRating')}
             </CardTitle>
+            <Star className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
+            <div className='text-2xl font-bold'>
               {stats.averageRating.toFixed(1)}
             </div>
-            <div className="flex">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={star}
-                  className={`h-4 w-4 ${
-                    star <= stats.averageRating
-                      ? 'text-yellow-400 fill-yellow-400'
-                      : 'text-gray-400'
-                  }`}
-                />
-              ))}
-            </div>
           </CardContent>
         </Card>
-
-        <Card className="bg-white/10 border-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm">
-              Tasa de Respuesta
+        <Card>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              {t('dashboard.responseRate')}
             </CardTitle>
+            <Building2 className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
-              {stats.responseRate.toFixed(1)}%
-            </div>
-            <Progress value={stats.responseRate} className="h-2" />
+            <div className='text-2xl font-bold'>{stats.responseRate}%</div>
           </CardContent>
         </Card>
-
-        <Card className="bg-white/10 border-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm">Total Taps</CardTitle>
+        <Card>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              {t('dashboard.taps')}
+            </CardTitle>
+            <Building2 className='h-4 w-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{stats.taps}</div>
-            <Progress value={stats.taps} max={1000} className="h-2" />
+            <div className='text-2xl font-bold'>{stats.taps}</div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
         <Card
-          className="bg-white/10 border-0 cursor-pointer hover:bg-white/20 transition-colors"
+          className='bg-white/10 border-0 cursor-pointer hover:bg-white/20 transition-colors'
           onClick={handleChartClick}
         >
           <CardHeader>
-            <CardTitle className="text-white">Evolución de reseñas</CardTitle>
+            <CardTitle className='text-white'>Evolución de reseñas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className='h-[300px]'>
+              <ResponsiveContainer width='100%' height='100%'>
                 <LineChart data={stats.timelineData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-                  <XAxis dataKey="date" stroke="#ffffff60" />
-                  <YAxis stroke="#ffffff60" />
+                  <CartesianGrid strokeDasharray='3 3' stroke='#ffffff20' />
+                  <XAxis dataKey='date' stroke='#ffffff60' />
+                  <YAxis stroke='#ffffff60' />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#1a1a1a',
@@ -551,11 +526,11 @@ export function DashboardContent() {
                     labelStyle={{ color: '#fff' }}
                   />
                   <Line
-                    type="monotone"
-                    dataKey="reviews"
-                    stroke="#4318FF"
+                    type='monotone'
+                    dataKey='reviews'
+                    stroke='#4318FF'
                     strokeWidth={2}
-                    name="Reseñas"
+                    name='Reseñas'
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -564,21 +539,21 @@ export function DashboardContent() {
         </Card>
 
         <Card
-          className="bg-white/10 border-0 cursor-pointer hover:bg-white/20 transition-colors"
+          className='bg-white/10 border-0 cursor-pointer hover:bg-white/20 transition-colors'
           onClick={handleChartClick}
         >
           <CardHeader>
-            <CardTitle className="text-white">
+            <CardTitle className='text-white'>
               Distribución de calificaciones
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className='h-[300px]'>
+              <ResponsiveContainer width='100%' height='100%'>
                 <BarChart data={stats.ratingData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-                  <XAxis dataKey="rating" stroke="#ffffff60" />
-                  <YAxis stroke="#ffffff60" />
+                  <CartesianGrid strokeDasharray='3 3' stroke='#ffffff20' />
+                  <XAxis dataKey='rating' stroke='#ffffff60' />
+                  <YAxis stroke='#ffffff60' />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#1a1a1a',
@@ -586,7 +561,7 @@ export function DashboardContent() {
                     }}
                     labelStyle={{ color: '#fff' }}
                   />
-                  <Bar dataKey="count" name="Cantidad" fill="#4318FF" />
+                  <Bar dataKey='count' name='Cantidad' fill='#4318FF' />
                 </BarChart>
               </ResponsiveContainer>
             </div>

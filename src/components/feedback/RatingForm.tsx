@@ -1,5 +1,7 @@
-import { ratingOptions } from '@/data/Reviews';
+import { getRatingOptions } from '@/data/Reviews';
 import type { RatingValue } from '@/types/reviews';
+import { useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '../../i18n/config';
 
 import {
   BsEmojiAngryFill,
@@ -11,17 +13,20 @@ import {
 
 interface Props {
   onClick: (rating: RatingValue) => void;
+  lang: SupportedLang;
 }
 
-export default function RatingForm({ onClick }: Props) {
+export default function RatingForm({ onClick, lang }: Props) {
+  const t = useTranslations(lang);
+
   return (
     <div className='w-full max-w-md flex flex-col items-center gap-8'>
       <h2 className='text-2xl font-medium text-white text-center'>
-        ¿Qué tan satisfecho quedaste con el servicio?
+        {t('feedback.ratingQuestion')}
       </h2>
 
       <div className='flex justify-between w-full px-4 relative'>
-        {ratingOptions.map(({ rating, label }) => (
+        {getRatingOptions(lang).map(({ rating, label }) => (
           <button
             key={rating}
             onClick={() => onClick(rating as RatingValue)}

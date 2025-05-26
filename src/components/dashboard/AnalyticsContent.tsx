@@ -18,6 +18,8 @@ import {
 } from './charts/ChartComponents';
 import { getCachedMetrics, setCachedMetrics } from './metricsCache';
 import { getSelectedRestaurant } from '../../lib/restaurantStore';
+import { useTranslations } from '../../i18n/config';
+import type { SupportedLang } from '../../i18n/config';
 import {
   Select,
   SelectContent,
@@ -27,22 +29,22 @@ import {
 } from '@/components/ui/select';
 
 const MetricCard = React.memo(({ title, value, trend, icon }: any) => (
-  <Card className="bg-white/10 border-0">
-    <CardHeader className="pb-2">
-      <CardTitle className="text-white text-sm">{title}</CardTitle>
+  <Card className='bg-white/10 border-0'>
+    <CardHeader className='pb-2'>
+      <CardTitle className='text-white text-sm'>{title}</CardTitle>
     </CardHeader>
     <CardContent>
-      <div className="text-2xl font-bold text-white">{value}</div>
+      <div className='text-2xl font-bold text-white'>{value}</div>
       {trend !== undefined && (
-        <p className="text-xs text-white/60">
+        <p className='text-xs text-white/60'>
           {trend === 0 ? (
             'Primer período - No hay datos anteriores para comparar'
           ) : (
             <>
               {trend >= 0 ? (
-                <TrendingUp className="h-4 w-4 text-green-400 inline mr-1" />
+                <TrendingUp className='h-4 w-4 text-green-400 inline mr-1' />
               ) : (
-                <TrendingDown className="h-4 w-4 text-red-400 inline mr-1" />
+                <TrendingDown className='h-4 w-4 text-red-400 inline mr-1' />
               )}
               {Math.abs(trend).toFixed(1)}% vs período anterior
             </>
@@ -55,21 +57,26 @@ const MetricCard = React.memo(({ title, value, trend, icon }: any) => (
 ));
 
 const LoadingState = () => (
-  <div className="p-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
+  <div className='p-6'>
+    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse'>
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="h-32 bg-white/10 rounded" />
+        <div key={i} className='h-32 bg-white/10 rounded' />
       ))}
     </div>
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+    <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6'>
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="h-[400px] bg-white/10 rounded" />
+        <div key={i} className='h-[400px] bg-white/10 rounded' />
       ))}
     </div>
   </div>
 );
 
-export function AnalyticsContent() {
+interface Props {
+  lang: SupportedLang;
+}
+
+export function AnalyticsContent({ lang }: Props) {
+  const t = useTranslations(lang);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('month');
   const [metrics, setMetrics] = useState<MetricsData | null>(null);
   const [history, setHistory] = useState<any>(null);
@@ -122,7 +129,7 @@ export function AnalyticsContent() {
         const restaurantData = selectedRestaurant
           ? selectedRestaurant
           : await getRestaurantByFirebaseUID(auth.currentUser.uid);
-        if (!restaurantData) throw new Error('No restaurant found');
+        if (!restaurantData) throw new Error(t('error.noRestaurantFound'));
         const [metricsData, historyData] = await Promise.all([
           getRestaurantMetrics(restaurantData.documentId, timeFilter),
           getMetricsHistory(restaurantData.documentId, timeFilter),
@@ -147,7 +154,7 @@ export function AnalyticsContent() {
         console.error('Error fetching metrics:', error);
         if (isMounted) {
           setError(
-            error instanceof Error ? error.message : 'Error loading data'
+            error instanceof Error ? error.message : t('error.loadingData')
           );
         }
       } finally {
@@ -160,7 +167,7 @@ export function AnalyticsContent() {
     return () => {
       isMounted = false;
     };
-  }, [timeFilter, selectedRestaurant]);
+  }, [timeFilter, selectedRestaurant, t]);
 
   const processedHistoryData = useMemo(() => {
     if (!history?.dates) return [];
@@ -172,86 +179,88 @@ export function AnalyticsContent() {
   }, [history]);
 
   if (loading) return <LoadingState />;
-  if (error) return <div className="p-6 text-red-500">{error}</div>;
+  if (error) return <div className='p-6 text-red-500'>{error}</div>;
   if (!metrics || !history) return null;
 
   return (
-    <div className="p-6">
+    <div className='p-6'>
       {/* Header */}
-      <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Analytics</h1>
-        <div className="flex gap-2">
-          <div className="relative">
+      <header className='flex justify-between items-center mb-6'>
+        <h1 className='text-2xl font-bold text-white'>
+          {t('analytics.title')}
+        </h1>
+        <div className='flex gap-2'>
+          <div className='relative'>
             <select
               value={timeFilter}
               onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
-              className="bg-white/10 text-white border-0 rounded-lg px-4 py-2 pr-10 appearance-none"
+              className='bg-white/10 text-white border-0 rounded-lg px-4 py-2 pr-10 appearance-none'
               style={{
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 color: 'white',
               }}
             >
               <option
-                value="today"
+                value='today'
                 style={{ backgroundColor: 'white', color: '#1e1e1e' }}
               >
-                Hoy
+                {t('analytics.timeFilters.today')}
               </option>
               <option
-                value="week"
+                value='week'
                 style={{ backgroundColor: 'white', color: '#1e1e1e' }}
               >
-                Última semana
+                {t('analytics.timeFilters.lastWeek')}
               </option>
               <option
-                value="month"
+                value='month'
                 style={{ backgroundColor: 'white', color: '#1e1e1e' }}
               >
-                Último mes
+                {t('analytics.timeFilters.lastMonth')}
               </option>
               <option
-                value="year"
+                value='year'
                 style={{ backgroundColor: 'white', color: '#1e1e1e' }}
               >
-                Último año
+                {t('analytics.timeFilters.lastYear')}
               </option>
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center mr-2 text-white">
+            <div className='pointer-events-none absolute inset-y-0 right-0 flex items-center mr-2 text-white'>
               <svg
-                className="fill-current h-4 w-4"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
+                className='fill-current h-4 w-4'
+                xmlns='http://www.w3.org/2000/svg'
+                viewBox='0 0 20 20'
               >
-                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                <path d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' />
               </svg>
             </div>
           </div>
 
-          <Button variant="ghost" className="flex items-center text-white">
-            <Download className="mr-2 h-4 w-4" />
-            Exportar
+          <Button variant='ghost' className='flex items-center text-white'>
+            <Download className='mr-2 h-4 w-4' />
+            {t('analytics.export')}
           </Button>
         </div>
       </header>
 
       {/* Métricas principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6'>
         <MetricCard
-          title="Total de reseñas"
+          title={t('analytics.metrics.totalReviews')}
           value={metrics.totalReviews}
           trend={metrics.trends.volumeTrend}
         />
         <MetricCard
-          title="Rating promedio"
+          title={t('analytics.metrics.averageRating')}
           value={metrics.averageRating.toFixed(1)}
           icon={
-            <div className="flex items-center">
+            <div className='flex items-center'>
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
                   className={`h-4 w-4 ${
                     i < Math.round(metrics.averageRating)
-                      ? 'text-yellow-400 fill-yellow-400'
+                      ? 'text-yellow-400'
                       : 'text-gray-400'
                   }`}
                 />
@@ -260,82 +269,67 @@ export function AnalyticsContent() {
           }
         />
         <MetricCard
-          title="Tasa de respuesta"
+          title={t('analytics.metrics.responseRate')}
           value={`${metrics.responseRate.toFixed(1)}%`}
-          icon={<Progress value={metrics.responseRate} className="h-2" />}
+          trend={metrics.trends.responseRateTrend}
         />
         <MetricCard
-          title="Envíos a Google"
-          value={`${metrics.googleSentRate.toFixed(1)}%`}
-          icon={<Progress value={metrics.googleSentRate} className="h-2" />}
+          title={t('analytics.metrics.totalTaps')}
+          value={metrics.totalTaps}
+          trend={metrics.trends.tapsTrend}
         />
       </div>
 
       {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-white/10 border-0">
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+        <Card className='bg-white/10 border-0'>
           <CardHeader>
-            <CardTitle className="text-white">Evolución de reseñas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[400px]">
-              <Suspense
-                fallback={<div className="animate-pulse h-full bg-white/10" />}
-              >
-                <MetricsLineChart data={processedHistoryData} />
-              </Suspense>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white/10 border-0">
-          <CardHeader>
-            <CardTitle className="text-white">
-              Distribución de calificaciones
+            <CardTitle className='text-white'>
+              {t('analytics.charts.reviewsEvolution')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[400px]">
-              <Suspense
-                fallback={<div className="animate-pulse h-full bg-white/10" />}
-              >
-                <MetricsBarChart data={metrics.ratingsDistribution} />
-              </Suspense>
+            <div className='h-[300px]'>
+              <MetricsLineChart data={processedHistoryData} />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-white/10 border-0">
+
+        <Card className='bg-white/10 border-0'>
           <CardHeader>
-            <CardTitle className="text-white">Tipos de mejora</CardTitle>
+            <CardTitle className='text-white'>
+              {t('analytics.charts.ratingDistribution')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[400px]">
-              <Suspense
-                fallback={<div className="animate-pulse h-full bg-white/10" />}
-              >
-                <MetricsPieChart data={metrics.reviewsByType} />
-              </Suspense>
+            <div className='h-[300px]'>
+              <MetricsBarChart data={metrics.ratingDistribution} />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-white/10 border-0">
+
+        <Card className='bg-white/10 border-0'>
           <CardHeader>
-            <CardTitle className="text-white">Análisis por día</CardTitle>
+            <CardTitle className='text-white'>
+              {t('analytics.charts.improvementTypes')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[400px]">
-              <Suspense
-                fallback={<div className="animate-pulse h-full bg-white/10" />}
-              >
-                <MetricsBarChart
-                  data={Object.entries(metrics.weekdayAnalysis).map(
-                    ([day, data]) => ({
-                      day,
-                      count: data.count,
-                      rating: data.averageRating,
-                    })
-                  )}
-                />
-              </Suspense>
+            <div className='h-[300px]'>
+              <MetricsPieChart data={metrics.improvementTypes} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className='bg-white/10 border-0'>
+          <CardHeader>
+            <CardTitle className='text-white'>
+              {t('analytics.charts.responseTime')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className='h-[300px]'>
+              <MetricsLineChart data={metrics.responseTimeData} />
             </div>
           </CardContent>
         </Card>

@@ -1,17 +1,19 @@
 ---
-// src/pages/login.astro
-import Layout from '../layouts/Layout.astro';
-import { LoginForm } from '../components/auth/LoginForm';
+import Layout from '../../layouts/Layout.astro';
+import { LoginForm } from '../../components/auth/LoginForm';
+import { getLangFromUrl } from '../../i18n/config';
+
+const lang = getLangFromUrl(Astro.url);
 ---
 
 <Layout title="Login | Yuppie">
   <div class="min-h-screen flex items-center justify-center">
-    <LoginForm client:load />
+    <LoginForm client:load lang={lang} />
   </div>
 </Layout>
 
 <script>
-  import { auth } from '../lib/firebase';
+  import { auth } from '../../lib/firebase';
   import { onAuthStateChanged } from 'firebase/auth';
 
   if (auth) {
