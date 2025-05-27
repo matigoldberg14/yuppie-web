@@ -42,7 +42,7 @@ export default function Review({ restaurant, employee }: Props) {
   const [error, setError] = useState({ type: '', message: '' });
   const { loading, startLoading, stopLoading } = useLoading();
   // Variable de prueba para simular login
-  const isLoggedIn = true; // Cambia a true para ver la barra fija de usuario robertito
+  const isLoggedIn = false; // Cambia a true para ver la barra fija de usuario robertito
 
   useEffect(() => {
     const alreadyVisited = localStorage.getItem(

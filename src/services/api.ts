@@ -700,3 +700,42 @@ export async function updateRestaurantCoordinates(
 }
 
 export type { ApiError, ApiResponse, Restaurant, Review };
+
+export interface CreateClienteInput {
+  name: string;
+  email: string;
+  firebase_uid: string;
+  level?: string;
+  registered_at: string;
+  last_login_at: string;
+}
+
+export async function createCliente(cliente: CreateClienteInput) {
+  try {
+    const payload = {
+      data: {
+        name: cliente.name,
+        email: cliente.email,
+        firebase_uid: cliente.firebase_uid,
+        level: cliente.level || 'cliente',
+        registered_at: cliente.registered_at,
+        last_login_at: cliente.last_login_at,
+      },
+    };
+    const response = await fetch(`${API_CONFIG.baseUrl}/clientes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error('Error al crear cliente: ' + errorText);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error en createCliente:', error);
+    throw error;
+  }
+}

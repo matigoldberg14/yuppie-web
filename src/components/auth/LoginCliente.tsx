@@ -7,16 +7,27 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import type { User } from 'firebase/auth';
+import { createCliente } from '@/services/api';
 
 const TABS = [
   { label: 'Iniciar sesión', value: 'login' },
   { label: 'Registrarse', value: 'register' },
 ];
 
+function getRedirectUrl() {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('redirect') || '/';
+  }
+  return '/';
+}
+
 export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [user, setUser] = useState<User | null>(null);
@@ -28,6 +39,7 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
     setLoading(true);
     try {
       if (!authClientes) throw new Error('Firebase no inicializado');
+      const redirectUrl = getRedirectUrl();
       if (tab === 'login') {
         const res = await signInWithEmailAndPassword(
           authClientes,
@@ -35,6 +47,7 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
           password
         );
         setUser(res.user);
+        window.location.href = redirectUrl;
       } else {
         const res = await createUserWithEmailAndPassword(
           authClientes,
@@ -42,6 +55,14 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
           password
         );
         setUser(res.user);
+        await createCliente({
+          name: `${firstName} ${lastName}`.trim(),
+          email,
+          firebase_uid: res.user.uid,
+          registered_at: new Date().toISOString(),
+          last_login_at: new Date().toISOString(),
+        });
+        window.location.href = redirectUrl;
       }
     } catch (err: any) {
       setError(err.message || 'Error de autenticación');
@@ -57,10 +78,19 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
     try {
       if (!authClientes) throw new Error('Firebase no inicializado');
       const provider = new GoogleAuthProvider();
-      console.log('Intentando login con Google...');
       const res = await signInWithPopup(authClientes, provider);
       setUser(res.user);
-      console.log('Login con Google exitoso', res.user);
+      const redirectUrl = getRedirectUrl();
+      if (tab === 'register') {
+        await createCliente({
+          name: res.user.displayName || '',
+          email: res.user.email || '',
+          firebase_uid: res.user.uid,
+          registered_at: new Date().toISOString(),
+          last_login_at: new Date().toISOString(),
+        });
+      }
+      window.location.href = redirectUrl;
     } catch (err: any) {
       setError(err.message || 'Error con Google');
       console.error('Error con Google:', err);
@@ -126,6 +156,26 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
           ))}
         </div>
         {/* Inputs */}
+        {tab === 'register' && (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Nombre"
+              className="input mb-2 flex-1"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              autoComplete="given-name"
+            />
+            <input
+              type="text"
+              placeholder="Apellido"
+              className="input mb-2 flex-1"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              autoComplete="family-name"
+            />
+          </div>
+        )}
         <input
           type="email"
           placeholder="Email"
@@ -149,7 +199,12 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
         {/* Botón principal */}
         <button
           className="button w-full"
-          disabled={loading || !email || !password}
+          disabled={
+            loading ||
+            !email ||
+            !password ||
+            (tab === 'register' && (!firstName || !lastName))
+          }
           type="submit"
         >
           {loading
@@ -171,7 +226,8 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
           type="button"
           onClick={handleGoogle}
         >
-          <span className="text-lg">{'G'}</span> Continuar con Google
+          <img src="/google.svg" alt="Google" className="w-8 h-8" /> Continuar
+          con Google
         </button>
         {/* Cancelar */}
         <button
