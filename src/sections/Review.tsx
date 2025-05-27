@@ -42,7 +42,7 @@ export default function Review({ restaurant, employee }: Props) {
   const [error, setError] = useState({ type: '', message: '' });
   const { loading, startLoading, stopLoading } = useLoading();
   // Variable de prueba para simular login
-  const isLoggedIn = false; // Cambia a true para ver la barra fija de usuario robertito
+  const isLoggedIn = true; // Cambia a true para ver la barra fija de usuario robertito
 
   useEffect(() => {
     const alreadyVisited = localStorage.getItem(
@@ -481,7 +481,7 @@ export default function Review({ restaurant, employee }: Props) {
       )}
 
       {isLoggedIn && (
-        <div className="fixed bottom-0 left-0 w-full z-50 px-2 pb-2 pointer-events-none flex justify-center">
+        <div className="fixed bottom-0 left-0 w-full z-50 px-4 pb-4 pointer-events-none flex justify-center">
           <div
             className="flex items-center justify-between max-w-md w-full pointer-events-auto"
             style={{
