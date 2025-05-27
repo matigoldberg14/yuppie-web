@@ -20,6 +20,8 @@ import InstagramIcon from '@/components/icons/InstagramIcon';
 import { commentOptions } from '@/data/Reviews';
 import ErrorModal from '@/components/ui/Modal';
 import emailjs from '@emailjs/browser';
+import { authClientes } from '@/lib/firebaseClientes';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 type Pages = 'rating' | 'improvement' | 'comment' | 'thanks';
 
@@ -41,8 +43,10 @@ export default function Review({ restaurant, employee }: Props) {
   const [emailError, setEmailError] = useState('');
   const [error, setError] = useState({ type: '', message: '' });
   const { loading, startLoading, stopLoading } = useLoading();
-  // Variable de prueba para simular login
-  const isLoggedIn = false; // Cambia a true para ver la barra fija de usuario robertito
+  const [cliente, setCliente] = useState<{
+    name: string;
+    email: string;
+  } | null>(null);
 
   useEffect(() => {
     const alreadyVisited = localStorage.getItem(
@@ -64,6 +68,21 @@ export default function Review({ restaurant, employee }: Props) {
 
     incrementTaps();
     setEmailFromLS(localStorage.getItem('yuppie_email') || '');
+
+    // Escuchar usuario logueado de Firebase Clientes
+    if (authClientes) {
+      const unsubscribe = onAuthStateChanged(authClientes, (user) => {
+        if (user) {
+          setCliente({
+            name: user.displayName || user.email || 'Cliente',
+            email: user.email || '',
+          });
+        } else {
+          setCliente(null);
+        }
+      });
+      return () => unsubscribe();
+    }
   }, []);
 
   useEffect(() => {
@@ -300,9 +319,7 @@ export default function Review({ restaurant, employee }: Props) {
   return (
     <>
       <div
-        className={`w-full max-w-md overflow-hidden ${
-          isLoggedIn ? 'pb-32' : ''
-        }`}
+        className={`w-full max-w-md overflow-hidden ${cliente ? 'pb-32' : ''}`}
       >
         <span
           onClick={handleBack}
@@ -458,7 +475,7 @@ export default function Review({ restaurant, employee }: Props) {
       </div>
 
       {/* Barra de login/usuario */}
-      {!isLoggedIn && (
+      {!cliente && (
         <div className="w-full flex justify-center mt-2">
           <div className="flex flex-col items-center justify-center bg-white/10 border border-white/20 rounded-xl py-3 px-4 max-w-md w-full">
             <div className="flex items-center gap-1 text-sm">
@@ -467,6 +484,11 @@ export default function Review({ restaurant, employee }: Props) {
                 <span
                   className="font-medium cursor-pointer hover:underline"
                   style={{ color: '#39DFB2' }}
+                  onClick={() =>
+                    (window.location.href = `/login-cliente?redirect=${encodeURIComponent(
+                      window.location.pathname + window.location.search
+                    )}`)
+                  }
                 >
                   Inicia Sesión
                 </span>{' '}
@@ -480,7 +502,7 @@ export default function Review({ restaurant, employee }: Props) {
         </div>
       )}
 
-      {isLoggedIn && (
+      {cliente && (
         <div className="fixed bottom-0 left-0 w-full z-50 px-4 pb-4 pointer-events-none flex justify-center">
           <div
             className="flex items-center justify-between max-w-md w-full pointer-events-auto"
@@ -494,7 +516,7 @@ export default function Review({ restaurant, employee }: Props) {
             <div className="flex items-center gap-2">
               <span className="text-yellow-300 text-lg">✨</span>
               <span className="text-white text-sm font-medium">
-                Nombre Cliente
+                {cliente.name}
               </span>
             </div>
             <div

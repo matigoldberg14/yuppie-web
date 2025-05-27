@@ -704,10 +704,10 @@ export type { ApiError, ApiResponse, Restaurant, Review };
 export interface CreateClienteInput {
   name: string;
   email: string;
-  firebase_uid: string;
+  firebaseUID: string;
   level?: string;
-  registered_at: string;
-  last_login_at: string;
+  registeredAt: string;
+  lastLoginAt: string;
 }
 
 export async function createCliente(cliente: CreateClienteInput) {
@@ -716,10 +716,10 @@ export async function createCliente(cliente: CreateClienteInput) {
       data: {
         name: cliente.name,
         email: cliente.email,
-        firebase_uid: cliente.firebase_uid,
+        firebaseUID: cliente.firebaseUID,
         level: cliente.level || 'cliente',
-        registered_at: cliente.registered_at,
-        last_login_at: cliente.last_login_at,
+        registeredAt: cliente.registeredAt,
+        lastLoginAt: cliente.lastLoginAt,
       },
     };
     const response = await fetch(`${API_CONFIG.baseUrl}/clientes`, {

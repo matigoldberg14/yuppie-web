@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { authClientes } from '@/lib/firebaseClientes';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  onAuthStateChanged,
+  signOut,
 } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { createCliente } from '@/services/api';
@@ -31,6 +33,17 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [user, setUser] = useState<User | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  // Escuchar usuario logueado de Firebase Clientes
+  useEffect(() => {
+    if (authClientes) {
+      const unsubscribe = onAuthStateChanged(authClientes, (user) => {
+        setUser(user);
+      });
+      return () => unsubscribe();
+    }
+  }, []);
 
   // Handler para login o registro
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,14 +68,30 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
           password
         );
         setUser(res.user);
-        await createCliente({
+        console.log('Registrando cliente en Strapi...', {
           name: `${firstName} ${lastName}`.trim(),
           email,
           firebase_uid: res.user.uid,
-          registered_at: new Date().toISOString(),
-          last_login_at: new Date().toISOString(),
         });
-        window.location.href = redirectUrl;
+        try {
+          const strapiRes = await createCliente({
+            name: `${firstName} ${lastName}`.trim(),
+            email,
+            firebaseUID: res.user.uid,
+            level: 'cliente',
+            registeredAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+          });
+          console.log('Respuesta de Strapi:', strapiRes);
+          setToast('¡Cliente creado en Strapi!');
+        } catch (err) {
+          console.error('Error al crear cliente en Strapi:', err);
+          setToast('Error al crear cliente en Strapi');
+        }
+        setTimeout(() => {
+          setToast(null);
+          window.location.href = redirectUrl;
+        }, 10000);
       }
     } catch (err: any) {
       setError(err.message || 'Error de autenticación');
@@ -82,15 +111,33 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
       setUser(res.user);
       const redirectUrl = getRedirectUrl();
       if (tab === 'register') {
-        await createCliente({
-          name: res.user.displayName || '',
+        console.log('Registrando cliente en Strapi (Google)...', {
+          name: res.user.displayName || res.user.email || '',
           email: res.user.email || '',
           firebase_uid: res.user.uid,
-          registered_at: new Date().toISOString(),
-          last_login_at: new Date().toISOString(),
         });
+        try {
+          const strapiRes = await createCliente({
+            name: res.user.displayName || res.user.email || '',
+            email: res.user.email || '',
+            firebaseUID: res.user.uid,
+            level: 'cliente',
+            registeredAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+          });
+          console.log('Respuesta de Strapi (Google):', strapiRes);
+          setToast('¡Cliente creado en Strapi!');
+        } catch (err) {
+          console.error('Error al crear cliente en Strapi (Google):', err);
+          setToast('Error al crear cliente en Strapi');
+        }
+        setTimeout(() => {
+          setToast(null);
+          window.location.href = redirectUrl;
+        }, 10000);
+      } else {
+        window.location.href = redirectUrl;
       }
-      window.location.href = redirectUrl;
     } catch (err: any) {
       setError(err.message || 'Error con Google');
       console.error('Error con Google:', err);
@@ -102,7 +149,7 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
   // Handler para logout
   const handleLogout = async () => {
     setUser(null);
-    if (authClientes) await authClientes.signOut();
+    if (authClientes) await signOut(authClientes);
   };
 
   if (user) {
@@ -134,6 +181,11 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
 
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-b from-[#1a1440] to-[#2e1a7a]">
+      {toast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-black/90 text-white px-6 py-3 rounded-xl shadow-lg z-50 text-center text-base animate-fade-in">
+          {toast}
+        </div>
+      )}
       <form
         className="w-full max-w-sm card flex flex-col gap-6 shadow-xl p-6"
         onSubmit={handleSubmit}
@@ -157,11 +209,11 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
         </div>
         {/* Inputs */}
         {tab === 'register' && (
-          <div className="flex gap-2">
+          <>
             <input
               type="text"
               placeholder="Nombre"
-              className="input mb-2 flex-1"
+              className="input mb-2"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               autoComplete="given-name"
@@ -169,12 +221,12 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
             <input
               type="text"
               placeholder="Apellido"
-              className="input mb-2 flex-1"
+              className="input mb-2"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               autoComplete="family-name"
             />
-          </div>
+          </>
         )}
         <input
           type="email"
