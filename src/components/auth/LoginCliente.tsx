@@ -88,10 +88,8 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
           console.error('Error al crear cliente en Strapi:', err);
           setToast('Error al crear cliente en Strapi');
         }
-        setTimeout(() => {
-          setToast(null);
-          window.location.href = redirectUrl;
-        }, 10000);
+        setToast(null);
+        window.location.href = redirectUrl;
       }
     } catch (err: any) {
       setError(err.message || 'Error de autenticación');
@@ -111,6 +109,8 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
       setUser(res.user);
       const redirectUrl = getRedirectUrl();
       if (tab === 'register') {
+        setToast('Intentando crear cliente en Strapi con Google...');
+        setTimeout(() => setToast(null), 10000);
         console.log('Registrando cliente en Strapi (Google)...', {
           name: res.user.displayName || res.user.email || '',
           email: res.user.email || '',
@@ -131,10 +131,8 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
           console.error('Error al crear cliente en Strapi (Google):', err);
           setToast('Error al crear cliente en Strapi');
         }
-        setTimeout(() => {
-          setToast(null);
-          window.location.href = redirectUrl;
-        }, 10000);
+        setToast(null);
+        window.location.href = redirectUrl;
       } else {
         window.location.href = redirectUrl;
       }
