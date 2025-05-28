@@ -5,7 +5,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!auth) {
@@ -19,19 +18,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
       } else {
         setIsAuthenticated(true);
       }
-      setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-white text-xl">Verificando autenticación...</div>
-      </div>
-    );
-  }
 
   return isAuthenticated ? <>{children}</> : null;
 }

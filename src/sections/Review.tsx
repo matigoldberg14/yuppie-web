@@ -18,7 +18,7 @@ import useLoading from '@/hooks/useLoading';
 import { incrementTapsForEmployee } from '@/services/api/employees';
 import InstagramIcon from '@/components/icons/InstagramIcon';
 import { commentOptions } from '@/data/Reviews';
-import ErrorModal from '@/components/ui/Modal';
+import ErrorModal from '@/components/ui/new/Modal';
 import emailjs from '@emailjs/browser';
 
 type Pages = 'rating' | 'improvement' | 'comment' | 'thanks';

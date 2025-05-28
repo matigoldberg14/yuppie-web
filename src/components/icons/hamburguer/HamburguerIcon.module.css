@@ -1,0 +1,41 @@
+.line1,
+.line3 {
+  transition: top 250ms ease-in-out 250ms, transform 250ms ease-in-out;
+}
+
+.line1-selected,
+.line3-selected {
+  transition: top 250ms ease-in-out, transform 250ms ease-in-out 250ms;
+}
+
+.line1 {
+  top: 5%;
+  transform: rotate(0);
+}
+
+.line1-selected {
+  top: 50%;
+  transform: rotate(45deg);
+}
+
+.line2 {
+  top: 50%;
+  transform: scale(1);
+  transition: transform 250ms ease-in-out 250ms;
+}
+
+.line2-selected {
+  top: 50%;
+  transform: scale(0);
+  transition: transform 250ms ease-in-out;
+}
+
+.line3 {
+  top: 95%;
+  transform: rotate(0);
+}
+
+.line3-selected {
+  top: 50%;
+  transform: rotate(135deg);
+}

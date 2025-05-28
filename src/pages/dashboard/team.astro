@@ -1,17 +1,13 @@
 ---
-// src/pages/dashboard/team.astro
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
-import { Sidebar } from '../../components/dashboard/Sidebar';
 import TeamContent from '../../components/dashboard/TeamContent';
 import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
+import DashboardMainLayout from '../../layouts/DashboardMainLayout';
 ---
-<DashboardLayout title="Equipo | Yuppie">
+<DashboardLayout title="Equipo | Yuppie" section="team">
   <ProtectedRoute client:load>
-    <div class="min-h-screen flex">
-      <Sidebar client:load />
-      <main class="transition-all duration-300 p-4 md:pl-64 w-full">
-        <TeamContent client:load />
-      </main>
-    </div>
+    <DashboardMainLayout client:load>
+      <TeamContent client:load />
+    </DashboardMainLayout>
   </ProtectedRoute>
 </DashboardLayout>

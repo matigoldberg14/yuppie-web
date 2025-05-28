@@ -5,6 +5,18 @@
 
 :root {
   color-scheme: dark;
+  --blue-primary: #4318FF;
+  --blue-light: #9181F2;
+  --blue-dark: #1D0158;
+  --green: #39DFB2;
+}
+
+.bg-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--blue-primary),
+    var(--blue-dark)
+  );
 }
 
 body {
@@ -42,6 +54,10 @@ body {
 @layer utilities {
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500;
+  }
+
+  .rotate-y-180 {
+    transform: rotateY(180deg);
   }
 }
 

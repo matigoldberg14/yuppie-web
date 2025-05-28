@@ -1,8 +1,6 @@
-// src/components/dashboard/RestaurantsOverview.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { auth } from '../../lib/firebase';
 import {
-  getOwnerRestaurants,
   getRestaurantReviews,
   getEmployeesByRestaurant,
 } from '../../services/api';
@@ -10,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/Button';
 import type { Review } from '../../types/reviews';
-import type { Restaurant } from '../../types/restaurant';
+import type { Restaurant } from '@/types/restaurant';
 import type { Employee } from '../../types/employee';
 import {
   Building2,
@@ -21,8 +19,6 @@ import {
   Zap,
   Search,
   RefreshCw,
-  Plus,
-  Check,
 } from 'lucide-react';
 import { Input } from '../ui/input';
 import AdvancedComparison from './AdvancedComparison';
@@ -34,30 +30,8 @@ import {
   setRestaurantsList,
 } from '../../lib/restaurantStore';
 import { useToast } from '../ui/use-toast';
-
-export interface RestaurantData {
-  id: number;
-  documentId: string;
-  name: string;
-  taps: string;
-  owner: {
-    firstName: string;
-    lastName: string;
-  };
-  location?: {
-    street: string;
-    number: string;
-    city: string;
-    state: string;
-    country: string;
-    postalCode: string;
-  };
-  coordinates?: {
-    latitude: number;
-    longitude: number;
-  };
-  linkMaps: string;
-}
+import { getRestaurantsByOwner } from '@/services/api/restaurants';
+import { convertToRestaurant } from '@/types/restaurant';
 
 // Interfaz para las métricas calculadas
 interface RestaurantMetric {
@@ -67,25 +41,8 @@ interface RestaurantMetric {
   employeeCount: number;
 }
 
-// Función para convertir de RestaurantData a Restaurant
-const convertToRestaurant = (data: RestaurantData): Restaurant => {
-  return {
-    id: data.id,
-    documentId: data.documentId,
-    name: data.name,
-    taps: data.taps || '0',
-    linkMaps: data.linkMaps || '',
-    owner: {
-      firstName: data.owner?.firstName || '',
-      lastName: data.owner?.lastName || '',
-    },
-    location: data.location,
-    coordinates: data.coordinates,
-  };
-};
-
 export function RestaurantsOverview() {
-  const [restaurants, setRestaurants] = useState<RestaurantData[]>([]);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,13 +55,13 @@ export function RestaurantsOverview() {
 
   // Estados para manejar la selección de restaurantes
   const [currentRestaurant, setCurrentRestaurantState] =
-    useState<RestaurantData | null>(null);
+    useState<Restaurant | null>(null);
   const [compareRestaurants, setCompareRestaurantsState] = useState<
-    RestaurantData[]
+    Restaurant[]
   >([]);
 
   // Obtener ciudad desde datos reales o usar función de respaldo para compatibilidad
-  const getCiudad = (restaurant: RestaurantData): string => {
+  const getCiudad = (restaurant: Restaurant): string => {
     return restaurant.location?.city || 'Ciudad no disponible';
   };
 
@@ -168,9 +125,7 @@ export function RestaurantsOverview() {
           return;
         }
 
-        console.log('Llamando a getOwnerRestaurants con UID:', uid);
-        const data = await getOwnerRestaurants(uid);
-        console.log('Datos recibidos de getOwnerRestaurants:', data);
+        const data = await getRestaurantsByOwner(uid);
 
         if (!data || data.length === 0) {
           console.warn('No se encontraron restaurantes para el usuario');
@@ -178,19 +133,21 @@ export function RestaurantsOverview() {
           setLoading(false);
           return;
         }
-
         // Convertir los datos recibidos al formato esperado por el componente
-        const formattedData: RestaurantData[] = data.map((restaurant: any) => ({
-          id: restaurant.id,
-          documentId: restaurant.documentId,
-          name: restaurant.name,
-          taps: restaurant.taps,
-          owner: restaurant.owner,
-          linkMaps: restaurant.linkMaps || '',
-          // Mapear la ubicación correctamente
-          location: restaurant.location,
-          coordinates: restaurant.coordinates,
-        }));
+        const formattedData: Restaurant[] = data.map(
+          (restaurant: Restaurant) => ({
+            id: restaurant.id,
+            documentId: restaurant.documentId,
+            name: restaurant.name,
+            taps: restaurant.taps,
+            owner: restaurant.owner,
+            linkMaps: restaurant.linkMaps || '',
+            // Mapear la ubicación correctamente
+            location: restaurant.location,
+            coordinates: restaurant.coordinates,
+            slug: restaurant.slug,
+          })
+        );
 
         setRestaurants(formattedData);
 
@@ -248,7 +205,7 @@ export function RestaurantsOverview() {
   }, []);
 
   // Cargar métricas para los restaurantes
-  const loadRestaurantMetrics = async (restaurants: RestaurantData[]) => {
+  const loadRestaurantMetrics = async (restaurants: Restaurant[]) => {
     setMetricsLoading(true);
     const metrics: Record<string, RestaurantMetric> = {};
 
@@ -298,7 +255,7 @@ export function RestaurantsOverview() {
   };
 
   // Manejar selección de restaurante
-  const handleSelectRestaurant = (restaurant: RestaurantData) => {
+  const handleSelectRestaurant = (restaurant: Restaurant) => {
     console.log('Seleccionando restaurante:', restaurant);
 
     // Siempre establecer el restaurante seleccionado
@@ -312,7 +269,7 @@ export function RestaurantsOverview() {
   };
 
   // Manejar toggle para comparación
-  const handleToggleCompare = (restaurant: RestaurantData) => {
+  const handleToggleCompare = (restaurant: Restaurant) => {
     console.log('Toggle comparación para:', restaurant);
 
     // Obtener la lista actual
@@ -336,20 +293,20 @@ export function RestaurantsOverview() {
   };
 
   if (loading)
-    return <div className="text-white">Cargando restaurantes...</div>;
+    return <div className='text-white'>Cargando restaurantes...</div>;
 
-  if (error) return <div className="text-red-500">{error}</div>;
+  if (error) return <div className='text-red-500'>{error}</div>;
 
   if (restaurants.length === 0) {
     return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-white mb-4">Mis Restaurantes</h1>
-        <p className="text-white">
+      <div className='p-6'>
+        <h1 className='text-2xl font-bold text-white mb-4'>Mis Restaurantes</h1>
+        <p className='text-white'>
           No se encontraron restaurantes para este usuario. (UID:{' '}
           {auth?.currentUser?.uid || 'No autenticado'})
         </p>
-        <div className="mt-4">
-          <Button variant="primary" onClick={() => window.location.reload()}>
+        <div className='mt-4'>
+          <Button variant='primary' onClick={() => window.location.reload()}>
             Reintentar
           </Button>
         </div>
@@ -358,18 +315,18 @@ export function RestaurantsOverview() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+    <div className='p-6'>
+      <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-6'>
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Building2 className="h-8 w-8" />
+          <h1 className='text-2xl font-bold text-white flex items-center gap-2'>
+            <Building2 className='h-8 w-8' />
             Mis Restaurantes
           </h1>
-          <p className="text-white/60">
+          <p className='text-white/60'>
             Gestiona y compara el rendimiento de tus locales
           </p>
         </div>
-        <div className="mt-4 md:mt-0 flex gap-2">
+        <div className='mt-4 md:mt-0 flex gap-2'>
           <Button
             variant={activeTab === 'list' ? 'primary' : 'secondary'}
             onClick={() => setActiveTab('list')}
@@ -387,19 +344,19 @@ export function RestaurantsOverview() {
 
       {activeTab === 'list' && (
         <>
-          <div className="mb-4 max-w-md">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-white/50" />
+          <div className='mb-4 max-w-md'>
+            <div className='relative'>
+              <Search className='absolute left-2 top-2.5 h-4 w-4 text-white/50' />
               <Input
-                placeholder="Buscar restaurante..."
-                className="pl-8 bg-white/5 border-white/10 text-white"
+                placeholder='Buscar restaurante...'
+                className='pl-8 bg-white/5 border-white/10 text-white'
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
             {filteredRestaurants.map((restaurant) => (
               <Card
                 key={restaurant.documentId}
@@ -410,12 +367,12 @@ export function RestaurantsOverview() {
                 }`}
                 onClick={() => handleSelectRestaurant(restaurant)}
               >
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-white flex justify-between items-start">
+                <CardHeader className='pb-2'>
+                  <CardTitle className='text-white flex justify-between items-start'>
                     <div>
                       {restaurant.name}
-                      <div className="text-sm font-normal text-white/60 flex items-center mt-1">
-                        <MapPin className="w-4 h-4 mr-1" />
+                      <div className='text-sm font-normal text-white/60 flex items-center mt-1'>
+                        <MapPin className='w-4 h-4 mr-1' />
                         {getCiudad(restaurant)}
                       </div>
                     </div>
@@ -433,32 +390,32 @@ export function RestaurantsOverview() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
-                      <MessageSquare className="h-4 w-4 mb-1 text-blue-400" />
-                      <div className="text-xs text-white/60">Total Reseñas</div>
+                  <div className='grid grid-cols-2 gap-2 mt-2'>
+                    <div className='flex flex-col items-center p-2 bg-white/5 rounded-md'>
+                      <MessageSquare className='h-4 w-4 mb-1 text-blue-400' />
+                      <div className='text-xs text-white/60'>Total Reseñas</div>
                       {metricsLoading ? (
-                        <div className="h-5 flex items-center">
-                          <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
+                        <div className='h-5 flex items-center'>
+                          <RefreshCw className='h-3 w-3 text-white/50 animate-spin' />
                         </div>
                       ) : (
-                        <div className="font-medium text-white">
+                        <div className='font-medium text-white'>
                           {restaurantMetrics[restaurant.documentId]
                             ?.totalReviews || 0}
                         </div>
                       )}
                     </div>
-                    <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
-                      <Star className="h-4 w-4 mb-1 text-yellow-400" />
-                      <div className="text-xs text-white/60">
+                    <div className='flex flex-col items-center p-2 bg-white/5 rounded-md'>
+                      <Star className='h-4 w-4 mb-1 text-yellow-400' />
+                      <div className='text-xs text-white/60'>
                         Rating Promedio
                       </div>
                       {metricsLoading ? (
-                        <div className="h-5 flex items-center justify-center">
-                          <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
+                        <div className='h-5 flex items-center justify-center'>
+                          <RefreshCw className='h-3 w-3 text-white/50 animate-spin' />
                         </div>
                       ) : (
-                        <div className="font-medium text-white">
+                        <div className='font-medium text-white'>
                           {restaurantMetrics[restaurant.documentId]
                             ? restaurantMetrics[
                                 restaurant.documentId
@@ -468,17 +425,17 @@ export function RestaurantsOverview() {
                         </div>
                       )}
                     </div>
-                    <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
-                      <Zap className="h-4 w-4 mb-1 text-amber-400" />
-                      <div className="text-xs text-white/60">
+                    <div className='flex flex-col items-center p-2 bg-white/5 rounded-md'>
+                      <Zap className='h-4 w-4 mb-1 text-amber-400' />
+                      <div className='text-xs text-white/60'>
                         Tasa de Conversión
                       </div>
                       {metricsLoading ? (
-                        <div className="h-5 flex items-center">
-                          <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
+                        <div className='h-5 flex items-center'>
+                          <RefreshCw className='h-3 w-3 text-white/50 animate-spin' />
                         </div>
                       ) : (
-                        <div className="font-medium text-white">
+                        <div className='font-medium text-white'>
                           {restaurantMetrics[restaurant.documentId]
                             ? restaurantMetrics[
                                 restaurant.documentId
@@ -488,15 +445,15 @@ export function RestaurantsOverview() {
                         </div>
                       )}
                     </div>
-                    <div className="flex flex-col items-center p-2 bg-white/5 rounded-md">
-                      <Users className="h-4 w-4 mb-1 text-purple-400" />
-                      <div className="text-xs text-white/60">Equipo</div>
+                    <div className='flex flex-col items-center p-2 bg-white/5 rounded-md'>
+                      <Users className='h-4 w-4 mb-1 text-purple-400' />
+                      <div className='text-xs text-white/60'>Equipo</div>
                       {metricsLoading ? (
-                        <div className="h-5 flex items-center">
-                          <RefreshCw className="h-3 w-3 text-white/50 animate-spin" />
+                        <div className='h-5 flex items-center'>
+                          <RefreshCw className='h-3 w-3 text-white/50 animate-spin' />
                         </div>
                       ) : (
-                        <div className="font-medium text-white">
+                        <div className='font-medium text-white'>
                           {restaurantMetrics[restaurant.documentId]
                             ?.employeeCount || 0}
                         </div>
@@ -504,8 +461,8 @@ export function RestaurantsOverview() {
                     </div>
                   </div>
 
-                  <div className="mt-4">
-                    <div className="text-center text-white/60 text-xs py-2">
+                  <div className='mt-4'>
+                    <div className='text-center text-white/60 text-xs py-2'>
                       Utiliza la vista de comparación para analizar múltiples
                       locales
                     </div>

@@ -1,13 +1,10 @@
-// src/types/restaurant.ts
-// Necesitamos alinear las definiciones de tipos para evitar incompatibilidades
-
 export interface Location {
-  street: string; // Requerido
-  number: string; // Requerido
-  city: string; // Requerido
-  state: string; // Requerido
-  country: string; // Requerido
-  postalCode: string; // Requerido
+  street: string;
+  number: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
 }
 
 export interface Coordinates {
@@ -15,7 +12,6 @@ export interface Coordinates {
   longitude: number;
 }
 
-// Para el tipo Restaurant
 export interface Restaurant {
   id: number;
   documentId: string;
@@ -38,34 +34,7 @@ export interface Restaurant {
   socialNetwork?: string;
 }
 
-// Para el tipo RestaurantData usado en componentes
-export interface RestaurantData {
-  id: number;
-  documentId: string;
-  name: string;
-  taps: string;
-  owner: {
-    firstName: string;
-    lastName: string;
-  };
-  linkMaps?: string; // Opcional
-  location?: {
-    street?: string;
-    number?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    postalCode?: string;
-  };
-  coordinates?: {
-    latitude: number;
-    longitude: number;
-  };
-}
-
-// Función para convertir RestaurantData a Restaurant
-export function convertToRestaurant(data: RestaurantData): Restaurant {
-  // Asegurar valores por defecto para los campos requeridos
+export function convertToRestaurant(data: Restaurant): Restaurant {
   return {
     id: data.id,
     documentId: data.documentId,
@@ -75,9 +44,8 @@ export function convertToRestaurant(data: RestaurantData): Restaurant {
     owner: {
       firstName: data.owner?.firstName || '',
       lastName: data.owner?.lastName || '',
-      email: '', // Assuming email is not provided in the data
+      email: '',
     },
-    // Convertir location solo si todos los campos requeridos están presentes
     location:
       data.location &&
       data.location.street &&
@@ -95,7 +63,7 @@ export function convertToRestaurant(data: RestaurantData): Restaurant {
             postalCode: data.location.postalCode,
           }
         : undefined,
-    // Coordenadas
     coordinates: data.coordinates,
+    slug: data.slug,
   };
 }

@@ -1,23 +1,8 @@
 // src/lib/restaurantStore.ts
 import React, { useState, useEffect } from 'react';
 import { auth } from './firebase';
+import type { Restaurant } from '@/types/restaurant';
 
-export interface Restaurant {
-  id: number;
-  documentId: string;
-  name: string;
-  taps: string;
-  linkMaps: string;
-  owner: {
-    firstName: string;
-    lastName: string;
-  };
-  ingresos?: number;
-  clientes?: number;
-  satisfaccion?: number;
-  ocupacion?: number;
-}
-// Claves para localStorage
 const SELECTED_RESTAURANT_KEY = 'selectedRestaurant';
 const COMPARE_RESTAURANTS_KEY = 'compareRestaurants';
 const RESTAURANTS_LIST_KEY = 'restaurantsList';

@@ -32,43 +32,43 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-md p-8 card">
-      <h1 className="text-2xl font-bold text-white text-center mb-8">
+    <form onSubmit={handleSubmit} className='w-full max-w-md p-8 card'>
+      <h1 className='text-2xl font-bold text-white text-center mb-8'>
         Iniciar Sesión
       </h1>
 
       {error && (
-        <div className="mb-6 p-3 bg-red-500/10 text-red-400 rounded-lg text-sm">
+        <div className='mb-6 p-3 bg-red-500/10 text-red-400 rounded-lg text-sm'>
           {error}
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className='space-y-6'>
         <div>
           <Input
-            type="email"
+            type='email'
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
+            placeholder='Email'
             required
-            className="w-full bg-white/5 border-white/10"
+            className='w-full bg-white/5 border-white/10'
             disabled={loading}
           />
         </div>
 
         <div>
           <Input
-            type="password"
+            type='password'
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Contraseña"
+            placeholder='Contraseña'
             required
-            className="w-full bg-white/5 border-white/10"
+            className='w-full bg-white/5 border-white/10'
             disabled={loading}
           />
         </div>
 
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button type='submit' disabled={loading} className='w-full'>
           {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
         </Button>
       </div>

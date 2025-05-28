@@ -1,22 +1,19 @@
 ---
-// src/pages/dashboard/index.astro
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
-import { Sidebar } from '../../components/dashboard/Sidebar';
 import { DashboardContent } from '../../components/dashboard/DashboardContent';
 import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
 import SelectedRestaurantHeader from '../../components/dashboard/SelectedRestaurantHeader';
-import RestaurantValidator from '../../components/dashboard/RestaurantValidator';
+import DashboardMainLayout from '../../layouts/DashboardMainLayout';
+import RestaurantValidator from '@/components/dashboard/RestaurantValidator';
 ---
-<DashboardLayout title="Dashboard | Yuppie">
-  <RestaurantValidator client:only="react" />
+
+<DashboardLayout title='Dashboard | Yuppie' section='dashboard'>
   <ProtectedRoute client:load>
-    <div class="min-h-screen flex">
-      <Sidebar client:load />
-      <main class="transition-all duration-300 p-4 md:pl-64 w-full">
-        <SelectedRestaurantHeader client:load />
-        <DashboardContent client:load />
-      </main>
-    </div>
+    <DashboardMainLayout client:load>
+      <RestaurantValidator client:only="react" />
+      <SelectedRestaurantHeader client:load />
+      <DashboardContent client:load />
+    </DashboardMainLayout>
   </ProtectedRoute>
 </DashboardLayout>
 

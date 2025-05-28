@@ -10,6 +10,7 @@ export default {
           dark: '#1D0158', // Azul Oscuro
         },
         white: '#FFFFFF',
+        green: '#39DFB2',
       },
       boxShadow: {
         yuppie: '0 4px 14px 0 rgba(47, 2, 204, 0.25)',
