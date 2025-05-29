@@ -51,6 +51,7 @@ export const API_CONFIG = {
   timeout: 10000,
   retryAttempts: 3,
   retryDelay: 1000,
+  apiKey: import.meta.env.PUBLIC_STRAPI_API_KEY,
 } as const;
 
 const withRetry = async <T>(
@@ -66,11 +67,10 @@ const withRetry = async <T>(
   }
 };
 
-const apiClient = {
+export const apiClient = {
   async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
-
     try {
       const response = await withRetry(async () => {
         const res = await fetch(`${API_CONFIG.baseUrl}${endpoint}`, {
@@ -78,10 +78,10 @@ const apiClient = {
           signal: controller.signal,
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${API_CONFIG.apiKey}`,
             ...options.headers,
           },
         });
-
         if (!res.ok) {
           const error = await res.json();
           throw new Error(error.error?.message || 'API Error');
@@ -124,18 +124,13 @@ interface Restaurant {
 
 export async function getRestaurantByFirebaseUID(firebaseUID: string) {
   try {
-    const baseUrl = import.meta.env.PUBLIC_API_URL;
     if (!firebaseUID) {
       console.error('No firebaseUID provided');
       return null;
     }
-    const url = `${baseUrl}/restaurants?filters[firebaseUID][$eq]=${firebaseUID}&populate=owner`;
+    const url = `/restaurants?filters[firebaseUID][$eq]=${firebaseUID}&populate=owner`;
     console.log('Requesting URL:', url);
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const result = await response.json();
+    const result = await apiClient.fetch<ApiResponse<any[]>>(url);
     if (!result.data || result.data.length === 0) {
       throw new Error('No restaurant found');
     }
@@ -159,15 +154,9 @@ export async function getRestaurantByFirebaseUID(firebaseUID: string) {
 
 export async function getRestaurantReviews(restaurantId: string) {
   try {
-    const response = await fetch(
-      `${
-        import.meta.env.PUBLIC_API_URL
-      }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*&sort[0]=createdAt:desc`
+    const { data } = await apiClient.fetch<ApiResponse<any[]>>(
+      `/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*&sort[0]=createdAt:desc`
     );
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const { data } = await response.json();
     return data.map((review: any) => ({
       id: review.id,
       documentId: review.documentId,
@@ -233,17 +222,9 @@ interface Schedule {
 // Añadir funciones para empleados
 export async function getEmployeesByRestaurant(restaurantId: string) {
   try {
-    const response = await fetch(
-      `${
-        import.meta.env.PUBLIC_API_URL
-      }/employees?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*`
+    const { data } = await apiClient.fetch<ApiResponse<any[]>>(
+      `/employees?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*`
     );
-
-    if (!response.ok) {
-      throw new Error('Error fetching employees');
-    }
-
-    const { data } = await response.json();
     return data.map((employee: any) => ({
       id: employee.id,
       documentId: employee.documentId,
@@ -322,17 +303,10 @@ export async function createEmployee(employeeData: CreateEmployeeInput) {
     console.log(
       `Obteniendo ID numérico para restaurante: ${employeeData.restaurantId}`
     );
-    const restaurantResponse = await fetch(
-      `${import.meta.env.PUBLIC_API_URL}/restaurants?filters[documentId][$eq]=${
-        employeeData.restaurantId
-      }`
+    const restaurantData = await apiClient.fetch<ApiResponse<any[]>>(
+      `/restaurants?filters[documentId][$eq]=${employeeData.restaurantId}`
     );
 
-    if (!restaurantResponse.ok) {
-      throw new Error('No se pudo obtener la información del restaurante');
-    }
-
-    const restaurantData = await restaurantResponse.json();
     if (!restaurantData.data || restaurantData.data.length === 0) {
       throw new Error('Restaurante no encontrado');
     }
@@ -364,34 +338,12 @@ export async function createEmployee(employeeData: CreateEmployeeInput) {
       JSON.stringify(employeePayload, null, 2)
     );
 
-    const response = await fetch(
-      `${import.meta.env.PUBLIC_API_URL}/employees`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(employeePayload),
-      }
-    );
+    const result = await apiClient.fetch<ApiResponse<any>>('/employees', {
+      method: 'POST',
+      body: JSON.stringify(employeePayload),
+    });
 
-    // Para un mejor debugging, obtenemos el texto completo de la respuesta
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      console.error('Error creando empleado (respuesta):', responseText);
-      throw new Error('Error al crear empleado');
-    }
-
-    // Intentar parsear la respuesta como JSON
-    let result;
-    try {
-      result = JSON.parse(responseText);
-      console.log('Empleado creado:', result);
-    } catch (e) {
-      console.error('Error al parsear respuesta JSON:', e);
-      throw new Error('Error al procesar la respuesta del servidor');
-    }
+    console.log('Empleado creado:', result);
 
     // Subir foto si existe
     if (employeeData.photo && result.data && result.data.id) {
@@ -402,13 +354,13 @@ export async function createEmployee(employeeData: CreateEmployeeInput) {
       photoFormData.append('refId', result.data.id);
       photoFormData.append('field', 'photo');
 
-      const uploadResponse = await fetch(
-        `${import.meta.env.PUBLIC_API_URL}/upload`,
-        {
-          method: 'POST',
-          body: photoFormData,
-        }
-      );
+      const uploadResponse = await fetch(`${API_CONFIG.baseUrl}/upload`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${API_CONFIG.apiKey}`,
+        },
+        body: photoFormData,
+      });
 
       if (!uploadResponse.ok) {
         console.error('Error al subir la foto');
@@ -443,30 +395,17 @@ export async function updateEmployee(
     }));
 
     // Actualizar datos del empleado incluyendo horarios
-    const response = await fetch(
-      `${import.meta.env.PUBLIC_API_URL}/employees/${documentId}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
+    await apiClient.fetch<ApiResponse<any>>(`/employees/${documentId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        data: {
+          firstName: employeeData.firstName,
+          lastName: employeeData.lastName,
+          position: employeeData.position,
+          schedules: formattedSchedules,
         },
-        body: JSON.stringify({
-          data: {
-            firstName: employeeData.firstName,
-            lastName: employeeData.lastName,
-            position: employeeData.position,
-            // Reemplazar completamente los horarios existentes con los formateados
-            schedules: formattedSchedules,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error actualizando empleado:', errorText);
-      throw new Error('Error al actualizar empleado');
-    }
+      }),
+    });
 
     console.log('Empleado actualizado correctamente');
 
@@ -475,24 +414,16 @@ export async function updateEmployee(
       console.log('Subiendo nueva foto para el empleado');
 
       // Primero, obtener el ID numérico del empleado
-      const employeeResponse = await fetch(
-        `${
-          import.meta.env.PUBLIC_API_URL
-        }/employees?filters[documentId][$eq]=${documentId}`
+      const employeeDataResult = await apiClient.fetch<ApiResponse<any[]>>(
+        `/employees?filters[documentId][$eq]=${documentId}`
       );
 
-      if (!employeeResponse.ok) {
-        console.error('No se pudo obtener el ID numérico del empleado');
-        return true; // Continuamos, ya que el empleado se actualizó correctamente
-      }
-
-      const employeeData = await employeeResponse.json();
-      if (!employeeData.data || employeeData.data.length === 0) {
+      if (!employeeDataResult.data || employeeDataResult.data.length === 0) {
         console.error('No se encontró el empleado');
         return true;
       }
 
-      const employeeId = employeeData.data[0].id;
+      const employeeId = employeeDataResult.data[0].id;
 
       // Subir la foto
       const photoFormData = new FormData();
@@ -501,13 +432,13 @@ export async function updateEmployee(
       photoFormData.append('refId', employeeId.toString());
       photoFormData.append('field', 'photo');
 
-      const uploadResponse = await fetch(
-        `${import.meta.env.PUBLIC_API_URL}/upload`,
-        {
-          method: 'POST',
-          body: photoFormData,
-        }
-      );
+      const uploadResponse = await fetch(`${API_CONFIG.baseUrl}/upload`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${API_CONFIG.apiKey}`,
+        },
+        body: photoFormData,
+      });
 
       if (!uploadResponse.ok) {
         console.error('Error al subir la foto');
@@ -525,21 +456,9 @@ export async function updateEmployee(
 
 export async function deleteEmployee(documentId: string): Promise<boolean> {
   try {
-    const response = await fetch(
-      `${import.meta.env.PUBLIC_API_URL}/employees/${documentId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Error deleting employee');
-    }
-
+    await apiClient.fetch<ApiResponse<any>>(`/employees/${documentId}`, {
+      method: 'DELETE',
+    });
     return true;
   } catch (error) {
     console.error('Error in deleteEmployee:', error);
@@ -552,21 +471,13 @@ export async function updateReview(
   data: any
 ): Promise<any> {
   try {
-    const response = await fetch(
-      `${API_CONFIG.baseUrl}/reviews/${reviewDocumentId}`,
+    return await apiClient.fetch<ApiResponse<any>>(
+      `/reviews/${reviewDocumentId}`,
       {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ data }),
       }
     );
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error updating review: ${errorText}`);
-    }
-    return await response.json();
   } catch (error) {
     console.error('Error in updateReview:', error);
     throw error;
@@ -576,25 +487,15 @@ export async function updateReview(
 // Función para obtener todos los restaurantes de un owner dado su firebaseUID
 export async function getOwnerRestaurants(firebaseUID: string) {
   try {
-    const baseUrl = import.meta.env.PUBLIC_API_URL;
     if (!firebaseUID) {
       console.error('No se proporcionó firebaseUID');
       return [];
     }
 
-    const url = `${baseUrl}/restaurants?filters[firebaseUID][$eq]=${firebaseUID}&populate=*`;
+    const url = `/restaurants?filters[firebaseUID][$eq]=${firebaseUID}&populate=*`;
     console.log('Solicitando restaurantes desde:', url);
 
-    const response = await fetch(url);
-    console.log('Estado de respuesta HTTP:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error en getOwnerRestaurants:', errorText);
-      throw new Error(`HTTP error! estado: ${response.status}`);
-    }
-
-    const result = await response.json();
+    const result = await apiClient.fetch<ApiResponse<any[]>>(url);
     console.log('Resultado completo:', result);
 
     if (!result.data) {
@@ -609,21 +510,17 @@ export async function getOwnerRestaurants(firebaseUID: string) {
 
     // Mapeamos los datos para asegurarnos que tengan la estructura correcta
     const restaurants = result.data.map((restaurantData: any) => {
-      // IMPORTANTE: La estructura directa en las respuestas de Strapi
       const id = restaurantData.id || 0;
       const documentId =
         restaurantData.documentId || restaurantData.id?.toString() || 'unknown';
       const name = restaurantData.name || 'Restaurante sin nombre';
       const taps = restaurantData.taps || '0';
 
-      // Extraer datos del propietario de forma segura
       const owner = {
         firstName: restaurantData.owner?.name || '',
         lastName: restaurantData.owner?.lastName || '',
       };
 
-      // Extraer coordenadas directamente desde los campos de nivel superior
-      // IMPORTANTE: Las coordenadas están a nivel de raíz, no en un subobjeto
       const coordinates = {
         latitude:
           restaurantData.latitude !== null
@@ -635,7 +532,6 @@ export async function getOwnerRestaurants(firebaseUID: string) {
             : -58.381592,
       };
 
-      // Extraer información de ubicación directamente de los campos de nivel superior
       const location = {
         street: restaurantData.address || '',
         number: '',
@@ -645,7 +541,6 @@ export async function getOwnerRestaurants(firebaseUID: string) {
         postalCode: restaurantData.postalCode || '',
       };
 
-      // Construir y devolver el objeto de restaurante
       return {
         id,
         documentId,
@@ -672,26 +567,17 @@ export async function updateRestaurantCoordinates(
   coordinates: { latitude: number; longitude: number }
 ): Promise<boolean> {
   try {
-    const response = await fetch(
-      `${process.env.API_URL}/api/restaurants/${documentId}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          data: {
-            coordinates: {
-              latitude: coordinates.latitude,
-              longitude: coordinates.longitude,
-            },
+    await apiClient.fetch<ApiResponse<any>>(`/restaurants/${documentId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        data: {
+          coordinates: {
+            latitude: coordinates.latitude,
+            longitude: coordinates.longitude,
           },
-        }),
-      }
-    );
-    if (!response.ok) {
-      throw new Error(`Error updating coordinates: ${response.status}`);
-    }
+        },
+      }),
+    });
     return true;
   } catch (error) {
     console.error('Error in updateRestaurantCoordinates:', error);

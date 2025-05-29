@@ -3,7 +3,7 @@ import type {
   CreateReviewInput,
   ErrorResponse,
 } from '@/types/api';
-import { API_CONFIG } from '../api';
+import { API_CONFIG, apiClient } from '../api';
 import type { Review } from '@/types/reviews';
 
 export async function createReview(
@@ -11,20 +11,11 @@ export async function createReview(
 ): Promise<ApiResponse<Review> | ErrorResponse> {
   try {
     reviewData.date = new Date().toISOString();
-
-    const response = await fetch(`${API_CONFIG.baseUrl}/reviews`, {
+    const result = await apiClient.fetch<ApiResponse<Review>>('/reviews', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ data: reviewData }),
     });
-
-    if (!response.ok) {
-      throw new Error('Error al crear la review');
-    }
-
-    return response.json();
+    return result;
   } catch (error) {
     return {
       error: true,
@@ -39,18 +30,11 @@ export async function existsReviewWithEmail(
   email: string
 ): Promise<Boolean | ErrorResponse> {
   try {
-    const url = `${
-      import.meta.env.PUBLIC_API_URL
-    }/reviews?filters[restaurant][documentId][$eq]=${restaurant}&filters[employee][documentId][$eq]=${employee}&filters[email][$eq]=${email}`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error('Error al buscar la review');
-    }
-
-    const { data: reviewsData } = await response.json();
+    const url = `/reviews?filters[restaurant][documentId][$eq]=${restaurant}&filters[employee][documentId][$eq]=${employee}&filters[email][$eq]=${email}`;
+    const { data: reviewsData } = await apiClient.fetch<{ data: Review[] }>(
+      url
+    );
     const today = new Date().toISOString().split('T')[0];
-
     return reviewsData.some(
       (review: Review) => review.date.split('T')[0] === today
     );

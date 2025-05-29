@@ -2,6 +2,7 @@
 import { API_CONFIG } from './api';
 import type { Review, Employee } from '../types/api';
 import type { MetricsData, TimeFilter } from '../types/metrics';
+import { apiClient } from './api';
 
 function getDateRangeForFilter(
   timeFilter: TimeFilter,
@@ -45,20 +46,10 @@ export async function getEmployeeMetrics(
     customStart,
     customEnd
   );
-
-  const response = await fetch(
-    `${
-      API_CONFIG.baseUrl
-    }/reviews?filters[employee][id][$eq]=${employeeId}&filters[createdAt][$gte]=${start.toISOString()}&filters[createdAt][$lte]=${end.toISOString()}&populate=*`
+  const { data } = await apiClient.fetch<{ data: Review[] }>(
+    `/reviews?filters[employee][id][$eq]=${employeeId}&filters[createdAt][$gte]=${start.toISOString()}&filters[createdAt][$lte]=${end.toISOString()}&populate=*`
   );
-
-  if (!response.ok) {
-    throw new Error('Error fetching employee metrics');
-  }
-
-  const data = await response.json();
-  const reviews = data.data;
-
+  const reviews = data;
   return {
     totalReviews: reviews.length,
     averageRating:
@@ -85,66 +76,34 @@ export async function getRestaurantMetrics(
       startDate,
       endDate
     );
-
     // Obtener datos del restaurante
-    const restaurantResponse = await fetch(
-      `${API_CONFIG.baseUrl}/restaurants/${restaurantId}?populate=*`
+    const restaurantData = await apiClient.fetch<{ data: any }>(
+      `/restaurants/${restaurantId}?populate=*`
     );
-
-    if (!restaurantResponse.ok) {
-      throw new Error('Error fetching restaurant data');
-    }
-
-    const restaurantData = await restaurantResponse.json();
-
     // Obtener reseñas del período actual
-    const currentReviewsResponse = await fetch(
-      `${
-        API_CONFIG.baseUrl
-      }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&filters[createdAt][$gte]=${start.toISOString()}&filters[createdAt][$lte]=${end.toISOString()}&populate=*`
+    const { data: currentReviews } = await apiClient.fetch<{ data: Review[] }>(
+      `/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&filters[createdAt][$gte]=${start.toISOString()}&filters[createdAt][$lte]=${end.toISOString()}&populate=*`
     );
-
-    if (!currentReviewsResponse.ok) {
-      throw new Error('Error fetching current reviews');
-    }
-
-    const currentReviewsData = await currentReviewsResponse.json();
-    const currentReviews = currentReviewsData.data;
-
     // Obtener reseñas del período anterior para comparación
     const prevStart = new Date(start);
     prevStart.setDate(prevStart.getDate() - getDaysDifference(start, end));
-
-    const prevReviewsResponse = await fetch(
-      `${
-        API_CONFIG.baseUrl
-      }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&filters[createdAt][$gte]=${prevStart.toISOString()}&filters[createdAt][$lt]=${start.toISOString()}&populate=*`
+    const { data: prevReviews } = await apiClient.fetch<{ data: Review[] }>(
+      `/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&filters[createdAt][$gte]=${prevStart.toISOString()}&filters[createdAt][$lt]=${start.toISOString()}&populate=*`
     );
-
-    if (!prevReviewsResponse.ok) {
-      throw new Error('Error fetching previous reviews');
-    }
-
-    const prevReviewsData = await prevReviewsResponse.json();
-    const prevReviews = prevReviewsData.data;
-
     // Calcular métricas
     const totalReviews = currentReviews.length;
     const averageRating = calculateAverageRating(currentReviews);
     const prevAverageRating = calculateAverageRating(prevReviews);
-
     const typeStats = calculateTypeStats(currentReviews);
     const ratingStats = calculateRatingStats(currentReviews);
     const weekdayStats = calculateWeekdayStats(currentReviews);
     const timeOfDayStats = calculateTimeOfDayStats(currentReviews);
-
     // Calcular tendencias
     const trends = {
       ratingTrend: calculateTrend(averageRating, prevAverageRating),
       volumeTrend: calculateTrend(totalReviews, prevReviews.length),
       responseTimeTrend: 0, // TODO: Implementar cuando tengamos timestamps de respuesta
     };
-
     return {
       totalReviews,
       averageRating,
@@ -274,20 +233,9 @@ export async function getMetricsHistory(
   endDate?: Date
 ) {
   const { start, end } = getDateRangeForFilter(timeFilter, startDate, endDate);
-
-  const response = await fetch(
-    `${
-      API_CONFIG.baseUrl
-    }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&filters[createdAt][$gte]=${start.toISOString()}&filters[createdAt][$lte]=${end.toISOString()}&sort=createdAt:ASC&populate=*`
+  const { data: reviews } = await apiClient.fetch<{ data: Review[] }>(
+    `/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&filters[createdAt][$gte]=${start.toISOString()}&filters[createdAt][$lte]=${end.toISOString()}&sort=createdAt:ASC&populate=*`
   );
-
-  if (!response.ok) {
-    throw new Error('Error fetching metrics history');
-  }
-
-  const data = await response.json();
-  const reviews = data.data;
-
   // Agrupar por fecha
   const groupedByDate = reviews.reduce((acc: any, review: any) => {
     const date = review.createdAt.split('T')[0];
@@ -303,9 +251,7 @@ export async function getMetricsHistory(
     if (review.googleSent) acc[date].googleSent++;
     return acc;
   }, {});
-
   const dates = Object.keys(groupedByDate).sort();
-
   return {
     dates,
     ratings: dates.map(

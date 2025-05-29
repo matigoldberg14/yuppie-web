@@ -22,6 +22,7 @@ import { getSelectedRestaurant } from '../../lib/restaurantStore';
 import { setSelectedRestaurant } from '../../lib/restaurantStore';
 import { metricsCache } from '../dashboard/metricsCache';
 import { MetricsCacheManager } from '../../lib/cache/metricsCacheManager';
+import { apiClient } from '../../services/api';
 
 interface Stats {
   totalReviews: number;
@@ -34,23 +35,13 @@ interface Stats {
 
 async function fetchRestaurantData(restaurantId: string) {
   try {
-    const apiUrl = `${
-      import.meta.env.PUBLIC_API_URL
-    }/restaurants/${restaurantId}?populate=employees`;
+    const apiUrl = `/restaurants/${restaurantId}?populate=employees`;
     console.log(`Solicitando datos frescos del restaurante a: ${apiUrl}`);
-
-    const response = await fetch(apiUrl, { cache: 'no-store' });
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-    const result = await response.json();
-
+    const result = await apiClient.fetch<{ data: any }>(apiUrl);
     console.log(
       'Datos del restaurante recibidos:',
       JSON.stringify(result.data, null, 2)
     );
-
-    // Suponiendo que result.data tiene la info del restaurante
     return result.data;
   } catch (error) {
     console.error('Error al obtener datos del restaurante:', error);
@@ -65,21 +56,9 @@ async function fetchReviewsDirectly(
 ) {
   try {
     const nonce = forceRefresh ? `&_=${Date.now()}` : '';
-    const apiUrl = `${
-      import.meta.env.PUBLIC_API_URL
-    }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*&sort[0]=createdAt:desc${nonce}`;
-
+    const apiUrl = `/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*&sort[0]=createdAt:desc${nonce}`;
     console.log(`Solicitando directamente a: ${apiUrl}`);
-
-    // Agrega la opción cache: 'no-store' para evitar respuestas en caché
-    const response = await fetch(apiUrl, { cache: 'no-store' });
-
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-
-    const result = await response.json();
-
+    const result = await apiClient.fetch<{ data: any[] }>(apiUrl);
     const reviews = result.data.map((review: any) => ({
       id: review.id,
       documentId: review.documentId,
@@ -102,7 +81,6 @@ async function fetchReviewsDirectly(
           }
         : undefined,
     }));
-
     return reviews;
   } catch (error) {
     console.error('Error al obtener reseñas directamente:', error);
@@ -113,15 +91,9 @@ async function fetchReviewsDirectly(
 //traerme los emplados de un retaurant
 async function fetchEmployeesByRestaurant(restaurantDocumentId: string) {
   try {
-    const apiUrl = `${
-      import.meta.env.PUBLIC_API_URL
-    }/employees?filters[restaurant][documentId][$eq]=${restaurantDocumentId}`;
+    const apiUrl = `/employees?filters[restaurant][documentId][$eq]=${restaurantDocumentId}`;
     console.log(`Solicitando empleados del restaurante a: ${apiUrl}`);
-    const response = await fetch(apiUrl, { cache: 'no-store' });
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-    const result = await response.json();
+    const result = await apiClient.fetch<{ data: any[] }>(apiUrl);
     console.log('Empleados recibidos:', result.data);
     return result.data;
   } catch (error) {
