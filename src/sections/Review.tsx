@@ -22,6 +22,7 @@ import ErrorModal from '@/components/ui/Modal';
 import emailjs from '@emailjs/browser';
 import { authClientes } from '@/lib/firebaseClientes';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { getClienteByFirebaseUID } from '@/services/api';
 
 type Pages = 'rating' | 'improvement' | 'comment' | 'thanks';
 
@@ -71,10 +72,17 @@ export default function Review({ restaurant, employee }: Props) {
 
     // Escuchar usuario logueado de Firebase Clientes
     if (authClientes) {
-      const unsubscribe = onAuthStateChanged(authClientes, (user) => {
+      const unsubscribe = onAuthStateChanged(authClientes, async (user) => {
         if (user) {
+          // Buscar el cliente en Strapi por firebaseUID
+          const clienteStrapi = await getClienteByFirebaseUID(user.uid);
+          console.log('clienteStrapi:', clienteStrapi);
           setCliente({
-            name: user.displayName || user.email || 'Cliente',
+            name:
+              clienteStrapi?.name ||
+              user.displayName ||
+              user.email ||
+              'Cliente',
             email: user.email || '',
           });
         } else {

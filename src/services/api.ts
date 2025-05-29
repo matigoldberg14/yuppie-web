@@ -739,3 +739,21 @@ export async function createCliente(cliente: CreateClienteInput) {
     throw error;
   }
 }
+
+export async function getClienteByFirebaseUID(firebaseUID: string) {
+  try {
+    const url = `${API_CONFIG.baseUrl}/clientes?filters[firebaseUID][$eq]=${firebaseUID}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Error al buscar cliente en Strapi');
+    }
+    const result = await response.json();
+    if (result.data && result.data.length > 0) {
+      return result.data[0];
+    }
+    return null;
+  } catch (error) {
+    console.error('Error en getClienteByFirebaseUID:', error);
+    return null;
+  }
+}

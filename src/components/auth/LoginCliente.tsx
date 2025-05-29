@@ -9,7 +9,8 @@ import {
   signOut,
 } from 'firebase/auth';
 import type { User } from 'firebase/auth';
-import { createCliente } from '@/services/api';
+import { createCliente, getClienteByFirebaseUID } from '@/services/api';
+import ErrorModal from '@/components/ui/Modal';
 
 const TABS = [
   { label: 'Iniciar sesión', value: 'login' },
@@ -24,6 +25,25 @@ function getRedirectUrl() {
   return '/';
 }
 
+function getFriendlyErrorMessage(error: any): string {
+  const msg = typeof error === 'string' ? error : error?.message || '';
+  if (msg.includes('auth/invalid-email'))
+    return 'El email ingresado no es válido.';
+  if (msg.includes('auth/invalid-credential'))
+    return 'El email o la contraseña son incorrectos.';
+  if (msg.includes('auth/user-not-found'))
+    return 'No existe una cuenta con ese email.';
+  if (msg.includes('auth/email-already-in-use'))
+    return 'Ese email ya está registrado.';
+  if (msg.includes('auth/weak-password'))
+    return 'La contraseña es demasiado débil (mínimo 6 caracteres).';
+  if (msg.includes('Error al crear cliente en Strapi'))
+    return 'No se pudo guardar tu cuenta, intenta de nuevo en unos minutos.';
+  if (msg.includes('Failed to fetch') || msg.includes('NetworkError'))
+    return 'No se pudo conectar. Verifica tu conexión a internet.';
+  return 'Ha ocurrido un error. Intenta de nuevo.';
+}
+
 export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -33,7 +53,9 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [user, setUser] = useState<User | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('Error');
+  const [modalMessage, setModalMessage] = useState('');
 
   // Escuchar usuario logueado de Firebase Clientes
   useEffect(() => {
@@ -45,12 +67,25 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
     }
   }, []);
 
+  const isPasswordValid = (password: string) => {
+    return /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]{8,}$/.test(password);
+  };
+
   // Handler para login o registro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
+      if (tab === 'register' && !isPasswordValid(password)) {
+        setModalTitle('Contraseña inválida');
+        setModalMessage(
+          'La contraseña debe tener al menos 8 caracteres y ser alfanumérica.'
+        );
+        setModalOpen(true);
+        setLoading(false);
+        return;
+      }
       if (!authClientes) throw new Error('Firebase no inicializado');
       const redirectUrl = getRedirectUrl();
       if (tab === 'login') {
@@ -83,16 +118,19 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
             lastLoginAt: new Date().toISOString(),
           });
           console.log('Respuesta de Strapi:', strapiRes);
-          setToast('¡Cliente creado en Strapi!');
         } catch (err) {
           console.error('Error al crear cliente en Strapi:', err);
-          setToast('Error al crear cliente en Strapi');
+          setModalTitle('Error');
+          setModalMessage(getFriendlyErrorMessage(err));
+          setModalOpen(true);
+          return;
         }
-        setToast(null);
         window.location.href = redirectUrl;
       }
     } catch (err: any) {
-      setError(err.message || 'Error de autenticación');
+      setModalTitle('Error');
+      setModalMessage(getFriendlyErrorMessage(err));
+      setModalOpen(true);
     } finally {
       setLoading(false);
     }
@@ -108,14 +146,9 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
       const res = await signInWithPopup(authClientes, provider);
       setUser(res.user);
       const redirectUrl = getRedirectUrl();
-      if (tab === 'register') {
-        setToast('Intentando crear cliente en Strapi con Google...');
-        setTimeout(() => setToast(null), 10000);
-        console.log('Registrando cliente en Strapi (Google)...', {
-          name: res.user.displayName || res.user.email || '',
-          email: res.user.email || '',
-          firebase_uid: res.user.uid,
-        });
+      // Buscar cliente en Strapi por firebaseUID
+      const clienteStrapi = await getClienteByFirebaseUID(res.user.uid);
+      if (!clienteStrapi) {
         try {
           const strapiRes = await createCliente({
             name: res.user.displayName || res.user.email || '',
@@ -125,20 +158,20 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
             registeredAt: new Date().toISOString(),
             lastLoginAt: new Date().toISOString(),
           });
-          console.log('Respuesta de Strapi (Google):', strapiRes);
-          setToast('¡Cliente creado en Strapi!');
+          console.log('Cliente creado en Strapi (Google):', strapiRes);
         } catch (err) {
           console.error('Error al crear cliente en Strapi (Google):', err);
-          setToast('Error al crear cliente en Strapi');
+          setModalTitle('Error');
+          setModalMessage(getFriendlyErrorMessage(err));
+          setModalOpen(true);
+          return;
         }
-        setToast(null);
-        window.location.href = redirectUrl;
-      } else {
-        window.location.href = redirectUrl;
       }
+      window.location.href = redirectUrl;
     } catch (err: any) {
-      setError(err.message || 'Error con Google');
-      console.error('Error con Google:', err);
+      setModalTitle('Error');
+      setModalMessage(getFriendlyErrorMessage(err));
+      setModalOpen(true);
     } finally {
       setLoading(false);
     }
@@ -179,11 +212,12 @@ export default function LoginCliente({ onCancel }: { onCancel?: () => void }) {
 
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-b from-[#1a1440] to-[#2e1a7a]">
-      {toast && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-black/90 text-white px-6 py-3 rounded-xl shadow-lg z-50 text-center text-base animate-fade-in">
-          {toast}
-        </div>
-      )}
+      <ErrorModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={modalTitle}
+        message={modalMessage}
+      />
       <form
         className="w-full max-w-sm card flex flex-col gap-6 shadow-xl p-6"
         onSubmit={handleSubmit}
