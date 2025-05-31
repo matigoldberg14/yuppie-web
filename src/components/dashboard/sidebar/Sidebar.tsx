@@ -51,7 +51,7 @@ export function Sidebar({ section }: { section: string }) {
         />
       </button>
       <div className='w-full flex px-4 md:px-2 flex-row md:flex-col items-start justify-start gap-4 z-40'>
-        <div className='flex items-center w-full'>
+        <div className='flex items-center w-full px-4'>
           <div
             className={`w-full flex ${
               isCollapsed ? 'justify-center' : 'justify-start'

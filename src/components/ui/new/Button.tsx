@@ -13,7 +13,7 @@ export default function Button({
   type = 'button',
   icon,
   iconPosition = 'left',
-  className,
+  className = '',
 }: Props) {
   return (
     <button

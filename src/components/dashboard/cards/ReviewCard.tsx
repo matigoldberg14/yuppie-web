@@ -48,7 +48,7 @@ export default function ReviewCard({ className, review }: Props) {
             label={`${review.employee?.firstName} ${review.employee?.lastName}`}
             backgroundColor='bg-primary-dark'
             color='text-white'
-            className='text-sm cursor-pointer'
+            className='text-sm'
             icon={<RiUserLine className='h-3 w-3' />}
           />
         )}

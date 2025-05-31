@@ -3,6 +3,8 @@ import { getRestaurantsByOwner } from '@/services/api/restaurants';
 import type { Restaurant } from '@/types/restaurant';
 import { auth } from '@/lib/firebase';
 import { getEmployeesByRestaurant } from '@/services/api/employees';
+import { getRestaurantReviews } from '@/services/api/reviews';
+import type { Review } from '@/types/reviews';
 
 const SELECTED_RESTAURANT_KEY = 'selectedRestaurant';
 
@@ -15,6 +17,7 @@ const getUserKey = (key: string) => {
 interface RestaurantStore {
   restaurants: Restaurant[];
   selectedRestaurant: Restaurant | null;
+  reviews: Review[];
   isLoading: boolean;
   hasLoaded: boolean;
   error: string | null;
@@ -22,11 +25,13 @@ interface RestaurantStore {
   setSelectedRestaurant: (restaurant: Restaurant) => void;
   clearRestaurants: () => void;
   fetchEmployees: () => Promise<void>;
+  fetchReviews: () => Promise<void>;
 }
 
 export const useRestaurantStore = create<RestaurantStore>((set, get) => ({
   restaurants: [],
   selectedRestaurant: null,
+  reviews: [],
   isLoading: false,
   hasLoaded: false,
   error: null,
@@ -107,6 +112,8 @@ export const useRestaurantStore = create<RestaurantStore>((set, get) => ({
       JSON.stringify(restaurant)
     );
     set({ selectedRestaurant: restaurant });
+    // Fetch reviews for the newly selected restaurant
+    get().fetchReviews();
   },
 
   clearRestaurants: () => {
@@ -114,6 +121,7 @@ export const useRestaurantStore = create<RestaurantStore>((set, get) => ({
     set({
       restaurants: [],
       selectedRestaurant: null,
+      reviews: [],
       hasLoaded: false,
       error: null,
     });
@@ -125,6 +133,8 @@ export const useRestaurantStore = create<RestaurantStore>((set, get) => ({
       set({ error: 'No restaurant selected' });
       return;
     }
+
+    set({ isLoading: true, error: null });
 
     try {
       const employees = await getEmployeesByRestaurant(
@@ -147,11 +157,38 @@ export const useRestaurantStore = create<RestaurantStore>((set, get) => ({
       set({
         selectedRestaurant: updatedSelectedRestaurant,
         restaurants: updatedRestaurants,
+        isLoading: false,
       });
     } catch (error) {
       set({
         error:
           error instanceof Error ? error.message : 'Failed to fetch employees',
+        isLoading: false,
+      });
+    }
+  },
+
+  fetchReviews: async () => {
+    const selectedRestaurant = get().selectedRestaurant;
+    if (!selectedRestaurant) {
+      set({ error: 'No restaurant selected' });
+      return;
+    }
+
+    set({ isLoading: true, error: null });
+
+    try {
+      const reviews = await getRestaurantReviews(selectedRestaurant.documentId);
+      const reviewsSorted = reviews.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      set({ reviews: reviewsSorted, isLoading: false });
+    } catch (error) {
+      set({
+        error:
+          error instanceof Error ? error.message : 'Failed to fetch reviews',
+        isLoading: false,
       });
     }
   },

@@ -14,7 +14,6 @@ import {
 } from 'recharts';
 import { useRestaurantStore } from '@/store/useRestaurantStore';
 import { SkeletonLoader } from '@/components/common/SkeletonLoader';
-import { getRestaurantReviews } from '@/services/api/reviews';
 import MetricCard from '../../components/dashboard/cards/MetricCard';
 import DashboardSkeleton from '../../components/dashboard/skeleton/DashboardSkeleton';
 import GraphCard from '../../components/dashboard/cards/GraphCard';
@@ -30,7 +29,7 @@ interface Stats {
 }
 
 export default function DashboardContent() {
-  const { selectedRestaurant, isLoading } = useRestaurantStore();
+  const { selectedRestaurant, isLoading, reviews } = useRestaurantStore();
 
   const [stats, setStats] = useState<Stats>({
     totalReviews: 0,
@@ -47,81 +46,73 @@ export default function DashboardContent() {
     window.location.href = '/dashboard/analytics';
   };
 
-  // Cargar datos iniciales
+  // Update stats when reviews change
   useEffect(() => {
-    const fetchData = async () => {
-      if (!selectedRestaurant) {
-        setLoading(false);
-        return;
-      }
+    if (!selectedRestaurant) {
+      setLoading(false);
+      return;
+    }
 
-      setLoading(true);
+    setLoading(true);
 
-      try {
-        const reviews = await getRestaurantReviews(
-          selectedRestaurant.documentId
-        );
+    try {
+      const totalReviews = reviews.length;
 
-        const totalReviews = reviews.length;
+      const ratingDistribution = reviews.reduce(
+        (acc: Record<number, number>, review: any) => {
+          acc[review.calification] = (acc[review.calification] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
 
-        const ratingDistribution = reviews.reduce(
-          (acc: Record<number, number>, review: any) => {
-            acc[review.calification] = (acc[review.calification] || 0) + 1;
-            return acc;
-          },
-          {}
-        );
+      const reviewsByDate = reviews.reduce(
+        (acc: Record<string, number>, review: any) => {
+          const date = formatDateToSpanishLocale(review.createdAt);
+          acc[date] = (acc[date] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
 
-        const reviewsByDate = reviews.reduce(
-          (acc: Record<string, number>, review: any) => {
-            const date = formatDateToSpanishLocale(review.createdAt);
-            acc[date] = (acc[date] || 0) + 1;
-            return acc;
-          },
-          {}
-        );
+      const ratingData = Object.entries(ratingDistribution).map(
+        ([rating, count]) => ({
+          rating: Number(rating),
+          count: Number(count),
+        })
+      );
 
-        const ratingData = Object.entries(ratingDistribution).map(
-          ([rating, count]) => ({
-            rating: Number(rating),
-            count: Number(count),
-          })
-        );
+      const timelineData = Object.entries(reviewsByDate).map(
+        ([date, count]) => ({
+          date,
+          reviews: Number(count),
+        })
+      );
 
-        const timelineData = Object.entries(reviewsByDate).map(
-          ([date, count]) => ({
-            date,
-            reviews: Number(count),
-          })
-        );
+      const averageRating =
+        totalReviews > 0
+          ? reviews.reduce((acc: number, r: any) => acc + r.calification, 0) /
+            totalReviews
+          : 0;
 
-        const averageRating =
-          totalReviews > 0
-            ? reviews.reduce((acc: number, r: any) => acc + r.calification, 0) /
-              totalReviews
-            : 0;
+      const currentTaps = parseInt(selectedRestaurant.taps);
+      const currentResponseRate =
+        currentTaps > 0 ? (totalReviews / currentTaps) * 100 : 0;
 
-        const currentTaps = parseInt(selectedRestaurant.taps);
-        const currentResponseRate =
-          currentTaps > 0 ? (totalReviews / currentTaps) * 100 : 0;
-
-        setStats({
-          totalReviews,
-          averageRating,
-          responseRate: currentResponseRate,
-          taps: currentTaps,
-          ratingData,
-          timelineData,
-        });
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [selectedRestaurant]);
+      setStats({
+        totalReviews,
+        averageRating,
+        responseRate: currentResponseRate,
+        taps: currentTaps,
+        ratingData,
+        timelineData,
+      });
+    } catch (error) {
+      console.error('Error processing dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedRestaurant, reviews]);
 
   if (isLoading || loading) {
     return <DashboardSkeleton />;

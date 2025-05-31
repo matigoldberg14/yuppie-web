@@ -1,265 +1,230 @@
 import { useState, useEffect } from 'react';
-import { auth } from '../../lib/firebase';
-import { getRestaurantByFirebaseUID, updateReview } from '../../services/api';
-import { Star, Download, User } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge'; // Importamos Badge para mostrar el empleado
-import emailjs from '@emailjs/browser';
-import * as XLSX from 'xlsx';
-import { formatDateBuenosAires } from '../../utils/formatDate';
-import { getSelectedRestaurant } from '../../lib/restaurantStore';
-import { getRestaurantReviews } from '@/services/api/reviews';
-import type { Review } from '@/types/reviews';
 import Input from '../../components/ui/new/Input';
-import { IoSearch } from 'react-icons/io5';
+import {
+  IoArrowDownOutline,
+  IoArrowUpOutline,
+  IoCalendarOutline,
+  IoPersonOutline,
+  IoSearch,
+  IoStar,
+} from 'react-icons/io5';
 import Button from '../../components/ui/new/Button';
 import { BiSortAlt2 } from 'react-icons/bi';
 import { LuListFilter } from 'react-icons/lu';
 import ReviewCard from '../../components/dashboard/cards/ReviewCard';
+import { useRestaurantStore } from '@/store/useRestaurantStore';
+import ReviewsSkeleton from '@/components/dashboard/skeleton/ReviewsSkeleton';
+import { formatDateToSpanishLocale } from '@/utils/date';
+import ClickOutside from '@/components/ui/ClickOutside';
+import { IoIosTrendingUp } from 'react-icons/io';
+import type { ImprovementValue, Review } from '@/types/reviews';
+
+type ActionType = 'date' | 'calification' | 'typeImprovement' | 'employee';
+
+type OrderByDirection = 'asc' | 'desc';
+
+interface OrderBy {
+  open: boolean;
+  type: ActionType;
+  direction: OrderByDirection;
+}
+
+type filterType = '>' | '>=' | '<' | '<=' | '=' | '!=';
+
+interface DateFilter {
+  filter: filterType;
+  date1?: string;
+  date2?: string;
+  date?: string;
+}
+
+interface CalificationFilter {
+  filter: filterType;
+  calification: number;
+}
+
+interface TypeImprovementFilter {
+  filter: ImprovementValue[];
+}
+
+interface EmployeeFilter {
+  filter: string[];
+}
+
+interface Filter {
+  type: ActionType;
+  value:
+    | DateFilter
+    | CalificationFilter
+    | TypeImprovementFilter
+    | EmployeeFilter;
+}
+
+interface FilterType {
+  open: boolean;
+  filters: Filter[];
+}
+
+const orderByOptions = [
+  {
+    label: 'Fecha',
+    value: 'date',
+    icon: <IoCalendarOutline className='h-4 w-4' />,
+  },
+  {
+    label: 'Calificación',
+    value: 'calification',
+    icon: <IoStar className='h-4 w-4' />,
+  },
+  {
+    label: 'Tipo de mejora',
+    value: 'typeImprovement',
+    icon: <IoIosTrendingUp className='h-4 w-4' />,
+  },
+  {
+    label: 'Empleado',
+    value: 'employee',
+    icon: <IoPersonOutline className='h-4 w-4' />,
+  },
+];
 
 export function ReviewsContent() {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  // Estado para guardar cupones enviados (aunque la info viene de Strapi)
-  const [sentCoupons, setSentCoupons] = useState<{ [key: number]: string }>({});
-  // Almacenar el nombre del restaurante (para enviar en el email)
-  const [restaurantName, setRestaurantName] = useState('');
   const [search, setSearch] = useState('');
-
-  // Función para exportar a Excel
-  const handleExportToExcel = () => {
-    // Preparar los datos para el Excel
-    const exportData = reviews.map((review) => ({
-      Fecha: formatDateBuenosAires(review.createdAt),
-      Email: review.email,
-      Calificación: review.calification,
-      'Tipo de Mejora': review.typeImprovement,
-      Comentario: review.comment,
-      'Enviado a Google': review.googleSent ? 'Sí' : 'No',
-      'Código de Cupón': review.couponCode || 'No enviado',
-      'Cupón Usado': review.couponUsed ? 'Sí' : 'No',
-      'ID de Review': review.documentId,
-      Empleado: review.employee
-        ? `${review.employee.firstName} ${review.employee.lastName}`
-        : 'No asignado',
-    }));
-
-    // Crear el libro de Excel
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-
-    // Ajustar el ancho de las columnas
-    const columnWidths = [
-      { wch: 12 }, // Fecha
-      { wch: 30 }, // Email
-      { wch: 12 }, // Calificación
-      { wch: 15 }, // Tipo de Mejora
-      { wch: 50 }, // Comentario
-      { wch: 15 }, // Enviado a Google
-      { wch: 15 }, // Código de Cupón
-      { wch: 12 }, // Cupón Usado
-      { wch: 20 }, // ID de Review
-      { wch: 25 }, // Empleado
-    ];
-    ws['!cols'] = columnWidths;
-
-    // Agregar la hoja al libro
-    XLSX.utils.book_append_sheet(wb, ws, 'Reseñas');
-
-    // Generar el archivo y descargarlo
-    const fileName = `reseñas_${restaurantName}_${
-      new Date().toISOString().split('T')[0]
-    }.xlsx`;
-    XLSX.writeFile(wb, fileName);
-  };
-
-  // Inicializar EmailJS
-  useEffect(() => {
-    emailjs.init(import.meta.env.PUBLIC_EMAILJS_PUBLIC_KEY);
-  }, []);
-
-  const [selectedRestaurant, setSelectedRestaurant] = useState(
-    getSelectedRestaurant()
-  );
+  const [orderBy, setOrderBy] = useState<OrderBy>({
+    open: false,
+    type: 'date',
+    direction: 'desc',
+  });
+  const [filter, setFilter] = useState<FilterType>({
+    open: false,
+    filters: [],
+  });
+  const { selectedRestaurant, reviews, fetchReviews, isLoading } =
+    useRestaurantStore();
 
   useEffect(() => {
-    const handleRestaurantChange = (e: CustomEvent) => {
-      console.log(
-        'Cambio de restaurante detectado en ReviewsContent:',
-        e.detail
-      );
-      setSelectedRestaurant(e.detail);
-    };
-
-    window.addEventListener(
-      'restaurantChange',
-      handleRestaurantChange as EventListener
-    );
-
-    return () => {
-      window.removeEventListener(
-        'restaurantChange',
-        handleRestaurantChange as EventListener
-      );
-    };
-  }, []);
-
-  // Modifica el useEffect de carga de reseñas para usar el restaurante seleccionado
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        setLoading(true);
-
-        // Usar el restaurante seleccionado si existe, si no, obtenerlo por UID
-        let restaurantData;
-
-        if (selectedRestaurant) {
-          restaurantData = selectedRestaurant;
-          console.log('Usando restaurante seleccionado:', restaurantData);
-        } else if (auth?.currentUser?.uid) {
-          console.log('Obteniendo restaurante por UID:', auth.currentUser.uid);
-          restaurantData = await getRestaurantByFirebaseUID(
-            auth.currentUser.uid
-          );
-          if (!restaurantData) {
-            throw new Error('No se encontró el restaurante');
-          }
-        } else {
-          console.log('No hay usuario autenticado ni restaurante seleccionado');
-          setLoading(false);
-          return;
-        }
-
-        setRestaurantName(restaurantData.name || 'Yuppie');
-
-        // Obtener reseñas con información de empleados
-        console.log('Obteniendo reseñas para:', restaurantData.documentId);
-        const reviewsData = await getRestaurantReviews(
-          restaurantData.documentId
-        );
-        console.log('Reviews data:', reviewsData);
-        setReviews(reviewsData);
-      } catch (error) {
-        console.error('Error fetching reviews:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReviews();
-  }, [selectedRestaurant]);
-
-  // Función para generar un cupón aleatorio de 10 caracteres alfanuméricos
-  const generateCouponCode = (length: number): string => {
-    let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    for (let i = 0; i < length; i++) {
-      result += characters.charAt(
-        Math.floor(Math.random() * characters.length)
-      );
+    if (selectedRestaurant) {
+      fetchReviews();
     }
-    return result;
-  };
+  }, [selectedRestaurant, fetchReviews]);
 
-  // Función para enviar el cupón y actualizar Strapi
-  const handleSendCoupon = (review: Review) => {
-    const discountStr = window.prompt(
-      'Ingrese el porcentaje de descuento (entre 10 y 100):'
-    );
-    if (!discountStr) return;
-    const discount = parseInt(discountStr, 10);
-    if (isNaN(discount) || discount < 10 || discount > 100) {
-      alert('El valor debe ser un número entre 10 y 100.');
-      return;
-    }
+  if (isLoading) {
+    return <ReviewsSkeleton />;
+  }
 
-    const couponCode = generateCouponCode(10);
+  const getReviewsBySearch = () => {
+    if (!search.trim()) return reviews;
 
-    const templateParams = {
-      to_email: review.email,
-      discount_percentage: discount,
-      coupon_code: couponCode,
-      restaurant: restaurantName,
-      reply_to: 'info@yuppiecx.com.ar',
-    };
+    const searchTerm = search.toLowerCase().trim();
 
-    emailjs
-      .send(
-        import.meta.env.PUBLIC_EMAILJS_SERVICE_ID,
-        import.meta.env.PUBLIC_EMAILJS_COUPON_TEMPLATE_ID,
-        templateParams,
-        import.meta.env.PUBLIC_EMAILJS_PUBLIC_KEY
+    return reviews.filter((review) => {
+      // Search in comment
+      if (review.comment?.toLowerCase().includes(searchTerm)) return true;
+
+      // Search in email
+      if (review.email?.toLowerCase().includes(searchTerm)) return true;
+
+      // Search in typeImprovement
+      if (review.typeImprovement?.toLowerCase().includes(searchTerm))
+        return true;
+
+      // Search in date (both createdAt and date fields)
+      const formattedCreatedAt = formatDateToSpanishLocale(review.createdAt);
+      const formattedDate = formatDateToSpanishLocale(review.date);
+      if (
+        formattedCreatedAt.toLowerCase().includes(searchTerm) ||
+        formattedDate.toLowerCase().includes(searchTerm)
       )
-      .then(
-        async (result) => {
-          console.log('Email enviado correctamente', result.text);
-          alert('Cupón enviado exitosamente.');
-          try {
-            await updateReview(review.documentId, {
-              couponCode: couponCode,
-              couponUsed: false,
-            });
-            setSentCoupons((prev) => ({ ...prev, [review.id]: couponCode }));
-            setReviews((prevReviews) =>
-              prevReviews.map((r) =>
-                r.id === review.id ? { ...r, couponCode, couponUsed: false } : r
-              )
-            );
-          } catch (updateError) {
-            console.error(
-              'Error actualizando la review con el cupón:',
-              updateError
-            );
-          }
-        },
-        (error) => {
-          console.error('Error enviando cupón', error);
-          alert('Error enviando el cupón.');
-        }
-      );
+        return true;
+
+      // Search in rating (if user types a number)
+      if (
+        !isNaN(Number(searchTerm)) &&
+        review.calification === Number(searchTerm)
+      )
+        return true;
+
+      // Search in employee name if exists
+      if (
+        review.employee?.firstName?.toLowerCase().includes(searchTerm) ||
+        review.employee?.lastName?.toLowerCase().includes(searchTerm)
+      )
+        return true;
+
+      return false;
+    });
   };
 
-  const handleMarkCouponUsed = (review: Review) => {
-    const confirmation = window.confirm(
-      '¿Está seguro de que desea marcar este cupón como usado? Esta acción no se puede revertir.'
-    );
-    if (!confirmation) return;
-
-    updateReview(review.documentId, { couponUsed: true })
-      .then(() => {
-        alert('El cupón se ha marcado como usado.');
-        setReviews((prevReviews) =>
-          prevReviews.map((r) =>
-            r.id === review.id ? { ...r, couponUsed: true } : r
-          )
-        );
-      })
-      .catch((error) => {
-        console.error('Error marcando el cupón como usado:', error);
-        alert('Error al actualizar el estado del cupón.');
-      });
+  const handleOrderByClick = () => {
+    setOrderBy({
+      open: !orderBy.open,
+      type: orderBy.type,
+      direction: orderBy.direction,
+    });
+    setFilter((prev) => ({
+      ...prev,
+      open: false,
+    }));
   };
 
-  if (loading) {
-    return (
-      <div className='p-8'>
-        <div className='animate-pulse text-white'>Cargando reseñas...</div>
-      </div>
-    );
-  }
+  const handleFilterClick = () => {
+    setFilter({
+      open: !filter.open,
+      filters: filter.filters,
+    });
+    setOrderBy((prev) => ({
+      ...prev,
+      open: false,
+    }));
+  };
 
-  if (reviews.length === 0) {
-    return (
-      <div className='p-8'>
-        <div className='text-white'>No hay reseñas disponibles.</div>
-      </div>
-    );
-  }
+  const handleOrderBy = (type: ActionType, direction: OrderByDirection) => {
+    setOrderBy((prev) => ({
+      ...prev,
+      type,
+      direction,
+    }));
+  };
+
+  const getOrderedReviews = (reviews: Review[]) => {
+    const sorted = [...reviews];
+    sorted.sort((a, b) => {
+      let aValue: any, bValue: any;
+
+      switch (orderBy.type) {
+        case 'date':
+          // Use createdAt or date, parse as Date
+          aValue = new Date(a.createdAt || a.date);
+          bValue = new Date(b.createdAt || b.date);
+          break;
+        case 'calification':
+          aValue = a.calification;
+          bValue = b.calification;
+          break;
+        case 'typeImprovement':
+          aValue = a.typeImprovement || '';
+          bValue = b.typeImprovement || '';
+          break;
+        case 'employee':
+          aValue = (a.employee?.firstName || '') + (a.employee?.lastName || '');
+          bValue = (b.employee?.firstName || '') + (b.employee?.lastName || '');
+          break;
+        default:
+          aValue = '';
+          bValue = '';
+      }
+
+      if (orderBy.direction === 'asc') {
+        return aValue < bValue ? -1 : 1;
+      } else {
+        return aValue > bValue ? -1 : 1;
+      }
+    });
+    return sorted;
+  };
+
+  const searchedReviews = getReviewsBySearch();
+  const orderedReviews = getOrderedReviews(searchedReviews);
 
   return (
     <div className='w-full flex flex-col gap-4 md:gap-8'>
@@ -271,25 +236,99 @@ export function ReviewsContent() {
           icon={<IoSearch className='h-4 w-4' />}
           className='w-full'
         />
-        <div className='flex items-center gap-8 w-full md:w-auto'>
-          <Button
-            label='Ordenar'
-            onClick={() => {}}
-            icon={<BiSortAlt2 className='h-4 w-4' />}
-            className='w-full md:w-auto'
-          />
-          <Button
-            label='Filtrar'
-            onClick={() => {}}
-            icon={<LuListFilter className='h-4 w-4' />}
-            className='w-full md:w-auto'
-          />
+        <div className='flex items-center gap-8 w-full md:w-auto relative'>
+          <ClickOutside
+            onClickOutside={() =>
+              setOrderBy((prev) => ({ ...prev, open: false }))
+            }
+            className='relative'
+            isOpen={orderBy.open}
+          >
+            <Button
+              label='Ordenar'
+              onClick={handleOrderByClick}
+              icon={<BiSortAlt2 className='h-4 w-4' />}
+              className={`w-full md:w-auto ${
+                orderBy.open ? 'bg-white/20' : ''
+              }`}
+            />
+            {orderBy.open && (
+              <div className='absolute top-[calc(100%+0.5rem)] right-0  border border-white/20 bg-white/10 backdrop-blur-lg rounded-lg p-4 flex flex-col gap-2'>
+                {orderByOptions.map((option) => (
+                  <div
+                    className='flex justify-between items-center gap-2'
+                    key={option.value}
+                  >
+                    <div className='flex gap-2 items-center text-nowrap'>
+                      {option.icon}
+                      {option.label}
+                    </div>
+                    <div className='flex gap-2'>
+                      <Button
+                        label=''
+                        onClick={() =>
+                          handleOrderBy(option.value as ActionType, 'asc')
+                        }
+                        className={
+                          orderBy.type.toString() === option.value &&
+                          orderBy.direction.toString() === 'asc'
+                            ? '!bg-green text-primary-dark border border-primary-dark'
+                            : ''
+                        }
+                        icon={<IoArrowUpOutline className='h-4 w-4' />}
+                      />
+                      <Button
+                        label=''
+                        onClick={() =>
+                          handleOrderBy(option.value as ActionType, 'desc')
+                        }
+                        className={
+                          orderBy.type.toString() === option.value &&
+                          orderBy.direction.toString() === 'desc'
+                            ? '!bg-green text-primary-dark border border-primary-dark'
+                            : ''
+                        }
+                        icon={<IoArrowDownOutline className='h-4 w-4' />}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ClickOutside>
+          <ClickOutside
+            onClickOutside={() => {
+              setFilter((prev) => ({ ...prev, open: false }));
+            }}
+            className='relative'
+            isOpen={filter.open}
+          >
+            <Button
+              label='Filtrar'
+              onClick={handleFilterClick}
+              icon={<LuListFilter className='h-4 w-4' />}
+              className={`w-full md:w-auto ${filter.open ? 'bg-white/20' : ''}`}
+            />
+            {filter.open && (
+              <div className='absolute top-[calc(100%+0.5rem)] right-0  border border-white/20 bg-white/10 backdrop-blur-lg rounded-lg p-4 flex flex-col gap-2'>
+                hello
+              </div>
+            )}
+          </ClickOutside>
         </div>
       </div>
       <div className='max-h-[calc(100dvh-20.5rem)] border-t border-white/20 pt-4 md:max-h-[calc(100dvh-14rem)] overflow-y-scroll overflow-x-hidden scrollbar-hide md:px-4 flex flex-col gap-4'>
-        {reviews.map((review) => (
-          <ReviewCard key={review.id} review={review} />
-        ))}
+        {orderedReviews.length > 0 ? (
+          orderedReviews.map((review) => (
+            <ReviewCard key={review.id} review={review} />
+          ))
+        ) : (
+          <div className='text-white'>
+            {search
+              ? 'No se encontraron reseñas que coincidan con la búsqueda.'
+              : 'No hay reseñas disponibles.'}
+          </div>
+        )}
       </div>
     </div>
   );

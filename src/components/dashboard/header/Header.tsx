@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Option from './Option';
 import type { Restaurant } from '@/types/restaurant';
 import { SkeletonLoader } from '@/components/common/SkeletonLoader';
+import ClickOutside from '@/components/ui/ClickOutside';
 
 export default function Header() {
   const { isCollapsed, hydrated } = useSidebarStore();
@@ -65,32 +66,39 @@ export default function Header() {
         location={selectedRestaurant.zone ?? ''}
         employeesAmount={selectedRestaurant.employees?.length ?? 0}
       />
-      <div
-        className={`absolute bottom-full md:bottom-auto md:top-full px-4 py-4 border border-white/20 cursor-auto left-0 w-full flex flex-col gap-2 bg-primary-dark z-50 rounded-t-lg md:rounded-t-none md:rounded-b-lg transition-all duration-300 ${
-          openHeader
-            ? 'transform opacity-100 translate-y-0'
-            : 'transform opacity-0 translate-y-2 md:-translate-y-2 pointer-events-none'
-        }`}
+      <ClickOutside
+        isOpen={openHeader}
+        onClickOutside={() => setOpenHeader(false)}
       >
-        {restaurants
-          .sort((a, b) => {
-            if (selectedRestaurant.documentId === a.documentId) return -1;
-            if (selectedRestaurant.documentId === b.documentId) return 1;
-            return a.name.localeCompare(b.name);
-          })
-          .map((restaurant) => (
-            <Option
-              key={restaurant.documentId}
-              onClick={() => handleSelectRestaurant(restaurant)}
-              openHeader={openHeader}
-              restaurantName={restaurant.name}
-              location={restaurant.zone ?? ''}
-              employeesAmount={0}
-              isOption
-              selected={restaurant.documentId === selectedRestaurant.documentId}
-            />
-          ))}
-      </div>
+        <div
+          className={`absolute bottom-full md:bottom-auto md:top-full px-4 py-4 border border-white/20 cursor-auto left-0 w-full flex flex-col gap-2 bg-primary-dark z-50 rounded-t-lg md:rounded-t-none md:rounded-b-lg transition-all duration-300 ${
+            openHeader
+              ? 'transform opacity-100 translate-y-0'
+              : 'transform opacity-0 translate-y-2 md:-translate-y-2 pointer-events-none'
+          }`}
+        >
+          {restaurants
+            .sort((a, b) => {
+              if (selectedRestaurant.documentId === a.documentId) return -1;
+              if (selectedRestaurant.documentId === b.documentId) return 1;
+              return a.name.localeCompare(b.name);
+            })
+            .map((restaurant) => (
+              <Option
+                key={restaurant.documentId}
+                onClick={() => handleSelectRestaurant(restaurant)}
+                openHeader={openHeader}
+                restaurantName={restaurant.name}
+                location={restaurant.zone ?? ''}
+                employeesAmount={0}
+                isOption
+                selected={
+                  restaurant.documentId === selectedRestaurant.documentId
+                }
+              />
+            ))}
+        </div>
+      </ClickOutside>
     </header>
   );
 }
