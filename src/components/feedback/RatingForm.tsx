@@ -1,5 +1,12 @@
 import { ratingOptions } from '@/data/Reviews';
 import type { RatingValue } from '@/types/reviews';
+import {
+  BsEmojiAngryFill,
+  BsFillEmojiFrownFill,
+  BsEmojiNeutralFill,
+  BsEmojiSmileFill,
+  BsEmojiGrinFill,
+} from 'react-icons/bs';
 
 interface Props {
   onClick: (rating: RatingValue) => void;
@@ -22,7 +29,11 @@ export default function RatingForm({ onClick }: Props) {
           >
             {/* Use a simpler approach for the emoji display */}
             <span className='text-4xl transform transition-transform duration-200 group-hover:scale-110'>
-              {icon}
+              {rating === 1 && <BsEmojiAngryFill color='var(--rating-1)' />}
+              {rating === 2 && <BsFillEmojiFrownFill color='var(--rating-2)' />}
+              {rating === 3 && <BsEmojiNeutralFill color='var(--rating-3)' />}
+              {rating === 4 && <BsEmojiSmileFill color='var(--rating-4)' />}
+              {rating === 5 && <BsEmojiGrinFill color='var(--rating-5)' />}
             </span>
           </button>
         ))}

@@ -157,45 +157,6 @@ export async function getRestaurantByFirebaseUID(firebaseUID: string) {
   }
 }
 
-export async function getRestaurantReviews(restaurantId: string) {
-  try {
-    const response = await fetch(
-      `${
-        import.meta.env.PUBLIC_API_URL
-      }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*&sort[0]=createdAt:desc`
-    );
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const { data } = await response.json();
-    return data.map((review: any) => ({
-      id: review.id,
-      documentId: review.documentId,
-      calification: review.calification,
-      typeImprovement: review.typeImprovement,
-      comment: review.comment,
-      email: review.email,
-      googleSent: review.googleSent,
-      date: review.date,
-      createdAt: review.createdAt,
-      couponCode: review.couponCode,
-      couponUsed: review.couponUsed,
-      employee: review.employee
-        ? {
-            id: review.employee.id,
-            documentId: review.employee.documentId,
-            firstName: review.employee.firstName,
-            lastName: review.employee.lastName,
-            position: review.employee.position,
-          }
-        : undefined,
-    }));
-  } catch (error) {
-    console.error('Error fetching reviews:', error);
-    return [];
-  }
-}
-
 // Añadir interfaces
 interface Employee {
   id: number;
@@ -228,40 +189,6 @@ interface Schedule {
     | 'sunday';
   startTime: string;
   endTime: string;
-}
-
-// Añadir funciones para empleados
-export async function getEmployeesByRestaurant(restaurantId: string) {
-  try {
-    const response = await fetch(
-      `${
-        import.meta.env.PUBLIC_API_URL
-      }/employees?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*`
-    );
-
-    if (!response.ok) {
-      throw new Error('Error fetching employees');
-    }
-
-    const { data } = await response.json();
-    return data.map((employee: any) => ({
-      id: employee.id,
-      documentId: employee.documentId,
-      firstName: employee.firstName,
-      lastName: employee.lastName,
-      position: employee.position,
-      active: employee.active,
-      photo: employee.photo,
-      schedules: employee.schedules,
-      taps:
-        typeof employee.taps === 'number'
-          ? employee.taps
-          : Number(employee.taps) || 0,
-    }));
-  } catch (error) {
-    console.error('Error in getEmployeesByRestaurant:', error);
-    return [];
-  }
 }
 
 // /Users/Mati/Desktop/yuppie-web/src/services/api.ts

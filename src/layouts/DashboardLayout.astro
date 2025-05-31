@@ -17,7 +17,6 @@ const {
   title,
   description = 'Dashboard | Yuppie',
   section = 'dashboard',
-  showRestaurantHeader = true,
 } = Astro.props;
 ---
 
@@ -29,7 +28,7 @@ const {
     <ClientRouter />
   </head>
 
-  <body class="w-dvw min-h-screen bg-gradient font-['Poppins',sans-serif] text-white overflow-x-hidden">
+  <body class="w-dvw min-h-screen max-w-dvw bg-gradient font-['Poppins',sans-serif] text-white overflow-x-hidden">
     <div class="flex w-full min-h-dvh">
       <Sidebar client:load section={section} />
       <Header client:load/>

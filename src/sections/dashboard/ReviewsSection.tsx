@@ -1,44 +1,26 @@
-// src/components/dashboard/ReviewsContent.tsx
-
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { auth } from '../../lib/firebase';
-import {
-  getRestaurantByFirebaseUID,
-  getRestaurantReviews,
-  updateReview,
-} from '../../services/api';
+import { getRestaurantByFirebaseUID, updateReview } from '../../services/api';
 import { Star, Download, User } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/Button';
-import { Badge } from '../ui/badge'; // Importamos Badge para mostrar el empleado
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge'; // Importamos Badge para mostrar el empleado
 import emailjs from '@emailjs/browser';
 import * as XLSX from 'xlsx';
 import { formatDateBuenosAires } from '../../utils/formatDate';
-import process from 'process/browser';
 import { getSelectedRestaurant } from '../../lib/restaurantStore';
-
-interface Employee {
-  id: number;
-  documentId: string;
-  firstName: string;
-  lastName: string;
-  position: string;
-}
-
-interface Review {
-  id: number;
-  documentId: string;
-  calification: number;
-  typeImprovement: string;
-  comment: string;
-  email: string;
-  googleSent: boolean;
-  date: string;
-  createdAt: string;
-  couponCode?: string;
-  couponUsed?: boolean;
-  employee?: Employee; // Agregamos el empleado asociado
-}
+import { getRestaurantReviews } from '@/services/api/reviews';
+import type { Review } from '@/types/reviews';
+import Input from '../../components/ui/new/Input';
+import { IoSearch } from 'react-icons/io5';
+import Button from '../../components/ui/new/Button';
+import { BiSortAlt2 } from 'react-icons/bi';
+import { LuListFilter } from 'react-icons/lu';
+import ReviewCard from '../../components/dashboard/cards/ReviewCard';
 
 export function ReviewsContent() {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -47,6 +29,7 @@ export function ReviewsContent() {
   const [sentCoupons, setSentCoupons] = useState<{ [key: number]: string }>({});
   // Almacenar el nombre del restaurante (para enviar en el email)
   const [restaurantName, setRestaurantName] = useState('');
+  const [search, setSearch] = useState('');
 
   // Función para exportar a Excel
   const handleExportToExcel = () => {
@@ -264,119 +247,48 @@ export function ReviewsContent() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="animate-pulse text-white">Cargando reseñas...</div>
+      <div className='p-8'>
+        <div className='animate-pulse text-white'>Cargando reseñas...</div>
       </div>
     );
   }
 
   if (reviews.length === 0) {
     return (
-      <div className="p-8">
-        <div className="text-white">No hay reseñas disponibles.</div>
+      <div className='p-8'>
+        <div className='text-white'>No hay reseñas disponibles.</div>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Reseñas</h1>
-        <Button
-          variant="ghost"
-          className="flex items-center text-white hover:bg-white/10"
-          onClick={handleExportToExcel}
-        >
-          <Download className="mr-2 h-4 w-4" />
-          Exportar
-        </Button>
+    <div className='w-full flex flex-col gap-4 md:gap-8'>
+      <div className='w-full flex flex-col md:flex-row justify-between items-center gap-4 md:gap-8'>
+        <Input
+          placeholder='Buscar reseña'
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          icon={<IoSearch className='h-4 w-4' />}
+          className='w-full'
+        />
+        <div className='flex items-center gap-8 w-full md:w-auto'>
+          <Button
+            label='Ordenar'
+            onClick={() => {}}
+            icon={<BiSortAlt2 className='h-4 w-4' />}
+            className='w-full md:w-auto'
+          />
+          <Button
+            label='Filtrar'
+            onClick={() => {}}
+            icon={<LuListFilter className='h-4 w-4' />}
+            className='w-full md:w-auto'
+          />
+        </div>
       </div>
-      <div className="space-y-4">
+      <div className='max-h-[calc(100dvh-20.5rem)] border-t border-white/20 pt-4 md:max-h-[calc(100dvh-14rem)] overflow-y-scroll overflow-x-hidden scrollbar-hide md:px-4 flex flex-col gap-4'>
         {reviews.map((review) => (
-          <Card key={review.id} className="bg-white/10 border-0">
-            <CardHeader className="flex flex-row items-start justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-white">
-                    {review.email ===
-                    'prefirio-no-dar-su-email@nodiosuemail.com'
-                      ? '-'
-                      : review.email}
-                  </CardTitle>
-
-                  {/* Badge para mostrar el empleado asociado */}
-                  {review.employee && (
-                    <Badge className="bg-indigo-500 hover:bg-indigo-600 text-white">
-                      <User className="h-3 w-3 mr-1" />
-                      {review.employee.firstName} {review.employee.lastName}
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="flex items-center mt-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-4 w-4 ${
-                        i < review.calification
-                          ? 'text-yellow-400 fill-yellow-400'
-                          : 'text-gray-400'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="text-sm text-white/60">
-                {new Date(review.createdAt).toLocaleDateString()}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4 max-h-24 overflow-auto break-words">
-                <p className="text-white">{review.comment}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {review.typeImprovement && (
-                    <span className="text-sm bg-white/10 text-white px-2 py-1 rounded-full">
-                      {review.typeImprovement}
-                    </span>
-                  )}
-                  {/* Solo mostrar "Enviada a Google" si googleSent es true */}
-                  {review.googleSent && (
-                    <span className="text-sm bg-green-600 text-white px-2 py-1 rounded-full">
-                      Enviada a Google
-                    </span>
-                  )}
-                </div>
-              </div>
-              {/* Resto del código de cupones */}
-              {review.email !== 'prefirio-no-dar-su-email@nodiosuemail.com' &&
-                (review.couponCode ? (
-                  <div className="space-y-2">
-                    <div className="bg-green-600 text-white text-center py-2 rounded">
-                      Cupón de descuento: <strong>{review.couponCode}</strong>
-                    </div>
-                    {!review.couponUsed ? (
-                      <Button
-                        variant="secondary"
-                        onClick={() => handleMarkCouponUsed(review)}
-                      >
-                        Marcar como usado
-                      </Button>
-                    ) : (
-                      <div className="text-sm text-white/60 text-center">
-                        Cupón usado
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    onClick={() => handleSendCoupon(review)}
-                  >
-                    Enviar cupón de descuento
-                  </Button>
-                ))}
-            </CardContent>
-          </Card>
+          <ReviewCard key={review.id} review={review} />
         ))}
       </div>
     </div>

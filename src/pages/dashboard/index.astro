@@ -1,8 +1,7 @@
 ---
 import DashboardLayout from '../../layouts/DashboardLayout.astro';
-import { DashboardContent } from '../../components/dashboard/DashboardContent';
+import DashboardContent from '@/sections/dashboard/DashboardSection';
 import { ProtectedRoute } from '../../components/auth/ProtectedRoute';
-import SelectedRestaurantHeader from '../../components/dashboard/SelectedRestaurantHeader';
 import DashboardMainLayout from '../../layouts/DashboardMainLayout';
 import RestaurantValidator from '@/components/dashboard/RestaurantValidator';
 ---
@@ -10,8 +9,6 @@ import RestaurantValidator from '@/components/dashboard/RestaurantValidator';
 <DashboardLayout title='Dashboard | Yuppie' section='dashboard'>
   <ProtectedRoute client:load>
     <DashboardMainLayout client:load>
-      <RestaurantValidator client:only="react" />
-      <SelectedRestaurantHeader client:load />
       <DashboardContent client:load />
     </DashboardMainLayout>
   </ProtectedRoute>

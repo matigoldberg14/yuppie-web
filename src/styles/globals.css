@@ -9,6 +9,22 @@
   --blue-light: #9181F2;
   --blue-dark: #1D0158;
   --green: #39DFB2;
+
+ --rating-1: #ff5454;
+ --rating-2: #ff7c54;
+ --rating-3: #FFD700;
+ --rating-4: #CDDC39;
+ --rating-5: #4CAF50;
+
+  --yellow-star: #FFB600;
+}
+
+.half-star {
+  clip-path: polygon(0% 0%, 50% 0%, 50% 100%, 0 100%);
+}
+
+.half-empty-star {
+  clip-path: polygon(50% 0%, 100% 0%, 100% 100%, 50% 100%);
 }
 
 .bg-gradient {

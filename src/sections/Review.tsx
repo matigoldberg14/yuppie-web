@@ -16,7 +16,7 @@ import type { Restaurant } from '@/types/restaurant';
 import { validateEmail } from '@/utils/validation';
 import useLoading from '@/hooks/useLoading';
 import { incrementTapsForEmployee } from '@/services/api/employees';
-import InstagramIcon from '@/components/icons/InstagramIcon';
+import InstagramIcon from '@/components/common/icons/InstagramIcon';
 import { commentOptions } from '@/data/Reviews';
 import ErrorModal from '@/components/ui/new/Modal';
 import emailjs from '@emailjs/browser';

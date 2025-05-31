@@ -71,6 +71,8 @@ export interface Review {
   createdAt: string;
   updatedAt: string;
   publishedAt: string;
+  couponCode?: string;
+  couponUsed?: boolean;
 }
 
 // Tipo para la respuesta de la API al crear reseñas

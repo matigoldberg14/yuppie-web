@@ -61,3 +61,31 @@ export async function existsReviewWithEmail(
     };
   }
 }
+
+export async function getRestaurantReviews(restaurantId: string) {
+  try {
+    const url = `${
+      import.meta.env.PUBLIC_API_URL
+    }/reviews?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*&sort[0]=createdAt:asc`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.data) {
+      console.error('La respuesta de la API no contiene campo "data":', result);
+      return [];
+    }
+
+    const { data: reviewsData } = result;
+
+    return reviewsData as Review[];
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    return [];
+  }
+}

@@ -1,4 +1,3 @@
-// src/components/dashboard/RestaurantValidator.tsx
 import React, { useEffect } from 'react';
 import { useRestaurantStore } from '@/store/useRestaurantStore';
 
@@ -9,11 +8,13 @@ const RestaurantValidator: React.FC = () => {
     isLoading,
     hasLoaded,
     fetchRestaurants,
+    fetchEmployees,
   } = useRestaurantStore();
 
   useEffect(() => {
     fetchRestaurants();
-  }, [fetchRestaurants]);
+    fetchEmployees();
+  }, [fetchRestaurants, fetchEmployees]);
 
   useEffect(() => {
     // If we're still loading or haven't loaded yet, do nothing
@@ -25,10 +26,6 @@ const RestaurantValidator: React.FC = () => {
       return;
     }
   }, [isLoading, hasLoaded, restaurants, selectedRestaurant]);
-
-  if (isLoading) {
-    return <div className='text-white'>Verificando restaurante...</div>;
-  }
 
   return null;
 };

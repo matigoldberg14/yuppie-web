@@ -2,13 +2,12 @@
 import { useState } from 'react';
 import { auth } from '../../../lib/firebase';
 import { signOut } from 'firebase/auth';
-import { clearUserRestaurants } from '../../../lib/restaurantStore';
 import { IoIosArrowBack } from 'react-icons/io';
 import { getNavbarItems } from '@/data/Navbar';
 import Anchor from './Anchor';
 import { FiLogOut } from 'react-icons/fi';
 import { useSidebarStore } from '@/store/useSidebarStore';
-import HamburguerIcon from '../../icons/hamburguer/HamburguerIcon';
+import HamburguerIcon from '../../common/icons/hamburguer/HamburguerIcon';
 import Button from './Button';
 
 export function Sidebar({ section }: { section: string }) {
@@ -25,7 +24,6 @@ export function Sidebar({ section }: { section: string }) {
 
   const handleLogout = async () => {
     try {
-      clearUserRestaurants();
       if (!auth) throw new Error('Firebase not initialized');
       await signOut(auth);
       window.location.href = '/login';
@@ -52,7 +50,7 @@ export function Sidebar({ section }: { section: string }) {
           }`}
         />
       </button>
-      <div className='w-full flex px-2 flex-row md:flex-col items-start justify-start gap-4 z-40'>
+      <div className='w-full flex px-4 md:px-2 flex-row md:flex-col items-start justify-start gap-4 z-40'>
         <div className='flex items-center w-full'>
           <div
             className={`w-full flex ${
@@ -75,7 +73,7 @@ export function Sidebar({ section }: { section: string }) {
           </div>
         </div>
         <nav
-          className={`w-full fixed md:static top-20 md:translate-x-0 pt-4 md:pt-0 px-2 md:px-0 left-0 rounded-b-lg md:rounded-b-none bg-primary-light md:bg-transparent z-40 flex flex-col gap-2 transition-all duration-300 ${
+          className={`w-full fixed md:static top-20 md:translate-x-0 pt-4 md:pt-0 px-2 md:px-0 left-0 rounded-b-lg md:rounded-b-none bg-primary-light shadow-md shadow-black/20 md:shadow-none md:bg-transparent z-40 flex flex-col gap-2 transition-all duration-300 ${
             isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >

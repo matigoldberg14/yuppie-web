@@ -1,3 +1,5 @@
+import type { Employee } from './employee';
+
 export interface Location {
   street: string;
   number: string;
@@ -18,20 +20,19 @@ export interface Restaurant {
   name: string;
   slug: string;
   taps: string;
-  linkMaps: string; // Requerido
+  linkMaps: string;
   owner: {
     firstName: string;
     lastName: string;
-    email: string; // Email del dueño del restaurante
+    email: string;
   };
-  location?: Location; // Opcional, pero cuando existe debe tener todos los campos
-  coordinates?: Coordinates;
-  // Campos adicionales para métricas
+  zone?: string;
   ingresos?: number;
   clientes?: number;
   satisfaccion?: number;
   ocupacion?: number;
   socialNetwork?: string;
+  employees?: Employee[];
 }
 
 export function convertToRestaurant(data: Restaurant): Restaurant {
@@ -46,24 +47,7 @@ export function convertToRestaurant(data: Restaurant): Restaurant {
       lastName: data.owner?.lastName || '',
       email: '',
     },
-    location:
-      data.location &&
-      data.location.street &&
-      data.location.number &&
-      data.location.city &&
-      data.location.state &&
-      data.location.country &&
-      data.location.postalCode
-        ? {
-            street: data.location.street,
-            number: data.location.number,
-            city: data.location.city,
-            state: data.location.state,
-            country: data.location.country,
-            postalCode: data.location.postalCode,
-          }
-        : undefined,
-    coordinates: data.coordinates,
     slug: data.slug,
+    employees: data.employees || [],
   };
 }

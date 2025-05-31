@@ -11,6 +11,7 @@ export default {
         },
         white: '#FFFFFF',
         green: '#39DFB2',
+        'yellow-star': '#FFB600',
       },
       boxShadow: {
         yuppie: '0 4px 14px 0 rgba(47, 2, 204, 0.25)',

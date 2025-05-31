@@ -53,3 +53,27 @@ export async function incrementTapsForEmployee(employee: Employee) {
     return null;
   }
 }
+
+export async function getEmployeesByRestaurant(restaurantId: string) {
+  try {
+    const url = `${
+      import.meta.env.PUBLIC_API_URL
+    }/employees?filters[restaurant][documentId][$eq]=${restaurantId}&populate=*`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error('Error fetching employees');
+    }
+
+    const { data: employeesData } = await response.json();
+
+    if (!employeesData || employeesData.length === 0) {
+      return [];
+    }
+
+    return employeesData as Employee[];
+  } catch (error) {
+    console.error('Error in getEmployeesByRestaurant:', error);
+    return [];
+  }
+}

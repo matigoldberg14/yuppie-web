@@ -7,7 +7,7 @@ interface HamburguerIconProps {
 
 const HamburguerIcon = ({ isSelected, handleClick }: HamburguerIconProps) => {
   return (
-    <div className='flex flex-col items-center justify-center px-3'>
+    <div className='flex flex-col items-center justify-center'>
       <div className='relative h-8 w-10 cursor-pointer' onClick={handleClick}>
         <div
           className={`absolute h-[2px] w-10 rounded-sm bg-white shadow-[0px_2px_10px_0px_rgba(0,0,0,0.3)] ${
